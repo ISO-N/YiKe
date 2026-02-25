@@ -15,6 +15,7 @@ class AppSettingsEntity {
     required this.doNotDisturbStart,
     required this.doNotDisturbEnd,
     required this.notificationsEnabled,
+    required this.notificationPermissionGuideDismissed,
     this.lastNotifiedDate,
   });
 
@@ -30,6 +31,9 @@ class AppSettingsEntity {
   /// 通知开关。
   final bool notificationsEnabled;
 
+  /// 通知权限引导是否已被用户关闭（避免频繁弹窗）。
+  final bool notificationPermissionGuideDismissed;
+
   /// 今日是否已发送过提醒（YYYY-MM-DD）。
   ///
   /// 说明：用于后台任务防重复发送。
@@ -40,6 +44,7 @@ class AppSettingsEntity {
     String? doNotDisturbStart,
     String? doNotDisturbEnd,
     bool? notificationsEnabled,
+    bool? notificationPermissionGuideDismissed,
     String? lastNotifiedDate,
   }) {
     return AppSettingsEntity(
@@ -47,6 +52,8 @@ class AppSettingsEntity {
       doNotDisturbStart: doNotDisturbStart ?? this.doNotDisturbStart,
       doNotDisturbEnd: doNotDisturbEnd ?? this.doNotDisturbEnd,
       notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
+      notificationPermissionGuideDismissed:
+          notificationPermissionGuideDismissed ?? this.notificationPermissionGuideDismissed,
       lastNotifiedDate: lastNotifiedDate ?? this.lastNotifiedDate,
     );
   }
@@ -57,6 +64,6 @@ class AppSettingsEntity {
     doNotDisturbStart: '22:00',
     doNotDisturbEnd: '08:00',
     notificationsEnabled: true,
+    notificationPermissionGuideDismissed: false,
   );
 }
-

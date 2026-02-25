@@ -33,6 +33,8 @@ class SettingsRepositoryImpl implements SettingsRepository {
   static const String keyDndStart = 'do_not_disturb_start';
   static const String keyDndEnd = 'do_not_disturb_end';
   static const String keyNotificationsEnabled = 'notifications_enabled';
+  static const String keyNotificationPermissionGuideDismissed =
+      'notification_permission_guide_dismissed';
 
   // v1.0 MVP 扩展：用于后台防重复发送通知。
   static const String keyLastNotifiedDate = 'last_notified_date';
@@ -46,6 +48,8 @@ class SettingsRepositoryImpl implements SettingsRepository {
     final dndEnd = await _getString(keyDndEnd) ?? AppSettingsEntity.defaults.doNotDisturbEnd;
     final notificationsEnabled =
         await _getBool(keyNotificationsEnabled) ?? AppSettingsEntity.defaults.notificationsEnabled;
+    final guideDismissed = await _getBool(keyNotificationPermissionGuideDismissed) ??
+        AppSettingsEntity.defaults.notificationPermissionGuideDismissed;
     final lastNotifiedDate = await _getString(keyLastNotifiedDate);
 
     return AppSettingsEntity(
@@ -53,6 +57,7 @@ class SettingsRepositoryImpl implements SettingsRepository {
       doNotDisturbStart: dndStart,
       doNotDisturbEnd: dndEnd,
       notificationsEnabled: notificationsEnabled,
+      notificationPermissionGuideDismissed: guideDismissed,
       lastNotifiedDate: lastNotifiedDate,
     );
   }
@@ -64,6 +69,8 @@ class SettingsRepositoryImpl implements SettingsRepository {
       keyDndStart: await _crypto.encrypt(jsonEncode(settings.doNotDisturbStart)),
       keyDndEnd: await _crypto.encrypt(jsonEncode(settings.doNotDisturbEnd)),
       keyNotificationsEnabled: await _crypto.encrypt(jsonEncode(settings.notificationsEnabled)),
+      keyNotificationPermissionGuideDismissed:
+          await _crypto.encrypt(jsonEncode(settings.notificationPermissionGuideDismissed)),
       if (settings.lastNotifiedDate != null)
         keyLastNotifiedDate: await _crypto.encrypt(jsonEncode(settings.lastNotifiedDate)),
     });
@@ -85,4 +92,3 @@ class SettingsRepositoryImpl implements SettingsRepository {
     return decoded is bool ? decoded : null;
   }
 }
-
