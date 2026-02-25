@@ -67,7 +67,7 @@ Future<void> main(List<String> args) async {
   }
 
   // 2) 解析 lcov 汇总数据（按文件聚合 LF/LH）。
-  final lcovSummaries = await _parseLcovSummaries(lcovFile);
+  final lcovSummaries = await _parseLcovSummaries(lcovFile, repoRoot);
 
   // 3) 校验是否所有 scope 文件都出现在 lcov 中（避免“未加载文件不计入覆盖率”的虚高）。
   final missingAll = scopeFiles.where((p) => !lcovSummaries.containsKey(p)).toList()..sort();
@@ -143,7 +143,7 @@ bool _isExcluded(String normalizedRelativePath) {
   return false;
 }
 
-Future<Map<String, LcovSummary>> _parseLcovSummaries(File lcovFile) async {
+Future<Map<String, LcovSummary>> _parseLcovSummaries(File lcovFile, Directory repoRoot) async {
   final map = <String, LcovSummary>{};
 
   String? currentFile;
@@ -156,7 +156,9 @@ Future<Map<String, LcovSummary>> _parseLcovSummaries(File lcovFile) async {
     final line = raw.trim();
     if (line.startsWith('SF:')) {
       // 注意：lcov 里可能是 Windows 反斜杠路径。
-      currentFile = _normalizePath(line.substring(3));
+      final sf = _normalizePath(line.substring(3));
+      // 兼容 SF 为绝对路径的情况：统一转换为仓库根目录下的相对路径，确保与 scopeFiles 的 key 一致。
+      currentFile = _normalizePath(_relativePath(repoRoot.path, sf));
       currentLf = null;
       currentLh = null;
       continue;
