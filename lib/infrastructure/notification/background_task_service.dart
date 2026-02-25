@@ -4,6 +4,7 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:workmanager/workmanager.dart';
 
 import '../../core/utils/date_utils.dart';
@@ -30,7 +31,7 @@ class BackgroundTaskService {
   static Future<void> initialize() async {
     await Workmanager().initialize(
       callbackDispatcher,
-      isInDebugMode: false,
+      isInDebugMode: kDebugMode,
     );
 
     // 每小时检查一次（在提醒时间附近触发通知）。
