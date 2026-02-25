@@ -173,7 +173,7 @@ Future<Map<String, LcovSummary>> _parseLcovSummaries(File lcovFile) async {
     }
 
     if (line == 'end_of_record' && currentFile != null) {
-      final file = currentFile!;
+      final file = currentFile;
       final lf = currentLf ?? 0;
       final lh = currentLh ?? 0;
 

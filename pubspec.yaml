@@ -63,6 +63,11 @@ dependencies:
   # 跳转系统设置（用于通知权限引导闭环）
   app_settings: ^5.2.0
 
+  # v2.0 新增：日历 / 图表 / 分享
+  table_calendar: ^3.0.0
+  fl_chart: ^0.66.0
+  share_plus: ^7.0.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -77,6 +82,7 @@ dev_dependencies:
   # Drift / JSON 等代码生成
   build_runner: ^2.4.12
   drift_dev: ^2.16.0
+  path_provider_platform_interface: ^2.1.2
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
