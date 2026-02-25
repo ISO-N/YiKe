@@ -5,10 +5,13 @@
  */
 package com.example.yike
 
+import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
 import android.content.Context
+import android.content.Intent
 import android.content.SharedPreferences
 import android.net.Uri
+import android.os.Build
 import android.widget.RemoteViews
 import es.antonborri.home_widget.HomeWidgetLaunchIntent
 import es.antonborri.home_widget.HomeWidgetProvider
@@ -37,13 +40,25 @@ class YikeWidgetProvider : HomeWidgetProvider() {
 
             val views = RemoteViews(context.packageName, layoutId).apply {
                 // 点击小组件打开 App（v1.0 MVP 不做组件内交互）。
-                val pendingIntent = HomeWidgetLaunchIntent.getActivity(
-                    context,
-                    MainActivity::class.java,
-                    // 注意：使用 `yike:///home`（三斜杠）确保 path 为 `/home`，避免 GoRouter 仅按 path 匹配导致无法命中路由。
-                    // 旧格式 `yike://home?...` 会被解析为 host=home、path 为空，从而引发启动失败。
-                    Uri.parse("yike:///home?homeWidget=1")
-                )
+                //
+                // 重要说明：不要使用 `HomeWidgetLaunchIntent.getActivity`。
+                // 在部分 Android 14+（例如 Oplus/Realme 系统）上，该方法在创建 PendingIntent 时会携带
+                // `pendingIntentBackgroundActivityStartMode` 选项，从而触发系统的 IllegalArgumentException，
+                // 导致 `AppWidgetProvider` 崩溃并连带使应用“无法启动”。
+                //
+                // 因此此处改为手动创建 PendingIntent，同时保留 home_widget 约定的 LAUNCH Action，便于未来在 Flutter 侧识别。
+                val launchIntent = Intent(context, MainActivity::class.java).apply {
+                    action = HomeWidgetLaunchIntent.HOME_WIDGET_LAUNCH_ACTION
+                    // 注意：使用 `/home`（相对 URI）确保 Flutter deep link 解析得到的 location 以 `/` 开头，便于 GoRouter 匹配。
+                    data = Uri.parse("/home?homeWidget=1")
+                }
+
+                var flags = PendingIntent.FLAG_UPDATE_CURRENT
+                if (Build.VERSION.SDK_INT >= 23) {
+                    flags = flags or PendingIntent.FLAG_IMMUTABLE
+                }
+
+                val pendingIntent = PendingIntent.getActivity(context, 0, launchIntent, flags)
                 setOnClickPendingIntent(R.id.widget_container, pendingIntent)
 
                 bindWidgetData(widgetData, isLarge, this)
