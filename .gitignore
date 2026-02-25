@@ -43,3 +43,6 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Android Gradle 构建产物（包含 reports/*.html 等临时文件）
+/android/build/
