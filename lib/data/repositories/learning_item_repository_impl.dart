@@ -75,6 +75,11 @@ class LearningItemRepositoryImpl implements LearningItemRepository {
   }
 
   @override
+  Future<Map<String, int>> getTagDistribution() {
+    return dao.getTagDistribution();
+  }
+
+  @override
   Future<LearningItemEntity> update(LearningItemEntity item) async {
     if (item.id == null) {
       throw ArgumentError('更新学习内容时 id 不能为空');

@@ -8,6 +8,7 @@ import 'dart:convert';
 import 'package:drift/drift.dart';
 
 import '../../domain/entities/review_task.dart';
+import '../../domain/entities/task_day_stats.dart';
 import '../../domain/repositories/review_task_repository.dart';
 import '../models/review_task_with_item_model.dart';
 import '../database/daos/review_task_dao.dart';
@@ -91,6 +92,46 @@ class ReviewTaskRepositoryImpl implements ReviewTaskRepository {
   @override
   Future<(int completed, int total)> getTaskStats(DateTime date) {
     return dao.getTaskStats(date);
+  }
+
+  @override
+  Future<Map<DateTime, TaskDayStats>> getMonthlyTaskStats(int year, int month) {
+    return dao.getMonthlyTaskStats(year, month);
+  }
+
+  @override
+  Future<List<ReviewTaskViewEntity>> getTasksInRange(DateTime start, DateTime end) async {
+    final rows = await dao.getTasksInRange(start, end);
+    return rows.map(_toViewEntity).toList();
+  }
+
+  @override
+  Future<int> getConsecutiveCompletedDays({DateTime? today}) {
+    return dao.getConsecutiveCompletedDays(today: today);
+  }
+
+  @override
+  Future<(int completed, int total)> getTaskStatsInRange(DateTime start, DateTime end) {
+    return dao.getTaskStatsInRange(start, end);
+  }
+
+  @override
+  Future<List<ReviewTaskEntity>> getAllTasks() async {
+    final rows = await dao.getAllTasks();
+    return rows
+        .map(
+          (row) => ReviewTaskEntity(
+            id: row.id,
+            learningItemId: row.learningItemId,
+            reviewRound: row.reviewRound,
+            scheduledDate: row.scheduledDate,
+            status: ReviewTaskStatusX.fromDbValue(row.status),
+            completedAt: row.completedAt,
+            skippedAt: row.skippedAt,
+            createdAt: row.createdAt,
+          ),
+        )
+        .toList();
   }
 
   ReviewTaskViewEntity _toViewEntity(ReviewTaskWithItemModel model) {

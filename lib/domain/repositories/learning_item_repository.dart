@@ -33,5 +33,10 @@ abstract class LearningItemRepository {
 
   /// 获取所有标签（去重）。
   Future<List<String>> getAllTags();
+
+  /// F7：获取标签分布（用于统计饼图）。
+  ///
+  /// 返回值：Map（key=tag，value=count，不保证排序）。
+  Future<Map<String, int>> getTagDistribution();
 }
 

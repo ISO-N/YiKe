@@ -108,6 +108,27 @@ class LearningItemDao {
     return list;
   }
 
+  /// F7：获取各标签的学习内容数量（用于饼图）。
+  ///
+  /// 口径：
+  /// - 按 learning_items.tags（JSON 数组）聚合
+  /// - 多标签的 item 每个标签各计一次
+  /// 返回值：Map（key=tag，value=count，不保证排序）。
+  Future<Map<String, int>> getTagDistribution() async {
+    final query = db.selectOnly(db.learningItems)..addColumns([db.learningItems.tags]);
+    final rows = await query.get();
+    final map = <String, int>{};
+    for (final row in rows) {
+      final tagsJson = row.read(db.learningItems.tags) ?? '[]';
+      final tags = _parseTags(tagsJson);
+      // 避免同一条记录中重复标签导致计数放大。
+      for (final tag in tags.toSet()) {
+        map[tag] = (map[tag] ?? 0) + 1;
+      }
+    }
+    return map;
+  }
+
   List<String> _parseTags(String tagsJson) {
     try {
       final decoded = jsonDecode(tagsJson);

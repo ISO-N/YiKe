@@ -5,6 +5,8 @@ library;
 
 import 'package:drift/drift.dart';
 
+import '../../../core/utils/date_utils.dart';
+import '../../../domain/entities/task_day_stats.dart';
 import '../../models/review_task_with_item_model.dart';
 import '../database.dart';
 
@@ -191,6 +193,175 @@ class ReviewTaskDao {
     return (completed, total);
   }
 
+  /// F6：获取指定月份每天的任务统计（用于日历圆点标记）。
+  ///
+  /// 参数：
+  /// - [year] 年份
+  /// - [month] 月份（1-12）
+  /// 返回值：以当天 00:00 为 key 的统计 Map。
+  /// 异常：数据库查询失败时可能抛出异常。
+  Future<Map<DateTime, TaskDayStats>> getMonthlyTaskStats(int year, int month) async {
+    final start = DateTime(year, month, 1);
+    final end = DateTime(year, month + 1, 1);
+
+    final query = db.selectOnly(db.reviewTasks)
+      ..addColumns([db.reviewTasks.scheduledDate, db.reviewTasks.status])
+      ..where(db.reviewTasks.scheduledDate.isBiggerOrEqualValue(start))
+      ..where(db.reviewTasks.scheduledDate.isSmallerThanValue(end));
+
+    final rows = await query.get();
+    final map = <DateTime, _DayStatsAccumulator>{};
+    for (final row in rows) {
+      final scheduled = row.read(db.reviewTasks.scheduledDate);
+      if (scheduled == null) continue;
+      final status = row.read(db.reviewTasks.status) ?? 'pending';
+      final day = YikeDateUtils.atStartOfDay(scheduled);
+      final stats = map.putIfAbsent(day, _DayStatsAccumulator.new);
+      switch (status) {
+        case 'done':
+          stats.done++;
+          break;
+        case 'skipped':
+          stats.skipped++;
+          break;
+        case 'pending':
+        default:
+          stats.pending++;
+          break;
+      }
+    }
+
+    return map.map(
+      (day, stats) => MapEntry(
+        day,
+        TaskDayStats(
+          pendingCount: stats.pending,
+          doneCount: stats.done,
+          skippedCount: stats.skipped,
+        ),
+      ),
+    );
+  }
+
+  /// F6：获取指定日期范围的任务列表（join 学习内容）。
+  ///
+  /// 参数：
+  /// - [start] 起始时间（包含）
+  /// - [end] 结束时间（不包含）
+  /// 返回值：任务列表（按 scheduledDate 升序）。
+  /// 异常：数据库查询失败时可能抛出异常。
+  Future<List<ReviewTaskWithItemModel>> getTasksInRange(DateTime start, DateTime end) async {
+    final task = db.reviewTasks;
+    final item = db.learningItems;
+
+    final query = db.select(task).join([
+      innerJoin(item, item.id.equalsExp(task.learningItemId)),
+    ])
+      ..where(task.scheduledDate.isBiggerOrEqualValue(start))
+      ..where(task.scheduledDate.isSmallerThanValue(end))
+      ..orderBy([
+        OrderingTerm.asc(task.scheduledDate),
+        OrderingTerm.asc(task.status),
+        OrderingTerm.asc(task.reviewRound),
+      ]);
+
+    final rows = await query.get();
+    return rows
+        .map(
+          (row) => ReviewTaskWithItemModel(
+            task: row.readTable(task),
+            item: row.readTable(item),
+          ),
+        )
+        .toList();
+  }
+
+  /// F7：获取连续打卡天数（从今天往前计算）。
+  ///
+  /// 口径：
+  /// - 连续每天至少完成 1 条任务即算打卡成功（done>=1 记 1 天）
+  /// - 某天存在 pending 且 done=0 则断签
+  /// - skipped 不计入断签，也不计入完成
+  /// - 某天没有任务，不中断打卡链
+  Future<int> getConsecutiveCompletedDays({DateTime? today}) async {
+    final now = today ?? DateTime.now();
+    final todayStart = YikeDateUtils.atStartOfDay(now);
+    final todayEnd = todayStart.add(const Duration(days: 1));
+
+    // 找到最早的“done/pending”任务日期作为遍历下界，避免无穷回溯。
+    final minDateExp = db.reviewTasks.scheduledDate.min();
+    final minRow = await (db.selectOnly(db.reviewTasks)
+          ..addColumns([minDateExp])
+          ..where(db.reviewTasks.scheduledDate.isSmallerThanValue(todayEnd))
+          ..where(db.reviewTasks.status.isIn(const ['done', 'pending'])))
+        .getSingle();
+
+    final earliest = minRow.read(minDateExp);
+    if (earliest == null) return 0;
+    final earliestStart = YikeDateUtils.atStartOfDay(earliest);
+
+    // 一次性拉取范围内的 done/pending 任务，再在 Dart 侧按天聚合。
+    final tasks = await (db.select(db.reviewTasks)
+          ..where((t) => t.scheduledDate.isBiggerOrEqualValue(earliestStart))
+          ..where((t) => t.scheduledDate.isSmallerThanValue(todayEnd))
+          ..where((t) => t.status.isIn(const ['done', 'pending'])))
+        .get();
+
+    final dayMap = <DateTime, _DayStatsAccumulator>{};
+    for (final task in tasks) {
+      final day = YikeDateUtils.atStartOfDay(task.scheduledDate);
+      final stats = dayMap.putIfAbsent(day, _DayStatsAccumulator.new);
+      if (task.status == 'done') {
+        stats.done++;
+      } else {
+        stats.pending++;
+      }
+    }
+
+    var streak = 0;
+    for (var cursor = todayStart; !cursor.isBefore(earliestStart); cursor = cursor.subtract(const Duration(days: 1))) {
+      final stats = dayMap[cursor];
+      final pending = stats?.pending ?? 0;
+      final done = stats?.done ?? 0;
+
+      if (pending > 0 && done == 0) {
+        // 当天有待复习但没有完成，断签。
+        break;
+      }
+
+      if (done > 0) {
+        streak++;
+      }
+    }
+
+    return streak;
+  }
+
+  /// F7：获取指定日期范围的完成率口径数据（completed/total）。
+  ///
+  /// 说明：
+  /// - completed：done 数量
+  /// - total：done + pending 数量（skipped 不参与）
+  Future<(int completed, int total)> getTaskStatsInRange(DateTime start, DateTime end) async {
+    final totalExp = db.reviewTasks.id.count(filter: db.reviewTasks.status.isIn(const ['done', 'pending']));
+    final completedExp = db.reviewTasks.id.count(filter: db.reviewTasks.status.equals('done'));
+
+    final row = await (db.selectOnly(db.reviewTasks)
+          ..addColumns([totalExp, completedExp])
+          ..where(db.reviewTasks.scheduledDate.isBiggerOrEqualValue(start))
+          ..where(db.reviewTasks.scheduledDate.isSmallerThanValue(end)))
+        .getSingle();
+
+    final total = row.read(totalExp) ?? 0;
+    final completed = row.read(completedExp) ?? 0;
+    return (completed, total);
+  }
+
+  /// F8：获取全部复习任务（用于数据导出）。
+  Future<List<ReviewTask>> getAllTasks() {
+    return db.select(db.reviewTasks).get();
+  }
+
   Future<List<ReviewTaskWithItemModel>> _getTasksWithItem({
     required DateTime date,
     required bool onlyPending,
@@ -228,4 +399,10 @@ class ReviewTaskDao {
         )
         .toList();
   }
+}
+
+class _DayStatsAccumulator {
+  int pending = 0;
+  int done = 0;
+  int skipped = 0;
 }

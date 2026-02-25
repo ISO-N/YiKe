@@ -4,6 +4,7 @@
 library;
 
 import '../entities/review_task.dart';
+import '../entities/task_day_stats.dart';
 
 /// 复习任务仓储接口。
 abstract class ReviewTaskRepository {
@@ -36,4 +37,37 @@ abstract class ReviewTaskRepository {
 
   /// 获取指定日期统计（completed/total）。
   Future<(int completed, int total)> getTaskStats(DateTime date);
+
+  /// F6：获取指定月份每天的任务统计（用于日历圆点标记）。
+  ///
+  /// 返回值：以“当天 00:00:00”为 key 的统计 Map。
+  Future<Map<DateTime, TaskDayStats>> getMonthlyTaskStats(int year, int month);
+
+  /// F6：获取指定日期范围的任务列表（含学习内容信息）。
+  ///
+  /// 参数：
+  /// - [start] 起始时间（包含）
+  /// - [end] 结束时间（不包含）
+  Future<List<ReviewTaskViewEntity>> getTasksInRange(DateTime start, DateTime end);
+
+  /// F7：获取连续打卡天数。
+  ///
+  /// 口径：
+  /// - 从今天往前，连续每天至少完成 1 条任务算打卡成功
+  /// - 跳过(skipped)不算断签，也不算完成
+  /// - 某天没有任务，不中断打卡链
+  ///
+  /// 参数：
+  /// - [today] 用于测试/注入的“今天”（默认取当前时间）
+  Future<int> getConsecutiveCompletedDays({DateTime? today});
+
+  /// F7：获取指定日期范围的完成率口径数据。
+  ///
+  /// 说明：
+  /// - 分子：done 数量
+  /// - 分母：done + pending 数量（skipped 不参与）
+  Future<(int completed, int total)> getTaskStatsInRange(DateTime start, DateTime end);
+
+  /// F8：获取全部复习任务（用于数据导出）。
+  Future<List<ReviewTaskEntity>> getAllTasks();
 }

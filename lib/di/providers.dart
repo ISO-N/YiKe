@@ -18,7 +18,10 @@ import '../domain/repositories/settings_repository.dart';
 import '../infrastructure/storage/secure_storage_service.dart';
 import '../domain/usecases/complete_review_task_usecase.dart';
 import '../domain/usecases/create_learning_item_usecase.dart';
+import '../domain/usecases/export_data_usecase.dart';
+import '../domain/usecases/get_calendar_tasks_usecase.dart';
 import '../domain/usecases/get_home_tasks_usecase.dart';
+import '../domain/usecases/get_statistics_usecase.dart';
 import '../domain/usecases/skip_review_task_usecase.dart';
 
 /// 数据库 Provider（需要在启动时 override 注入真实实例）。
@@ -84,6 +87,27 @@ final completeReviewTaskUseCaseProvider = Provider<CompleteReviewTaskUseCase>((r
 
 final skipReviewTaskUseCaseProvider = Provider<SkipReviewTaskUseCase>((ref) {
   return SkipReviewTaskUseCase(
+    reviewTaskRepository: ref.read(reviewTaskRepositoryProvider),
+  );
+});
+
+/// v2.0 UseCase Providers
+final getCalendarTasksUseCaseProvider = Provider<GetCalendarTasksUseCase>((ref) {
+  return GetCalendarTasksUseCase(
+    reviewTaskRepository: ref.read(reviewTaskRepositoryProvider),
+  );
+});
+
+final getStatisticsUseCaseProvider = Provider<GetStatisticsUseCase>((ref) {
+  return GetStatisticsUseCase(
+    reviewTaskRepository: ref.read(reviewTaskRepositoryProvider),
+    learningItemRepository: ref.read(learningItemRepositoryProvider),
+  );
+});
+
+final exportDataUseCaseProvider = Provider<ExportDataUseCase>((ref) {
+  return ExportDataUseCase(
+    learningItemRepository: ref.read(learningItemRepositoryProvider),
     reviewTaskRepository: ref.read(reviewTaskRepositoryProvider),
   );
 });
