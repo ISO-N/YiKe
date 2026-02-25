@@ -40,7 +40,9 @@ class YikeWidgetProvider : HomeWidgetProvider() {
                 val pendingIntent = HomeWidgetLaunchIntent.getActivity(
                     context,
                     MainActivity::class.java,
-                    Uri.parse("yike://home?homeWidget")
+                    // 注意：使用 `yike:///home`（三斜杠）确保 path 为 `/home`，避免 GoRouter 仅按 path 匹配导致无法命中路由。
+                    // 旧格式 `yike://home?...` 会被解析为 host=home、path 为空，从而引发启动失败。
+                    Uri.parse("yike:///home?homeWidget=1")
                 )
                 setOnClickPendingIntent(R.id.widget_container, pendingIntent)
 
