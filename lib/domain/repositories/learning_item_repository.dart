@@ -1,0 +1,37 @@
+/// 文件用途：仓储接口 - 学习内容（LearningItemRepository）。
+/// 作者：Codex
+/// 创建日期：2026-02-25
+library;
+
+import '../entities/learning_item.dart';
+
+/// 学习内容仓储接口。
+abstract class LearningItemRepository {
+  /// 创建学习内容。
+  ///
+  /// 返回值：保存后的实体（包含 id）。
+  /// 异常：持久化失败时可能抛出异常。
+  Future<LearningItemEntity> create(LearningItemEntity item);
+
+  /// 更新学习内容。
+  Future<LearningItemEntity> update(LearningItemEntity item);
+
+  /// 删除学习内容。
+  Future<void> delete(int id);
+
+  /// 根据 ID 获取学习内容。
+  Future<LearningItemEntity?> getById(int id);
+
+  /// 获取所有学习内容。
+  Future<List<LearningItemEntity>> getAll();
+
+  /// 按日期获取学习内容。
+  Future<List<LearningItemEntity>> getByDate(DateTime date);
+
+  /// 按标签获取学习内容。
+  Future<List<LearningItemEntity>> getByTag(String tag);
+
+  /// 获取所有标签（去重）。
+  Future<List<String>> getAllTags();
+}
+
