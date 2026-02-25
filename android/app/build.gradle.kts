@@ -1,3 +1,9 @@
+/*
+ * 文件用途：Android App 模块构建脚本（Kotlin DSL），用于配置编译选项与依赖。
+ * 作者：Codex CLI（自动维护）
+ * 创建日期：未知（项目初始化时生成）
+ */
+
 plugins {
     id("com.android.application")
     id("kotlin-android")
@@ -13,6 +19,8 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+        // flutter_local_notifications 依赖要求开启 core library desugaring，用于在低版本 Android 上使用部分 Java 8+ API。
+        isCoreLibraryDesugaringEnabled = true
     }
 
     kotlinOptions {
@@ -41,4 +49,9 @@ android {
 
 flutter {
     source = "../.."
+}
+
+dependencies {
+    // 开启 core library desugaring 所需的运行库（与 compileOptions.isCoreLibraryDesugaringEnabled 配套）。
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
 }
