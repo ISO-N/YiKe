@@ -1,0 +1,34 @@
+/// 文件用途：统一管理应用颜色常量（v1.0 MVP）。
+/// 作者：Codex
+/// 创建日期：2026-02-25
+library;
+
+import 'package:flutter/material.dart';
+
+/// 应用颜色常量。
+///
+/// 说明：颜色值来自 UI/UX 设计稿（Teal/Orange 为主）。
+class AppColors {
+  AppColors._();
+
+  static const Color primary = Color(0xFF0D9488); // Teal 600
+  static const Color primaryLight = Color(0xFF14B8A6); // Teal 500
+  static const Color primaryDark = Color(0xFF134E4A); // Teal 800
+
+  static const Color cta = Color(0xFFF97316); // Orange 500
+
+  static const Color success = Color(0xFF22C55E);
+  static const Color warning = Color(0xFFF59E0B);
+  static const Color error = Color(0xFFEF4444);
+
+  static const Color background = Color(0xFFF0FDFA); // Teal 50
+  static const Color textPrimary = Color(0xFF0F172A); // Slate 900
+  static const Color textSecondary = Color(0xFF64748B); // Slate 500
+
+  /// 毛玻璃卡片底色（80% 不透明）。
+  static const Color glassSurface = Color.fromRGBO(255, 255, 255, 0.80);
+
+  /// 毛玻璃边框（40% 不透明）。
+  static const Color glassBorder = Color.fromRGBO(255, 255, 255, 0.40);
+}
+

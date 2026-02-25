@@ -1,30 +1,22 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
+// 文件用途：基础 Widget 冒烟测试，确保 App 能成功渲染并进入首页路由。
+// 作者：Codex
+// 创建日期：2026-02-25
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:yike/main.dart';
+import 'package:yike/app.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  testWidgets('App 可以渲染并显示首页标题', (WidgetTester tester) async {
+    // 构建 App 并触发首帧渲染。
+    await tester.pumpWidget(
+      const ProviderScope(child: YiKeApp()),
+    );
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    // 由于 GoRouter 的异步导航，补一帧以等待路由进入初始页。
+    await tester.pumpAndSettle();
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
-
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    expect(find.text('今日复习'), findsOneWidget);
   });
 }
