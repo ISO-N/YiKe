@@ -6,8 +6,10 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app_settings/app_settings.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_spacing.dart';
+import '../../../core/constants/app_strings.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/utils/time_utils.dart';
 import '../../../domain/entities/app_settings.dart';
@@ -215,6 +217,43 @@ class SettingsPage extends ConsumerWidget {
                           child: Center(child: CircularProgressIndicator()),
                         ),
                         error: (e, _) => Text('权限状态读取失败：$e', style: AppTypography.bodySecondary),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              GlassCard(
+                child: Padding(
+                  padding: const EdgeInsets.all(AppSpacing.lg),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('数据', style: AppTypography.h2),
+                      const SizedBox(height: AppSpacing.sm),
+                      Text(
+                        '将学习内容与复习任务导出为文件，可用于备份或分析。',
+                        style: AppTypography.bodySecondary.copyWith(color: Colors.black54),
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text(AppStrings.exportData),
+                        subtitle: const Text('导出为 JSON / CSV 并分享到其他应用'),
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: () => context.push('/settings/export'),
+                      ),
+                      const Divider(height: 1),
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text('备份与恢复'),
+                        subtitle: const Text('规划中'),
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: () {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('备份与恢复功能正在规划中')),
+                          );
+                        },
                       ),
                     ],
                   ),

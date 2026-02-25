@@ -8,8 +8,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../presentation/pages/home/home_page.dart';
+import '../../presentation/pages/calendar/calendar_page.dart';
 import '../../presentation/pages/input/input_page.dart';
+import '../../presentation/pages/settings/export_page.dart';
 import '../../presentation/pages/settings/settings_page.dart';
+import '../../presentation/pages/statistics/statistics_page.dart';
 import '../../presentation/pages/shell/shell_scaffold.dart';
 
 /// App 路由 Provider。
@@ -29,6 +32,18 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             ),
           ),
           GoRoute(
+            path: '/calendar',
+            pageBuilder: (context, state) => const NoTransitionPage(
+              child: CalendarPage(),
+            ),
+          ),
+          GoRoute(
+            path: '/statistics',
+            pageBuilder: (context, state) => const NoTransitionPage(
+              child: StatisticsPage(),
+            ),
+          ),
+          GoRoute(
             path: '/settings',
             pageBuilder: (context, state) => const NoTransitionPage(
               child: SettingsPage(),
@@ -42,6 +57,15 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           return const MaterialPage(
             fullscreenDialog: true,
             child: InputPage(),
+          );
+        },
+      ),
+      GoRoute(
+        path: '/settings/export',
+        pageBuilder: (context, state) {
+          return const MaterialPage(
+            fullscreenDialog: true,
+            child: ExportPage(),
           );
         },
       ),

@@ -1,0 +1,233 @@
+/// 文件用途：日历底部弹窗 - 当日任务列表（F6）。
+/// 作者：Codex
+/// 创建日期：2026-02-25
+library;
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../../../core/constants/app_colors.dart';
+import '../../../../core/constants/app_spacing.dart';
+import '../../../../core/constants/app_typography.dart';
+import '../../../../core/utils/date_utils.dart';
+import '../../../../domain/entities/review_task.dart';
+import '../../../providers/calendar_provider.dart';
+import '../../../widgets/glass_card.dart';
+
+/// 当日任务 BottomSheet。
+class DayTaskListSheet extends ConsumerWidget {
+  /// 构造函数。
+  ///
+  /// 参数：
+  /// - [selectedDay] 选中日期（当天 00:00:00）
+  const DayTaskListSheet({super.key, required this.selectedDay});
+
+  final DateTime selectedDay;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(calendarProvider);
+    final notifier = ref.read(calendarProvider.notifier);
+
+    return SafeArea(
+      child: DraggableScrollableSheet(
+        expand: false,
+        initialChildSize: 0.75,
+        minChildSize: 0.35,
+        maxChildSize: 0.95,
+        builder: (context, controller) {
+          return Padding(
+            padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.sm, AppSpacing.lg, AppSpacing.lg),
+            child: ListView(
+              controller: controller,
+              children: [
+                Text(
+                  '当天任务 · ${YikeDateUtils.formatYmd(selectedDay)}',
+                  style: AppTypography.h2,
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                Text(
+                  '左滑/右滑可在首页完成与跳过；此处支持点击按钮操作。',
+                  style: AppTypography.bodySecondary.copyWith(color: AppColors.textSecondary),
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                if (state.isLoadingTasks) ...[
+                  const Center(child: Padding(padding: EdgeInsets.all(24), child: CircularProgressIndicator())),
+                ] else if (state.errorMessage != null) ...[
+                  GlassCard(
+                    child: Padding(
+                      padding: const EdgeInsets.all(AppSpacing.lg),
+                      child: Text('加载失败：${state.errorMessage}', style: const TextStyle(color: AppColors.error)),
+                    ),
+                  ),
+                ] else if (state.selectedDayTasks.isEmpty) ...[
+                  GlassCard(
+                    child: Padding(
+                      padding: const EdgeInsets.all(AppSpacing.xl),
+                      child: Column(
+                        children: const [
+                          Icon(Icons.event_busy, size: 48, color: AppColors.textSecondary),
+                          SizedBox(height: AppSpacing.md),
+                          Text('当天暂无复习任务', style: AppTypography.bodySecondary),
+                        ],
+                      ),
+                    ),
+                  ),
+                ] else ...[
+                  for (final task in state.selectedDayTasks) ...[
+                    _TaskCard(
+                      task: task,
+                      onComplete: task.status == ReviewTaskStatus.pending
+                          ? () async {
+                              await notifier.completeTask(task.taskId);
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('已完成')));
+                              }
+                            }
+                          : null,
+                      onSkip: task.status == ReviewTaskStatus.pending
+                          ? () async {
+                              await notifier.skipTask(task.taskId);
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('已跳过')));
+                              }
+                            }
+                          : null,
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                  ],
+                ],
+                const SizedBox(height: 16),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _TaskCard extends StatelessWidget {
+  const _TaskCard({
+    required this.task,
+    required this.onComplete,
+    required this.onSkip,
+  });
+
+  final ReviewTaskViewEntity task;
+  final VoidCallback? onComplete;
+  final VoidCallback? onSkip;
+
+  @override
+  Widget build(BuildContext context) {
+    return GlassCard(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    task.title,
+                    style: AppTypography.h2.copyWith(fontSize: 16),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                _StatusChip(status: task.status),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Text('第 ${task.reviewRound} 次复习', style: AppTypography.bodySecondary),
+            if (task.tags.isNotEmpty) ...[
+              const SizedBox(height: AppSpacing.sm),
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: task.tags
+                    .take(6)
+                    .map(
+                      (t) => Chip(
+                        label: Text(t),
+                        labelStyle: const TextStyle(fontSize: 12),
+                        backgroundColor: AppColors.primary.withAlpha(24),
+                        side: BorderSide(color: AppColors.primary.withAlpha(60)),
+                        visualDensity: VisualDensity.compact,
+                      ),
+                    )
+                    .toList(),
+              ),
+            ],
+            if (task.note != null && task.note!.trim().isNotEmpty) ...[
+              const SizedBox(height: AppSpacing.sm),
+              Text(task.note!, style: AppTypography.bodySecondary),
+            ],
+            if (onComplete != null || onSkip != null) ...[
+              const SizedBox(height: AppSpacing.lg),
+              Row(
+                children: [
+                  Expanded(
+                    child: FilledButton(
+                      onPressed: onComplete,
+                      style: FilledButton.styleFrom(backgroundColor: AppColors.success),
+                      child: const Text('完成'),
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: onSkip,
+                      child: const Text('跳过'),
+                    ),
+                  ),
+                ],
+              ),
+            ] else ...[
+              const SizedBox(height: AppSpacing.sm),
+              Text(_timestampText(), style: AppTypography.bodySecondary.copyWith(color: AppColors.textSecondary)),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _timestampText() {
+    switch (task.status) {
+      case ReviewTaskStatus.done:
+        return '完成时间：${task.completedAt?.toIso8601String() ?? '-'}';
+      case ReviewTaskStatus.skipped:
+        return '跳过时间：${task.skippedAt?.toIso8601String() ?? '-'}';
+      case ReviewTaskStatus.pending:
+        return '状态：待复习';
+    }
+  }
+}
+
+class _StatusChip extends StatelessWidget {
+  const _StatusChip({required this.status});
+
+  final ReviewTaskStatus status;
+
+  @override
+  Widget build(BuildContext context) {
+    final (text, color) = switch (status) {
+      ReviewTaskStatus.pending => ('待复习', AppColors.primary),
+      ReviewTaskStatus.done => ('已完成', AppColors.success),
+      ReviewTaskStatus.skipped => ('已跳过', AppColors.warning),
+    };
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withAlpha(24),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: color.withAlpha(90)),
+      ),
+      child: Text(text, style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w700)),
+    );
+  }
+}
