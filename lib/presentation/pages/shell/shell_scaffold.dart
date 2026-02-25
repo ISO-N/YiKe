@@ -56,7 +56,7 @@ class ShellScaffold extends StatelessWidget {
           NavigationDestination(
             icon: Icon(Icons.today_outlined),
             selectedIcon: Icon(Icons.today),
-            label: AppStrings.todayReview,
+            label: AppStrings.today,
           ),
           NavigationDestination(
             icon: Icon(Icons.calendar_month_outlined),

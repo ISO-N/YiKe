@@ -7,6 +7,7 @@ class AppStrings {
   AppStrings._();
 
   static const String appName = '忆刻';
+  static const String today = '今日';
   static const String todayReview = '今日复习';
   static const String calendar = '日历';
   static const String statistics = '统计';
