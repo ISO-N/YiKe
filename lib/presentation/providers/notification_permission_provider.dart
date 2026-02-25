@@ -22,12 +22,15 @@ enum NotificationPermissionState {
 }
 
 /// 通知权限状态 Provider（异步）。
-final notificationPermissionProvider = FutureProvider<NotificationPermissionState>((ref) async {
-  // v1.0 MVP：核心目标是 Android；其他平台无法准确判断时返回 unknown。
-  if (!Platform.isAndroid) return NotificationPermissionState.unknown;
+final notificationPermissionProvider =
+    FutureProvider<NotificationPermissionState>((ref) async {
+      // v1.0 MVP：核心目标是 Android；其他平台无法准确判断时返回 unknown。
+      if (!Platform.isAndroid) return NotificationPermissionState.unknown;
 
-  final enabled = await NotificationService.instance.areNotificationsEnabled();
-  if (enabled == null) return NotificationPermissionState.unknown;
-  return enabled ? NotificationPermissionState.enabled : NotificationPermissionState.disabled;
-});
-
+      final enabled = await NotificationService.instance
+          .areNotificationsEnabled();
+      if (enabled == null) return NotificationPermissionState.unknown;
+      return enabled
+          ? NotificationPermissionState.enabled
+          : NotificationPermissionState.disabled;
+    });

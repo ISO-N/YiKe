@@ -39,4 +39,3 @@ abstract class LearningItemRepository {
   /// 返回值：Map（key=tag，value=count，不保证排序）。
   Future<Map<String, int>> getTagDistribution();
 }
-

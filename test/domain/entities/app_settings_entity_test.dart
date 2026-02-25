@@ -11,7 +11,10 @@ void main() {
     expect(AppSettingsEntity.defaults.doNotDisturbStart, '22:00');
     expect(AppSettingsEntity.defaults.doNotDisturbEnd, '08:00');
     expect(AppSettingsEntity.defaults.notificationsEnabled, true);
-    expect(AppSettingsEntity.defaults.notificationPermissionGuideDismissed, false);
+    expect(
+      AppSettingsEntity.defaults.notificationPermissionGuideDismissed,
+      false,
+    );
     expect(AppSettingsEntity.defaults.lastNotifiedDate, null);
   });
 
@@ -26,4 +29,3 @@ void main() {
     expect(next.reminderTime, base.reminderTime);
   });
 }
-

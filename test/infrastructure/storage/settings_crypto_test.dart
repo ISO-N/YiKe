@@ -30,4 +30,3 @@ void main() {
     expect(await crypto.decrypt(cipher), 'hello');
   });
 }
-

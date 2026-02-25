@@ -21,4 +21,3 @@ class AppSettingsTable extends Table {
   /// 更新时间。
   DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
 }
-

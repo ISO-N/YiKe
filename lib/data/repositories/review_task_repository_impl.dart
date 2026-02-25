@@ -42,7 +42,9 @@ class ReviewTaskRepositoryImpl implements ReviewTaskRepository {
   }
 
   @override
-  Future<List<ReviewTaskEntity>> createBatch(List<ReviewTaskEntity> tasks) async {
+  Future<List<ReviewTaskEntity>> createBatch(
+    List<ReviewTaskEntity> tasks,
+  ) async {
     // v1.0 MVP：每次最多插入 5 条任务，逐条插入以获得 ID，便于后续扩展（如按任务调度通知）。
     final saved = <ReviewTaskEntity>[];
     for (final task in tasks) {
@@ -100,7 +102,10 @@ class ReviewTaskRepositoryImpl implements ReviewTaskRepository {
   }
 
   @override
-  Future<List<ReviewTaskViewEntity>> getTasksInRange(DateTime start, DateTime end) async {
+  Future<List<ReviewTaskViewEntity>> getTasksInRange(
+    DateTime start,
+    DateTime end,
+  ) async {
     final rows = await dao.getTasksInRange(start, end);
     return rows.map(_toViewEntity).toList();
   }
@@ -111,7 +116,10 @@ class ReviewTaskRepositoryImpl implements ReviewTaskRepository {
   }
 
   @override
-  Future<(int completed, int total)> getTaskStatsInRange(DateTime start, DateTime end) {
+  Future<(int completed, int total)> getTaskStatsInRange(
+    DateTime start,
+    DateTime end,
+  ) {
     return dao.getTaskStatsInRange(start, end);
   }
 
@@ -156,7 +164,11 @@ class ReviewTaskRepositoryImpl implements ReviewTaskRepository {
     try {
       final decoded = jsonDecode(tagsJson);
       if (decoded is List) {
-        return decoded.whereType<String>().map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
+        return decoded
+            .whereType<String>()
+            .map((e) => e.trim())
+            .where((e) => e.isNotEmpty)
+            .toList();
       }
       return const [];
     } catch (_) {

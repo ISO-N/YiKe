@@ -31,4 +31,3 @@ class AppColors {
   /// 毛玻璃边框（40% 不透明）。
   static const Color glassBorder = Color.fromRGBO(255, 255, 255, 0.40);
 }
-

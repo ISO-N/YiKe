@@ -25,7 +25,9 @@ void main() {
   });
 
   Future<int> insertItem({required String tags}) {
-    return db.into(db.learningItems).insert(
+    return db
+        .into(db.learningItems)
+        .insert(
           LearningItemsCompanion.insert(
             title: 'Item',
             note: const drift.Value.absent(),
@@ -141,7 +143,11 @@ void main() {
     );
 
     final ts = DateTime(2026, 2, 25, 12);
-    final updated = await dao.updateTaskStatusBatch([id1, id2], 'done', timestamp: ts);
+    final updated = await dao.updateTaskStatusBatch(
+      [id1, id2],
+      'done',
+      timestamp: ts,
+    );
     expect(updated, 2);
 
     final r1 = await dao.getReviewTaskById(id1);

@@ -31,14 +31,14 @@ class StatisticsState {
   final String? errorMessage;
 
   factory StatisticsState.initial() => const StatisticsState(
-        isLoading: true,
-        consecutiveCompletedDays: 0,
-        weekCompleted: 0,
-        weekTotal: 0,
-        monthCompleted: 0,
-        monthTotal: 0,
-        tagDistribution: {},
-      );
+    isLoading: true,
+    consecutiveCompletedDays: 0,
+    weekCompleted: 0,
+    weekTotal: 0,
+    monthCompleted: 0,
+    monthTotal: 0,
+    tagDistribution: {},
+  );
 
   StatisticsState copyWith({
     bool? isLoading,
@@ -52,7 +52,8 @@ class StatisticsState {
   }) {
     return StatisticsState(
       isLoading: isLoading ?? this.isLoading,
-      consecutiveCompletedDays: consecutiveCompletedDays ?? this.consecutiveCompletedDays,
+      consecutiveCompletedDays:
+          consecutiveCompletedDays ?? this.consecutiveCompletedDays,
       weekCompleted: weekCompleted ?? this.weekCompleted,
       weekTotal: weekTotal ?? this.weekTotal,
       monthCompleted: monthCompleted ?? this.monthCompleted,
@@ -62,9 +63,11 @@ class StatisticsState {
     );
   }
 
-  double get weekCompletionRate => weekTotal == 0 ? 0 : weekCompleted / weekTotal;
+  double get weekCompletionRate =>
+      weekTotal == 0 ? 0 : weekCompleted / weekTotal;
 
-  double get monthCompletionRate => monthTotal == 0 ? 0 : monthCompleted / monthTotal;
+  double get monthCompletionRate =>
+      monthTotal == 0 ? 0 : monthCompleted / monthTotal;
 }
 
 /// 统计页面 Notifier。
@@ -99,7 +102,7 @@ class StatisticsNotifier extends StateNotifier<StatisticsState> {
 }
 
 /// 统计页面 Provider。
-final statisticsProvider = StateNotifierProvider<StatisticsNotifier, StatisticsState>((ref) {
-  return StatisticsNotifier(ref);
-});
-
+final statisticsProvider =
+    StateNotifierProvider<StatisticsNotifier, StatisticsState>((ref) {
+      return StatisticsNotifier(ref);
+    });

@@ -34,16 +34,19 @@ class _FakeLearningItemRepository implements LearningItemRepository {
   Future<Map<String, int>> getTagDistribution() => throw UnimplementedError();
 
   @override
-  Future<List<LearningItemEntity>> getByDate(DateTime date) => throw UnimplementedError();
+  Future<List<LearningItemEntity>> getByDate(DateTime date) =>
+      throw UnimplementedError();
 
   @override
   Future<LearningItemEntity?> getById(int id) => throw UnimplementedError();
 
   @override
-  Future<List<LearningItemEntity>> getByTag(String tag) => throw UnimplementedError();
+  Future<List<LearningItemEntity>> getByTag(String tag) =>
+      throw UnimplementedError();
 
   @override
-  Future<LearningItemEntity> update(LearningItemEntity item) => throw UnimplementedError();
+  Future<LearningItemEntity> update(LearningItemEntity item) =>
+      throw UnimplementedError();
 }
 
 /// 用于验证 CreateLearningItemUseCase 的复习任务批量入库行为。
@@ -51,7 +54,9 @@ class _FakeReviewTaskRepository implements ReviewTaskRepository {
   List<ReviewTaskEntity>? lastBatch;
 
   @override
-  Future<List<ReviewTaskEntity>> createBatch(List<ReviewTaskEntity> tasks) async {
+  Future<List<ReviewTaskEntity>> createBatch(
+    List<ReviewTaskEntity> tasks,
+  ) async {
     lastBatch = tasks;
     // 模拟数据库回写 ID。
     return [
@@ -60,7 +65,8 @@ class _FakeReviewTaskRepository implements ReviewTaskRepository {
   }
 
   @override
-  Future<ReviewTaskEntity> create(ReviewTaskEntity task) => throw UnimplementedError();
+  Future<ReviewTaskEntity> create(ReviewTaskEntity task) =>
+      throw UnimplementedError();
 
   @override
   Future<void> completeTask(int id) => throw UnimplementedError();
@@ -69,31 +75,45 @@ class _FakeReviewTaskRepository implements ReviewTaskRepository {
   Future<void> completeTasks(List<int> ids) => throw UnimplementedError();
 
   @override
-  Future<List<ReviewTaskViewEntity>> getOverduePendingTasks() => throw UnimplementedError();
+  Future<List<ReviewTaskViewEntity>> getOverduePendingTasks() =>
+      throw UnimplementedError();
 
   @override
-  Future<Map<DateTime, TaskDayStats>> getMonthlyTaskStats(int year, int month) => throw UnimplementedError();
+  Future<Map<DateTime, TaskDayStats>> getMonthlyTaskStats(
+    int year,
+    int month,
+  ) => throw UnimplementedError();
 
   @override
-  Future<List<ReviewTaskViewEntity>> getTasksInRange(DateTime start, DateTime end) => throw UnimplementedError();
+  Future<List<ReviewTaskViewEntity>> getTasksInRange(
+    DateTime start,
+    DateTime end,
+  ) => throw UnimplementedError();
 
   @override
-  Future<int> getConsecutiveCompletedDays({DateTime? today}) => throw UnimplementedError();
+  Future<int> getConsecutiveCompletedDays({DateTime? today}) =>
+      throw UnimplementedError();
 
   @override
-  Future<(int completed, int total)> getTaskStatsInRange(DateTime start, DateTime end) => throw UnimplementedError();
+  Future<(int completed, int total)> getTaskStatsInRange(
+    DateTime start,
+    DateTime end,
+  ) => throw UnimplementedError();
 
   @override
   Future<List<ReviewTaskEntity>> getAllTasks() => throw UnimplementedError();
 
   @override
-  Future<(int completed, int total)> getTaskStats(DateTime date) => throw UnimplementedError();
+  Future<(int completed, int total)> getTaskStats(DateTime date) =>
+      throw UnimplementedError();
 
   @override
-  Future<List<ReviewTaskViewEntity>> getTasksByDate(DateTime date) => throw UnimplementedError();
+  Future<List<ReviewTaskViewEntity>> getTasksByDate(DateTime date) =>
+      throw UnimplementedError();
 
   @override
-  Future<List<ReviewTaskViewEntity>> getTodayPendingTasks() => throw UnimplementedError();
+  Future<List<ReviewTaskViewEntity>> getTodayPendingTasks() =>
+      throw UnimplementedError();
 
   @override
   Future<void> skipTask(int id) => throw UnimplementedError();
@@ -139,8 +159,10 @@ void main() {
       expect(task.learningItemId, 42);
       expect(task.reviewRound, round);
       expect(task.status, ReviewTaskStatus.pending);
-      expect(task.scheduledDate, ReviewConfig.calculateReviewDate(DateTime(2026, 2, 25), round));
+      expect(
+        task.scheduledDate,
+        ReviewConfig.calculateReviewDate(DateTime(2026, 2, 25), round),
+      );
     }
   });
 }
-

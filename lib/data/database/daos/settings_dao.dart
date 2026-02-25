@@ -25,8 +25,9 @@ class SettingsDao {
   /// 返回值：value（字符串）或 null。
   /// 异常：数据库查询失败时可能抛出异常。
   Future<String?> getValue(String key) async {
-    final row = await (db.select(db.appSettingsTable)..where((t) => t.key.equals(key)))
-        .getSingleOrNull();
+    final row = await (db.select(
+      db.appSettingsTable,
+    )..where((t) => t.key.equals(key))).getSingleOrNull();
     return row?.value;
   }
 
@@ -50,7 +51,9 @@ class SettingsDao {
       updatedAt: Value(now),
     );
 
-    await db.into(db.appSettingsTable).insert(
+    await db
+        .into(db.appSettingsTable)
+        .insert(
           companion,
           onConflict: DoUpdate(
             (old) => AppSettingsTableCompanion(
@@ -77,4 +80,3 @@ class SettingsDao {
     });
   }
 }
-

@@ -37,7 +37,9 @@ class _InputPageState extends ConsumerState<InputPage> {
     super.initState();
     // v1.0 MVP：默认提供一条输入项。
     _items.add(_DraftItemControllers());
-    _availableTagsFuture = ref.read(learningItemRepositoryProvider).getAllTags();
+    _availableTagsFuture = ref
+        .read(learningItemRepositoryProvider)
+        .getAllTags();
   }
 
   @override
@@ -77,9 +79,9 @@ class _InputPageState extends ConsumerState<InputPage> {
       if (mounted) Navigator.of(context).pop();
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('保存失败：$e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('保存失败：$e')));
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -155,13 +157,20 @@ class _InputPageState extends ConsumerState<InputPage> {
                           children: [
                             Row(
                               children: [
-                                Text('条目 ${index + 1}', style: AppTypography.h2),
+                                Text(
+                                  '条目 ${index + 1}',
+                                  style: AppTypography.h2,
+                                ),
                                 const Spacer(),
                                 IconButton(
                                   tooltip: '删除条目',
-                                  onPressed: _saving ? null : () => _removeItem(index),
+                                  onPressed: _saving
+                                      ? null
+                                      : () => _removeItem(index),
                                   icon: const Icon(Icons.delete_outline),
-                                  color: _items.length <= 1 ? AppColors.textSecondary : AppColors.error,
+                                  color: _items.length <= 1
+                                      ? AppColors.textSecondary
+                                      : AppColors.error,
                                 ),
                               ],
                             ),
@@ -217,7 +226,8 @@ class _InputPageState extends ConsumerState<InputPage> {
                                       label: Text(t),
                                       onPressed: _saving
                                           ? null
-                                          : () => _appendTag(controllers.tags, t),
+                                          : () =>
+                                                _appendTag(controllers.tags, t),
                                     );
                                   }).toList(),
                                 );
@@ -261,9 +271,9 @@ class _InputPageState extends ConsumerState<InputPage> {
 
 class _DraftItemControllers {
   _DraftItemControllers()
-      : title = TextEditingController(),
-        note = TextEditingController(),
-        tags = TextEditingController();
+    : title = TextEditingController(),
+      note = TextEditingController(),
+      tags = TextEditingController();
 
   final TextEditingController title;
   final TextEditingController note;

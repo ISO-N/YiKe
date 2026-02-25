@@ -44,7 +44,9 @@ void main() {
   });
 
   Future<int> insertItem() async {
-    return db.into(db.learningItems).insert(
+    return db
+        .into(db.learningItems)
+        .insert(
           LearningItemsCompanion.insert(
             title: 'T1',
             note: const drift.Value('N1'),
@@ -56,7 +58,9 @@ void main() {
   }
 
   Future<int> insertTask({required int itemId}) async {
-    return db.into(db.reviewTasks).insert(
+    return db
+        .into(db.reviewTasks)
+        .insert(
           ReviewTasksCompanion.insert(
             learningItemId: itemId,
             reviewRound: 1,
@@ -71,20 +75,25 @@ void main() {
   test('JSON 导出：文件生成且字段齐全', () async {
     final tmp = await Directory.systemTemp.createTemp('yike_export_test_');
     final original = PathProviderPlatform.instance;
-      PathProviderPlatform.instance = _FakePathProviderPlatform(tmp.path);
+    PathProviderPlatform.instance = _FakePathProviderPlatform(tmp.path);
 
     try {
       final itemId = await insertItem();
       await insertTask(itemId: itemId);
 
       final result = await useCase.execute(
-        const ExportParams(format: ExportFormat.json, includeItems: true, includeTasks: true),
+        const ExportParams(
+          format: ExportFormat.json,
+          includeItems: true,
+          includeTasks: true,
+        ),
       );
 
       expect(await result.file.exists(), true);
       expect(result.totalCount, 2);
 
-      final json = jsonDecode(await result.file.readAsString()) as Map<String, Object?>;
+      final json =
+          jsonDecode(await result.file.readAsString()) as Map<String, Object?>;
       expect(json['version'], '2.0');
       expect((json['items'] as List).length, 1);
       expect((json['tasks'] as List).length, 1);
@@ -96,21 +105,33 @@ void main() {
   test('CSV 导出：包含学习内容与复习任务两个区域', () async {
     final tmp = await Directory.systemTemp.createTemp('yike_export_test_');
     final original = PathProviderPlatform.instance;
-      PathProviderPlatform.instance = _FakePathProviderPlatform(tmp.path);
+    PathProviderPlatform.instance = _FakePathProviderPlatform(tmp.path);
 
     try {
       final itemId = await insertItem();
       await insertTask(itemId: itemId);
 
       final result = await useCase.execute(
-        const ExportParams(format: ExportFormat.csv, includeItems: true, includeTasks: true),
+        const ExportParams(
+          format: ExportFormat.csv,
+          includeItems: true,
+          includeTasks: true,
+        ),
       );
 
       final content = await result.file.readAsString();
       expect(content.contains('学习内容'), true);
       expect(content.contains('复习任务'), true);
-      expect(content.contains('id,title,note,tags,learningDate,createdAt'), true);
-      expect(content.contains('id,learningItemId,reviewRound,scheduledDate,status,completedAt,skippedAt,createdAt'), true);
+      expect(
+        content.contains('id,title,note,tags,learningDate,createdAt'),
+        true,
+      );
+      expect(
+        content.contains(
+          'id,learningItemId,reviewRound,scheduledDate,status,completedAt,skippedAt,createdAt',
+        ),
+        true,
+      );
     } finally {
       PathProviderPlatform.instance = original;
     }

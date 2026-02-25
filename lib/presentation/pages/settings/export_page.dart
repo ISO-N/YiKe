@@ -43,10 +43,10 @@ class _ExportPageState extends ConsumerState<ExportPage> {
   }
 
   ExportParams get _params => ExportParams(
-        format: _format,
-        includeItems: _includeItems,
-        includeTasks: _includeTasks,
-      );
+    format: _format,
+    includeItems: _includeItems,
+    includeTasks: _includeTasks,
+  );
 
   Future<void> _loadPreview() async {
     setState(() {
@@ -55,7 +55,9 @@ class _ExportPageState extends ConsumerState<ExportPage> {
     });
 
     try {
-      final preview = await ref.read(exportDataUseCaseProvider).preview(_params);
+      final preview = await ref
+          .read(exportDataUseCaseProvider)
+          .preview(_params);
       if (!mounted) return;
       setState(() {
         _preview = preview;
@@ -81,22 +83,25 @@ class _ExportPageState extends ConsumerState<ExportPage> {
       final result = await ref.read(exportDataUseCaseProvider).execute(_params);
 
       // 系统分享文件
-      await Share.shareXFiles(
-        [XFile(result.file.path)],
-        text: '忆刻数据导出（${result.totalCount} 条）',
-      );
+      await Share.shareXFiles([
+        XFile(result.file.path),
+      ], text: '忆刻数据导出（${result.totalCount} 条）');
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('导出成功：${result.fileName}（${_formatBytes(result.bytes)}）')),
+          SnackBar(
+            content: Text(
+              '导出成功：${result.fileName}（${_formatBytes(result.bytes)}）',
+            ),
+          ),
         );
       }
     } catch (e) {
       if (mounted) {
         setState(() => _error = e.toString());
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('导出失败：$e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('导出失败：$e')));
       }
     } finally {
       if (mounted) {
@@ -115,9 +120,7 @@ class _ExportPageState extends ConsumerState<ExportPage> {
         (preview != null && preview.totalCount > 0);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text(AppStrings.exportData),
-      ),
+      appBar: AppBar(title: const Text(AppStrings.exportData)),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.all(AppSpacing.lg),
@@ -151,8 +154,12 @@ class _ExportPageState extends ConsumerState<ExportPage> {
                     ),
                     const SizedBox(height: AppSpacing.sm),
                     Text(
-                      _format == ExportFormat.json ? '完整数据，适合备份与恢复' : '表格数据，适合分析与查看',
-                      style: AppTypography.bodySecondary.copyWith(color: AppColors.textSecondary),
+                      _format == ExportFormat.json
+                          ? '完整数据，适合备份与恢复'
+                          : '表格数据，适合分析与查看',
+                      style: AppTypography.bodySecondary.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
                     ),
                   ],
                 ),
@@ -186,7 +193,9 @@ class _ExportPageState extends ConsumerState<ExportPage> {
                     const SizedBox(height: AppSpacing.sm),
                     Text(
                       '提示：至少选择一项；应用设置不会被导出。',
-                      style: AppTypography.bodySecondary.copyWith(color: AppColors.textSecondary),
+                      style: AppTypography.bodySecondary.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
                     ),
                   ],
                 ),
@@ -202,9 +211,17 @@ class _ExportPageState extends ConsumerState<ExportPage> {
                     const Text('数据预览', style: AppTypography.h2),
                     const SizedBox(height: AppSpacing.sm),
                     if (_isPreviewLoading)
-                      const Center(child: Padding(padding: EdgeInsets.all(12), child: CircularProgressIndicator()))
+                      const Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(12),
+                          child: CircularProgressIndicator(),
+                        ),
+                      )
                     else if (_error != null)
-                      Text('预览失败：$_error', style: const TextStyle(color: AppColors.error))
+                      Text(
+                        '预览失败：$_error',
+                        style: const TextStyle(color: AppColors.error),
+                      )
                     else if (preview == null)
                       const Text('暂无数据', style: AppTypography.bodySecondary)
                     else
@@ -240,7 +257,9 @@ class _ExportPageState extends ConsumerState<ExportPage> {
                       const SizedBox(height: AppSpacing.sm),
                       Text(
                         '暂无数据可导出',
-                        style: AppTypography.bodySecondary.copyWith(color: AppColors.textSecondary),
+                        style: AppTypography.bodySecondary.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
                       ),
                     ],
                   ],
@@ -281,11 +300,20 @@ class _PreviewTile extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: AppTypography.bodySecondary.copyWith(color: AppColors.textSecondary)),
+          Text(
+            title,
+            style: AppTypography.bodySecondary.copyWith(
+              color: AppColors.textSecondary,
+            ),
+          ),
           const SizedBox(height: 6),
           Text(
             '$value',
-            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: AppColors.primary),
+            style: const TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.w900,
+              color: AppColors.primary,
+            ),
           ),
         ],
       ),

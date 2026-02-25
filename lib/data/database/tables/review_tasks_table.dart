@@ -41,7 +41,7 @@ class ReviewTasks extends Table {
 
   @override
   List<String> get customConstraints => const [
-        // 复习轮次范围约束（避免 Analyzer 对 self-reference 的提示）。
-        'CHECK (review_round BETWEEN 1 AND 5)',
-      ];
+    // 复习轮次范围约束（避免 Analyzer 对 self-reference 的提示）。
+    'CHECK (review_round BETWEEN 1 AND 5)',
+  ];
 }

@@ -15,12 +15,8 @@ class ReviewTaskWithItemModel {
   /// - [task] 复习任务行
   /// - [item] 学习内容行
   /// 异常：无。
-  const ReviewTaskWithItemModel({
-    required this.task,
-    required this.item,
-  });
+  const ReviewTaskWithItemModel({required this.task, required this.item});
 
   final ReviewTask task;
   final LearningItem item;
 }
-

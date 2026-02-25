@@ -33,14 +33,14 @@ class HomeTasksState {
   final String? errorMessage;
 
   factory HomeTasksState.initial() => const HomeTasksState(
-        isLoading: true,
-        todayPending: [],
-        overduePending: [],
-        completedCount: 0,
-        totalCount: 0,
-        isSelectionMode: false,
-        selectedTaskIds: {},
-      );
+    isLoading: true,
+    todayPending: [],
+    overduePending: [],
+    completedCount: 0,
+    totalCount: 0,
+    isSelectionMode: false,
+    selectedTaskIds: {},
+  );
 
   HomeTasksState copyWith({
     bool? isLoading,
@@ -156,10 +156,7 @@ class HomeTasksNotifier extends StateNotifier<HomeTasksState> {
       final allToday = await repo.getTasksByDate(DateTime.now());
       final tasks = allToday
           .map(
-            (t) => WidgetTaskItem(
-              title: t.title,
-              status: t.status.toDbValue(),
-            ),
+            (t) => WidgetTaskItem(title: t.title, status: t.status.toDbValue()),
           )
           .toList();
 
@@ -176,9 +173,10 @@ class HomeTasksNotifier extends StateNotifier<HomeTasksState> {
 }
 
 /// 首页任务 Provider。
-final homeTasksProvider = StateNotifierProvider<HomeTasksNotifier, HomeTasksState>((ref) {
-  final notifier = HomeTasksNotifier(ref);
-  // 首次创建时加载数据。
-  notifier.load();
-  return notifier;
-});
+final homeTasksProvider =
+    StateNotifierProvider<HomeTasksNotifier, HomeTasksState>((ref) {
+      final notifier = HomeTasksNotifier(ref);
+      // 首次创建时加载数据。
+      notifier.load();
+      return notifier;
+    });

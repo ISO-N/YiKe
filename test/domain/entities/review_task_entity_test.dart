@@ -31,11 +31,13 @@ void main() {
       createdAt: DateTime(2026, 2, 25, 9),
     );
 
-    final next = base.copyWith(status: ReviewTaskStatus.done, completedAt: DateTime(2026, 2, 26));
+    final next = base.copyWith(
+      status: ReviewTaskStatus.done,
+      completedAt: DateTime(2026, 2, 26),
+    );
     expect(next.id, 1);
     expect(next.learningItemId, 2);
     expect(next.status, ReviewTaskStatus.done);
     expect(next.completedAt, DateTime(2026, 2, 26));
   });
 }
-

@@ -85,11 +85,7 @@ class _HomePageState extends ConsumerState<HomePage> {
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [
-              Color(0xFFE6FFFB),
-              Color(0xFFF0FDFA),
-              Color(0xFFFFF7ED),
-            ],
+            colors: [Color(0xFFE6FFFB), Color(0xFFF0FDFA), Color(0xFFFFF7ED)],
           ),
         ),
         child: SafeArea(
@@ -118,15 +114,24 @@ class _HomePageState extends ConsumerState<HomePage> {
                   const SizedBox(height: AppSpacing.lg),
                 ],
                 if (state.isLoading) ...[
-                  const Center(child: Padding(padding: EdgeInsets.all(24), child: CircularProgressIndicator())),
+                  const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(24),
+                      child: CircularProgressIndicator(),
+                    ),
+                  ),
                 ] else ...[
-                  if (state.todayPending.length + state.overduePending.length > 20) ...[
+                  if (state.todayPending.length + state.overduePending.length >
+                      20) ...[
                     GlassCard(
                       child: Padding(
                         padding: const EdgeInsets.all(AppSpacing.lg),
                         child: Row(
                           children: const [
-                            Icon(Icons.warning_amber_rounded, color: AppColors.warning),
+                            Icon(
+                              Icons.warning_amber_rounded,
+                              color: AppColors.warning,
+                            ),
                             SizedBox(width: AppSpacing.sm),
                             Expanded(
                               child: Text(
@@ -157,7 +162,8 @@ class _HomePageState extends ConsumerState<HomePage> {
                         isOverdue: true,
                         selectionMode: state.isSelectionMode,
                         selected: state.selectedTaskIds.contains(t.taskId),
-                        onToggleSelected: () => notifier.toggleSelected(t.taskId),
+                        onToggleSelected: () =>
+                            notifier.toggleSelected(t.taskId),
                         onComplete: () => notifier.completeTask(t.taskId),
                         onSkip: () => notifier.skipTask(t.taskId),
                       ),
@@ -170,7 +176,8 @@ class _HomePageState extends ConsumerState<HomePage> {
                     color: AppColors.primary,
                   ),
                   const SizedBox(height: AppSpacing.sm),
-                  if (state.todayPending.isEmpty && state.overduePending.isEmpty)
+                  if (state.todayPending.isEmpty &&
+                      state.overduePending.isEmpty)
                     const _EmptyState()
                   else if (state.todayPending.isEmpty)
                     const _EmptySectionHint(text: AppStrings.emptyTodayTasks)
@@ -185,7 +192,8 @@ class _HomePageState extends ConsumerState<HomePage> {
                         isOverdue: false,
                         selectionMode: state.isSelectionMode,
                         selected: state.selectedTaskIds.contains(t.taskId),
-                        onToggleSelected: () => notifier.toggleSelected(t.taskId),
+                        onToggleSelected: () =>
+                            notifier.toggleSelected(t.taskId),
                         onComplete: () => notifier.completeTask(t.taskId),
                         onSkip: () => notifier.skipTask(t.taskId),
                       ),
@@ -200,8 +208,12 @@ class _HomePageState extends ConsumerState<HomePage> {
       bottomNavigationBar: state.isSelectionMode
           ? _BatchActionBar(
               selectedCount: state.selectedTaskIds.length,
-              onCompleteSelected: state.selectedTaskIds.isEmpty ? null : notifier.completeSelected,
-              onSkipSelected: state.selectedTaskIds.isEmpty ? null : notifier.skipSelected,
+              onCompleteSelected: state.selectedTaskIds.isEmpty
+                  ? null
+                  : notifier.completeSelected,
+              onSkipSelected: state.selectedTaskIds.isEmpty
+                  ? null
+                  : notifier.skipSelected,
             )
           : null,
     );
@@ -240,7 +252,9 @@ Future<void> _showNotificationPermissionDialog({
           ),
           FilledButton(
             onPressed: () async {
-              await AppSettings.openAppSettings(type: AppSettingsType.notification);
+              await AppSettings.openAppSettings(
+                type: AppSettingsType.notification,
+              );
               ref.invalidate(notificationPermissionProvider);
               if (context.mounted) Navigator.of(context).pop();
             },
@@ -278,7 +292,9 @@ class _ProgressCard extends StatelessWidget {
                       value: progress,
                       minHeight: 10,
                       backgroundColor: Colors.white,
-                      valueColor: const AlwaysStoppedAnimation<Color>(AppColors.success),
+                      valueColor: const AlwaysStoppedAnimation<Color>(
+                        AppColors.success,
+                      ),
                     ),
                   ),
                 ),
@@ -306,9 +322,16 @@ class _DateHeader extends StatelessWidget {
     final text = '${YikeDateUtils.formatYmd(now)}  $weekday';
     return Row(
       children: [
-        const Icon(Icons.calendar_today_outlined, size: 18, color: AppColors.textSecondary),
+        const Icon(
+          Icons.calendar_today_outlined,
+          size: 18,
+          color: AppColors.textSecondary,
+        ),
         const SizedBox(width: AppSpacing.sm),
-        Text(text, style: AppTypography.body.copyWith(fontWeight: FontWeight.w500)),
+        Text(
+          text,
+          style: AppTypography.body.copyWith(fontWeight: FontWeight.w500),
+        ),
       ],
     );
   }
@@ -336,7 +359,11 @@ class _DateHeader extends StatelessWidget {
 }
 
 class _SectionHeader extends StatelessWidget {
-  const _SectionHeader({required this.title, this.subtitle, required this.color});
+  const _SectionHeader({
+    required this.title,
+    this.subtitle,
+    required this.color,
+  });
 
   final String title;
   final String? subtitle;
@@ -426,7 +453,9 @@ class _TaskCard extends StatelessWidget {
               else
                 Icon(
                   isOverdue ? Icons.error_outline : Icons.circle_outlined,
-                  color: isOverdue ? AppColors.warning : AppColors.textSecondary,
+                  color: isOverdue
+                      ? AppColors.warning
+                      : AppColors.textSecondary,
                   size: 22,
                 ),
               const SizedBox(width: AppSpacing.md),
@@ -436,7 +465,9 @@ class _TaskCard extends StatelessWidget {
                   children: [
                     Text(
                       '$title（第$reviewRound次）',
-                      style: AppTypography.body.copyWith(fontWeight: FontWeight.w700),
+                      style: AppTypography.body.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                     const SizedBox(height: AppSpacing.xs),
                     Text(dueText, style: AppTypography.bodySecondary),
@@ -449,15 +480,22 @@ class _TaskCard extends StatelessWidget {
                             .take(3)
                             .map(
                               (t) => Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 4,
+                                ),
                                 decoration: BoxDecoration(
                                   color: Colors.white,
                                   borderRadius: BorderRadius.circular(999),
-                                  border: Border.all(color: AppColors.glassBorder),
+                                  border: Border.all(
+                                    color: AppColors.glassBorder,
+                                  ),
                                 ),
                                 child: Text(
                                   t,
-                                  style: AppTypography.bodySecondary.copyWith(fontSize: 12),
+                                  style: AppTypography.bodySecondary.copyWith(
+                                    fontSize: 12,
+                                  ),
                                 ),
                               ),
                             )
@@ -527,8 +565,16 @@ class _TaskCard extends StatelessWidget {
   }
 
   String _dueText() {
-    final todayStart = DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
-    final scheduledStart = DateTime(scheduledDate.year, scheduledDate.month, scheduledDate.day);
+    final todayStart = DateTime(
+      DateTime.now().year,
+      DateTime.now().month,
+      DateTime.now().day,
+    );
+    final scheduledStart = DateTime(
+      scheduledDate.year,
+      scheduledDate.month,
+      scheduledDate.day,
+    );
     final diffDays = todayStart.difference(scheduledStart).inDays;
     if (diffDays <= 0) return '今日待复习';
     return '逾期 $diffDays 天';
@@ -562,7 +608,10 @@ class _SwipeBackground extends StatelessWidget {
         children: [
           Icon(icon, color: color),
           const SizedBox(width: AppSpacing.sm),
-          Text(text, style: TextStyle(color: color, fontWeight: FontWeight.w700)),
+          Text(
+            text,
+            style: TextStyle(color: color, fontWeight: FontWeight.w700),
+          ),
         ],
       ),
     );
@@ -584,7 +633,12 @@ class _BatchActionBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return SafeArea(
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.sm, AppSpacing.lg, AppSpacing.lg),
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.lg,
+          AppSpacing.sm,
+          AppSpacing.lg,
+          AppSpacing.lg,
+        ),
         child: GlassCard(
           child: Padding(
             padding: const EdgeInsets.all(AppSpacing.md),
@@ -598,7 +652,9 @@ class _BatchActionBar extends StatelessWidget {
                 ),
                 FilledButton(
                   onPressed: onCompleteSelected,
-                  style: FilledButton.styleFrom(backgroundColor: AppColors.success),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.success,
+                  ),
                   child: const Text('完成所选'),
                 ),
                 const SizedBox(width: AppSpacing.sm),
@@ -625,9 +681,17 @@ class _EmptyState extends StatelessWidget {
         padding: const EdgeInsets.all(AppSpacing.xl),
         child: Column(
           children: const [
-            Icon(Icons.check_circle_outline, size: 48, color: AppColors.success),
+            Icon(
+              Icons.check_circle_outline,
+              size: 48,
+              color: AppColors.success,
+            ),
             SizedBox(height: AppSpacing.md),
-            Text(AppStrings.emptyTodayTasks, style: AppTypography.bodySecondary, textAlign: TextAlign.center),
+            Text(
+              AppStrings.emptyTodayTasks,
+              style: AppTypography.bodySecondary,
+              textAlign: TextAlign.center,
+            ),
           ],
         ),
       ),

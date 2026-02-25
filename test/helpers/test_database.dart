@@ -13,4 +13,3 @@ import 'package:yike/data/database/database.dart';
 AppDatabase createInMemoryDatabase() {
   return AppDatabase(NativeDatabase.memory());
 }
-

@@ -10,7 +10,8 @@ import '../../core/utils/ebbinghaus_utils.dart';
 /// 说明：v1.0 MVP 固定使用默认间隔 [1,2,4,7,15] 天。
 class ReviewConfig {
   /// 默认复习间隔（单位：天）。
-  static const List<int> defaultIntervals = EbbinghausUtils.defaultIntervalsDays;
+  static const List<int> defaultIntervals =
+      EbbinghausUtils.defaultIntervalsDays;
 
   /// 计算第 N 次复习的日期。
   ///
@@ -23,4 +24,3 @@ class ReviewConfig {
     return EbbinghausUtils.calculateReviewDate(learningDate, round);
   }
 }
-

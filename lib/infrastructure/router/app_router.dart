@@ -27,37 +27,30 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         routes: [
           GoRoute(
             path: '/home',
-            pageBuilder: (context, state) => const NoTransitionPage(
-              child: HomePage(),
-            ),
+            pageBuilder: (context, state) =>
+                const NoTransitionPage(child: HomePage()),
           ),
           GoRoute(
             path: '/calendar',
-            pageBuilder: (context, state) => const NoTransitionPage(
-              child: CalendarPage(),
-            ),
+            pageBuilder: (context, state) =>
+                const NoTransitionPage(child: CalendarPage()),
           ),
           GoRoute(
             path: '/statistics',
-            pageBuilder: (context, state) => const NoTransitionPage(
-              child: StatisticsPage(),
-            ),
+            pageBuilder: (context, state) =>
+                const NoTransitionPage(child: StatisticsPage()),
           ),
           GoRoute(
             path: '/settings',
-            pageBuilder: (context, state) => const NoTransitionPage(
-              child: SettingsPage(),
-            ),
+            pageBuilder: (context, state) =>
+                const NoTransitionPage(child: SettingsPage()),
           ),
         ],
       ),
       GoRoute(
         path: '/input',
         pageBuilder: (context, state) {
-          return const MaterialPage(
-            fullscreenDialog: true,
-            child: InputPage(),
-          );
+          return const MaterialPage(fullscreenDialog: true, child: InputPage());
         },
       ),
       GoRoute(
@@ -72,4 +65,3 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     ],
   );
 });
-

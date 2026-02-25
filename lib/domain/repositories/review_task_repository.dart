@@ -48,7 +48,10 @@ abstract class ReviewTaskRepository {
   /// 参数：
   /// - [start] 起始时间（包含）
   /// - [end] 结束时间（不包含）
-  Future<List<ReviewTaskViewEntity>> getTasksInRange(DateTime start, DateTime end);
+  Future<List<ReviewTaskViewEntity>> getTasksInRange(
+    DateTime start,
+    DateTime end,
+  );
 
   /// F7：获取连续打卡天数。
   ///
@@ -66,7 +69,10 @@ abstract class ReviewTaskRepository {
   /// 说明：
   /// - 分子：done 数量
   /// - 分母：done + pending 数量（skipped 不参与）
-  Future<(int completed, int total)> getTaskStatsInRange(DateTime start, DateTime end);
+  Future<(int completed, int total)> getTaskStatsInRange(
+    DateTime start,
+    DateTime end,
+  );
 
   /// F8：获取全部复习任务（用于数据导出）。
   Future<List<ReviewTaskEntity>> getAllTasks();

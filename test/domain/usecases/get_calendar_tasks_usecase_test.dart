@@ -29,7 +29,9 @@ void main() {
   });
 
   Future<int> insertItem({required List<String> tags}) {
-    return db.into(db.learningItems).insert(
+    return db
+        .into(db.learningItems)
+        .insert(
           LearningItemsCompanion.insert(
             title: 'Item',
             note: const drift.Value.absent(),
@@ -44,7 +46,9 @@ void main() {
     final itemId = await insertItem(tags: ['a']);
     final d = DateTime(2026, 2, 10);
 
-    await db.into(db.reviewTasks).insert(
+    await db
+        .into(db.reviewTasks)
+        .insert(
           ReviewTasksCompanion.insert(
             learningItemId: itemId,
             reviewRound: 1,
@@ -53,7 +57,9 @@ void main() {
             createdAt: drift.Value(d),
           ),
         );
-    await db.into(db.reviewTasks).insert(
+    await db
+        .into(db.reviewTasks)
+        .insert(
           ReviewTasksCompanion.insert(
             learningItemId: itemId,
             reviewRound: 2,
@@ -75,7 +81,9 @@ void main() {
     final itemId = await insertItem(tags: ['a', 'b']);
     final d = DateTime(2026, 2, 10);
 
-    await db.into(db.reviewTasks).insert(
+    await db
+        .into(db.reviewTasks)
+        .insert(
           ReviewTasksCompanion.insert(
             learningItemId: itemId,
             reviewRound: 1,

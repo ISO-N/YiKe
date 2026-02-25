@@ -35,10 +35,7 @@ class NonUiCoverageConfig {
 
 /// LCOV 单个源文件的汇总结果。
 class LcovSummary {
-  const LcovSummary({
-    required this.linesFound,
-    required this.linesHit,
-  });
+  const LcovSummary({required this.linesFound, required this.linesHit});
 
   final int linesFound;
   final int linesHit;
@@ -61,7 +58,9 @@ Future<void> main(List<String> args) async {
   // 1) 枚举非 UI 代码范围内的所有 Dart 源文件。
   final scopeFiles = await _collectScopeFiles(repoRoot);
   if (scopeFiles.isEmpty) {
-    stderr.writeln('未找到任何纳入统计的 Dart 文件，请检查 NonUiCoverageConfig.includeDirPrefixes。');
+    stderr.writeln(
+      '未找到任何纳入统计的 Dart 文件，请检查 NonUiCoverageConfig.includeDirPrefixes。',
+    );
     exitCode = 2;
     return;
   }
@@ -70,7 +69,8 @@ Future<void> main(List<String> args) async {
   final lcovSummaries = await _parseLcovSummaries(lcovFile, repoRoot);
 
   // 3) 校验是否所有 scope 文件都出现在 lcov 中（避免“未加载文件不计入覆盖率”的虚高）。
-  final missingAll = scopeFiles.where((p) => !lcovSummaries.containsKey(p)).toList()..sort();
+  final missingAll =
+      scopeFiles.where((p) => !lcovSummaries.containsKey(p)).toList()..sort();
   final missingCoverable = <String>[];
   for (final p in missingAll) {
     // 说明：部分“纯接口/纯声明”文件在 VM 覆盖率中可能不会生成 record（没有可插桩行）。
@@ -84,7 +84,9 @@ Future<void> main(List<String> args) async {
     for (final p in missingCoverable) {
       stderr.writeln('- $p');
     }
-    stderr.writeln('建议：在 `test/coverage/non_ui_imports_test.dart` 中补充 import，或为这些文件添加单测。');
+    stderr.writeln(
+      '建议：在 `test/coverage/non_ui_imports_test.dart` 中补充 import，或为这些文件添加单测。',
+    );
     exitCode = 2;
     return;
   }
@@ -120,14 +122,18 @@ Future<void> main(List<String> args) async {
 Future<List<String>> _collectScopeFiles(Directory repoRoot) async {
   final scopeFiles = <String>[];
   for (final dirPrefix in NonUiCoverageConfig.includeDirPrefixes) {
-    final dir = Directory('${repoRoot.path}${Platform.pathSeparator}${dirPrefix.replaceAll('/', Platform.pathSeparator)}');
+    final dir = Directory(
+      '${repoRoot.path}${Platform.pathSeparator}${dirPrefix.replaceAll('/', Platform.pathSeparator)}',
+    );
     if (!await dir.exists()) continue;
 
     await for (final entity in dir.list(recursive: true, followLinks: false)) {
       if (entity is! File) continue;
       if (!entity.path.endsWith('.dart')) continue;
 
-      final relative = _normalizePath(_relativePath(repoRoot.path, entity.path));
+      final relative = _normalizePath(
+        _relativePath(repoRoot.path, entity.path),
+      );
       if (_isExcluded(relative)) continue;
       scopeFiles.add(relative);
     }
@@ -143,7 +149,10 @@ bool _isExcluded(String normalizedRelativePath) {
   return false;
 }
 
-Future<Map<String, LcovSummary>> _parseLcovSummaries(File lcovFile, Directory repoRoot) async {
+Future<Map<String, LcovSummary>> _parseLcovSummaries(
+  File lcovFile,
+  Directory repoRoot,
+) async {
   final map = <String, LcovSummary>{};
 
   String? currentFile;
@@ -218,7 +227,10 @@ String _relativePath(String base, String full) {
   return f;
 }
 
-Future<bool> _isPotentiallyCoverable(Directory repoRoot, String normalizedRelativePath) async {
+Future<bool> _isPotentiallyCoverable(
+  Directory repoRoot,
+  String normalizedRelativePath,
+) async {
   // 说明：该启发式用于识别“可能存在可插桩代码”的文件，避免纯接口/纯声明文件导致误报。
   final file = File(
     '${repoRoot.path}${Platform.pathSeparator}${normalizedRelativePath.replaceAll('/', Platform.pathSeparator)}',

@@ -46,8 +46,8 @@ class CreateLearningItemUseCase {
   const CreateLearningItemUseCase({
     required LearningItemRepository learningItemRepository,
     required ReviewTaskRepository reviewTaskRepository,
-  })  : _learningItemRepository = learningItemRepository,
-        _reviewTaskRepository = reviewTaskRepository;
+  }) : _learningItemRepository = learningItemRepository,
+       _reviewTaskRepository = reviewTaskRepository;
 
   final LearningItemRepository _learningItemRepository;
   final ReviewTaskRepository _reviewTaskRepository;
@@ -56,7 +56,9 @@ class CreateLearningItemUseCase {
   ///
   /// 返回值：创建结果（学习内容 + 生成的复习任务）。
   /// 异常：校验/数据库写入失败时可能抛出异常。
-  Future<CreateLearningItemResult> execute(CreateLearningItemParams params) async {
+  Future<CreateLearningItemResult> execute(
+    CreateLearningItemParams params,
+  ) async {
     final now = DateTime.now();
     final learningDate = DateTime(
       params.learningDate.year,
@@ -67,7 +69,10 @@ class CreateLearningItemUseCase {
     final item = LearningItemEntity(
       title: params.title.trim(),
       note: params.note?.trim().isEmpty == true ? null : params.note?.trim(),
-      tags: params.tags.map((e) => e.trim()).where((e) => e.isNotEmpty).toList(),
+      tags: params.tags
+          .map((e) => e.trim())
+          .where((e) => e.isNotEmpty)
+          .toList(),
       learningDate: learningDate,
       createdAt: now,
       updatedAt: now,
@@ -79,7 +84,10 @@ class CreateLearningItemUseCase {
       ReviewConfig.defaultIntervals.length,
       (index) {
         final round = index + 1;
-        final scheduledDate = ReviewConfig.calculateReviewDate(learningDate, round);
+        final scheduledDate = ReviewConfig.calculateReviewDate(
+          learningDate,
+          round,
+        );
         return ReviewTaskEntity(
           learningItemId: saved.id!,
           reviewRound: round,

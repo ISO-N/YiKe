@@ -24,4 +24,3 @@ void main() {
     expect(next.tags, const ['t1']);
   });
 }
-

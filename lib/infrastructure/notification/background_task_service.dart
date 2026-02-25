@@ -28,18 +28,14 @@ class BackgroundTaskService {
   /// 返回值：Future（无返回值）。
   /// 异常：注册失败时可能抛出异常。
   static Future<void> initialize() async {
-    await Workmanager().initialize(
-      callbackDispatcher,
-    );
+    await Workmanager().initialize(callbackDispatcher);
 
     // 每小时检查一次（在提醒时间附近触发通知）。
     await Workmanager().registerPeriodicTask(
       _dailyReviewCheckUniqueName,
       _dailyReviewCheckTaskName,
       frequency: const Duration(hours: 1),
-      constraints: Constraints(
-        networkType: NetworkType.notRequired,
-      ),
+      constraints: Constraints(networkType: NetworkType.notRequired),
     );
   }
 }
@@ -102,7 +98,9 @@ Future<void> _checkAndSendDailyReviewNotification() async {
     final pending = await reviewTaskDao.getTodayPendingTasksWithItem();
     if (pending.isEmpty) {
       // 没有任务也记录今日已检查，避免窗口内重复检查。
-      await settingsRepo.saveSettings(settings.copyWith(lastNotifiedDate: todayKey));
+      await settingsRepo.saveSettings(
+        settings.copyWith(lastNotifiedDate: todayKey),
+      );
       return;
     }
 
@@ -119,7 +117,9 @@ Future<void> _checkAndSendDailyReviewNotification() async {
     );
 
     // 6) 记录今日已通知，防止重复发送。
-    await settingsRepo.saveSettings(settings.copyWith(lastNotifiedDate: todayKey));
+    await settingsRepo.saveSettings(
+      settings.copyWith(lastNotifiedDate: todayKey),
+    );
   } finally {
     await db.close();
   }
@@ -137,10 +137,7 @@ Future<void> _syncWidget(AppDatabase db) async {
       tasks: tasks
           .take(3)
           .map(
-            (t) => WidgetTaskItem(
-              title: t.item.title,
-              status: t.task.status,
-            ),
+            (t) => WidgetTaskItem(title: t.item.title, status: t.task.status),
           )
           .toList(),
     );
@@ -149,7 +146,11 @@ Future<void> _syncWidget(AppDatabase db) async {
   }
 }
 
-bool _isWithinWindow(TimeOfDay now, TimeOfDay target, {required int windowMinutes}) {
+bool _isWithinWindow(
+  TimeOfDay now,
+  TimeOfDay target, {
+  required int windowMinutes,
+}) {
   final n = now.hour * 60 + now.minute;
   final t = target.hour * 60 + target.minute;
   final diff = (n - t).abs();

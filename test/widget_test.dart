@@ -18,9 +18,7 @@ void main() {
     // 构建 App 并触发首帧渲染。
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [
-          appDatabaseProvider.overrideWithValue(db),
-        ],
+        overrides: [appDatabaseProvider.overrideWithValue(db)],
         child: const YiKeApp(),
       ),
     );

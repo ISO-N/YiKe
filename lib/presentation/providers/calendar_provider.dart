@@ -115,7 +115,11 @@ class CalendarNotifier extends StateNotifier<CalendarState> {
   /// 选中某天并加载当日任务列表。
   Future<void> selectDay(DateTime day) async {
     final selected = YikeDateUtils.atStartOfDay(day);
-    state = state.copyWith(selectedDay: selected, isLoadingTasks: true, errorMessage: null);
+    state = state.copyWith(
+      selectedDay: selected,
+      isLoadingTasks: true,
+      errorMessage: null,
+    );
     try {
       final useCase = _ref.read(getCalendarTasksUseCaseProvider);
       final tasks = await useCase.getTasksByDate(selected);
@@ -155,6 +159,8 @@ class CalendarNotifier extends StateNotifier<CalendarState> {
 }
 
 /// 日历页面 Provider。
-final calendarProvider = StateNotifierProvider<CalendarNotifier, CalendarState>((ref) {
-  return CalendarNotifier(ref);
-});
+final calendarProvider = StateNotifierProvider<CalendarNotifier, CalendarState>(
+  (ref) {
+    return CalendarNotifier(ref);
+  },
+);

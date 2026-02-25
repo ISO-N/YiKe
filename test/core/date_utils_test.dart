@@ -23,4 +23,3 @@ void main() {
     expect(YikeDateUtils.formatYmd(DateTime(2026, 2, 5)), '2026-02-05');
   });
 }
-

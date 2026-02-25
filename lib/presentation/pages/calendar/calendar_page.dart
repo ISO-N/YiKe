@@ -35,7 +35,12 @@ class CalendarPage extends ConsumerWidget {
         actions: [
           IconButton(
             tooltip: '刷新',
-            onPressed: state.isLoadingMonth ? null : () => notifier.loadMonth(state.focusedMonth.year, state.focusedMonth.month),
+            onPressed: state.isLoadingMonth
+                ? null
+                : () => notifier.loadMonth(
+                    state.focusedMonth.year,
+                    state.focusedMonth.month,
+                  ),
             icon: const Icon(Icons.refresh),
           ),
         ],
@@ -45,11 +50,7 @@ class CalendarPage extends ConsumerWidget {
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [
-              Color(0xFFE6FFFB),
-              Color(0xFFF0FDFA),
-              Color(0xFFFFF7ED),
-            ],
+            colors: [Color(0xFFE6FFFB), Color(0xFFF0FDFA), Color(0xFFFFF7ED)],
           ),
         ),
         child: SafeArea(
@@ -66,7 +67,9 @@ class CalendarPage extends ConsumerWidget {
                       const SizedBox(height: AppSpacing.sm),
                       Text(
                         '点击日期可查看当日任务列表',
-                        style: AppTypography.bodySecondary.copyWith(color: AppColors.textSecondary),
+                        style: AppTypography.bodySecondary.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
                       ),
                       const SizedBox(height: AppSpacing.lg),
                       CalendarGrid(
@@ -74,7 +77,8 @@ class CalendarPage extends ConsumerWidget {
                         selectedDay: state.selectedDay,
                         dayStats: state.monthStats,
                         isLoading: state.isLoadingMonth,
-                        onPageChanged: (focused) => notifier.loadMonth(focused.year, focused.month),
+                        onPageChanged: (focused) =>
+                            notifier.loadMonth(focused.year, focused.month),
                         onDaySelected: (day) async {
                           await notifier.selectDay(day);
                           if (!context.mounted) return;
@@ -99,7 +103,10 @@ class CalendarPage extends ConsumerWidget {
                 GlassCard(
                   child: Padding(
                     padding: const EdgeInsets.all(AppSpacing.lg),
-                    child: Text('加载失败：${state.errorMessage}', style: const TextStyle(color: AppColors.error)),
+                    child: Text(
+                      '加载失败：${state.errorMessage}',
+                      style: const TextStyle(color: AppColors.error),
+                    ),
                   ),
                 ),
               ],
@@ -163,4 +170,3 @@ class _LegendItem extends StatelessWidget {
     );
   }
 }
-

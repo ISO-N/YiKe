@@ -94,7 +94,9 @@ class ReviewTaskDao {
       skippedAt: Value(status == 'skipped' ? timestamp : null),
     );
 
-    return (db.update(db.reviewTasks)..where((t) => t.id.isIn(ids))).write(companion);
+    return (db.update(
+      db.reviewTasks,
+    )..where((t) => t.id.isIn(ids))).write(companion);
   }
 
   /// 根据 ID 查询复习任务。
@@ -102,7 +104,9 @@ class ReviewTaskDao {
   /// 返回值：复习任务或 null。
   /// 异常：数据库查询失败时可能抛出异常。
   Future<ReviewTask?> getReviewTaskById(int id) {
-    return (db.select(db.reviewTasks)..where((t) => t.id.equals(id))).getSingleOrNull();
+    return (db.select(
+      db.reviewTasks,
+    )..where((t) => t.id.equals(id))).getSingleOrNull();
   }
 
   /// 查询指定日期的所有复习任务（包含完成/跳过）。
@@ -123,21 +127,24 @@ class ReviewTaskDao {
   /// 查询指定日期的所有复习任务（join 学习内容，用于展示/小组件）。
   ///
   /// 说明：包含 pending/done/skipped。
-  Future<List<ReviewTaskWithItemModel>> getTasksByDateWithItem(DateTime date) async {
+  Future<List<ReviewTaskWithItemModel>> getTasksByDateWithItem(
+    DateTime date,
+  ) async {
     final start = DateTime(date.year, date.month, date.day);
     final end = start.add(const Duration(days: 1));
 
     final task = db.reviewTasks;
     final item = db.learningItems;
 
-    final query = db.select(task).join([
-      innerJoin(item, item.id.equalsExp(task.learningItemId)),
-    ])
-      ..where(task.scheduledDate.isBetweenValues(start, end))
-      ..orderBy([
-        OrderingTerm.asc(task.status),
-        OrderingTerm.asc(task.reviewRound),
-      ]);
+    final query =
+        db.select(task).join([
+            innerJoin(item, item.id.equalsExp(task.learningItemId)),
+          ])
+          ..where(task.scheduledDate.isBetweenValues(start, end))
+          ..orderBy([
+            OrderingTerm.asc(task.status),
+            OrderingTerm.asc(task.reviewRound),
+          ]);
 
     final rows = await query.get();
     return rows
@@ -170,7 +177,9 @@ class ReviewTaskDao {
 
   /// 查询学习内容关联的所有复习任务。
   Future<List<ReviewTask>> getTasksByLearningItemId(int learningItemId) {
-    return (db.select(db.reviewTasks)..where((t) => t.learningItemId.equals(learningItemId))).get();
+    return (db.select(
+      db.reviewTasks,
+    )..where((t) => t.learningItemId.equals(learningItemId))).get();
   }
 
   /// 获取指定日期任务统计（completed/total）。
@@ -181,12 +190,15 @@ class ReviewTaskDao {
     final end = start.add(const Duration(days: 1));
 
     final totalExp = db.reviewTasks.id.count();
-    final completedExp = db.reviewTasks.id.count(filter: db.reviewTasks.status.equals('done'));
+    final completedExp = db.reviewTasks.id.count(
+      filter: db.reviewTasks.status.equals('done'),
+    );
 
-    final row = await (db.selectOnly(db.reviewTasks)
-          ..addColumns([totalExp, completedExp])
-          ..where(db.reviewTasks.scheduledDate.isBetweenValues(start, end)))
-        .getSingle();
+    final row =
+        await (db.selectOnly(db.reviewTasks)
+              ..addColumns([totalExp, completedExp])
+              ..where(db.reviewTasks.scheduledDate.isBetweenValues(start, end)))
+            .getSingle();
 
     final total = row.read(totalExp) ?? 0;
     final completed = row.read(completedExp) ?? 0;
@@ -200,7 +212,10 @@ class ReviewTaskDao {
   /// - [month] 月份（1-12）
   /// 返回值：以当天 00:00 为 key 的统计 Map。
   /// 异常：数据库查询失败时可能抛出异常。
-  Future<Map<DateTime, TaskDayStats>> getMonthlyTaskStats(int year, int month) async {
+  Future<Map<DateTime, TaskDayStats>> getMonthlyTaskStats(
+    int year,
+    int month,
+  ) async {
     final start = DateTime(year, month, 1);
     final end = DateTime(year, month + 1, 1);
 
@@ -250,20 +265,24 @@ class ReviewTaskDao {
   /// - [end] 结束时间（不包含）
   /// 返回值：任务列表（按 scheduledDate 升序）。
   /// 异常：数据库查询失败时可能抛出异常。
-  Future<List<ReviewTaskWithItemModel>> getTasksInRange(DateTime start, DateTime end) async {
+  Future<List<ReviewTaskWithItemModel>> getTasksInRange(
+    DateTime start,
+    DateTime end,
+  ) async {
     final task = db.reviewTasks;
     final item = db.learningItems;
 
-    final query = db.select(task).join([
-      innerJoin(item, item.id.equalsExp(task.learningItemId)),
-    ])
-      ..where(task.scheduledDate.isBiggerOrEqualValue(start))
-      ..where(task.scheduledDate.isSmallerThanValue(end))
-      ..orderBy([
-        OrderingTerm.asc(task.scheduledDate),
-        OrderingTerm.asc(task.status),
-        OrderingTerm.asc(task.reviewRound),
-      ]);
+    final query =
+        db.select(task).join([
+            innerJoin(item, item.id.equalsExp(task.learningItemId)),
+          ])
+          ..where(task.scheduledDate.isBiggerOrEqualValue(start))
+          ..where(task.scheduledDate.isSmallerThanValue(end))
+          ..orderBy([
+            OrderingTerm.asc(task.scheduledDate),
+            OrderingTerm.asc(task.status),
+            OrderingTerm.asc(task.reviewRound),
+          ]);
 
     final rows = await query.get();
     return rows
@@ -290,22 +309,26 @@ class ReviewTaskDao {
 
     // 找到最早的“done/pending”任务日期作为遍历下界，避免无穷回溯。
     final minDateExp = db.reviewTasks.scheduledDate.min();
-    final minRow = await (db.selectOnly(db.reviewTasks)
-          ..addColumns([minDateExp])
-          ..where(db.reviewTasks.scheduledDate.isSmallerThanValue(todayEnd))
-          ..where(db.reviewTasks.status.isIn(const ['done', 'pending'])))
-        .getSingle();
+    final minRow =
+        await (db.selectOnly(db.reviewTasks)
+              ..addColumns([minDateExp])
+              ..where(db.reviewTasks.scheduledDate.isSmallerThanValue(todayEnd))
+              ..where(db.reviewTasks.status.isIn(const ['done', 'pending'])))
+            .getSingle();
 
     final earliest = minRow.read(minDateExp);
     if (earliest == null) return 0;
     final earliestStart = YikeDateUtils.atStartOfDay(earliest);
 
     // 一次性拉取范围内的 done/pending 任务，再在 Dart 侧按天聚合。
-    final tasks = await (db.select(db.reviewTasks)
-          ..where((t) => t.scheduledDate.isBiggerOrEqualValue(earliestStart))
-          ..where((t) => t.scheduledDate.isSmallerThanValue(todayEnd))
-          ..where((t) => t.status.isIn(const ['done', 'pending'])))
-        .get();
+    final tasks =
+        await (db.select(db.reviewTasks)
+              ..where(
+                (t) => t.scheduledDate.isBiggerOrEqualValue(earliestStart),
+              )
+              ..where((t) => t.scheduledDate.isSmallerThanValue(todayEnd))
+              ..where((t) => t.status.isIn(const ['done', 'pending'])))
+            .get();
 
     final dayMap = <DateTime, _DayStatsAccumulator>{};
     for (final task in tasks) {
@@ -319,7 +342,11 @@ class ReviewTaskDao {
     }
 
     var streak = 0;
-    for (var cursor = todayStart; !cursor.isBefore(earliestStart); cursor = cursor.subtract(const Duration(days: 1))) {
+    for (
+      var cursor = todayStart;
+      !cursor.isBefore(earliestStart);
+      cursor = cursor.subtract(const Duration(days: 1))
+    ) {
       final stats = dayMap[cursor];
       final pending = stats?.pending ?? 0;
       final done = stats?.done ?? 0;
@@ -342,15 +369,23 @@ class ReviewTaskDao {
   /// 说明：
   /// - completed：done 数量
   /// - total：done + pending 数量（skipped 不参与）
-  Future<(int completed, int total)> getTaskStatsInRange(DateTime start, DateTime end) async {
-    final totalExp = db.reviewTasks.id.count(filter: db.reviewTasks.status.isIn(const ['done', 'pending']));
-    final completedExp = db.reviewTasks.id.count(filter: db.reviewTasks.status.equals('done'));
+  Future<(int completed, int total)> getTaskStatsInRange(
+    DateTime start,
+    DateTime end,
+  ) async {
+    final totalExp = db.reviewTasks.id.count(
+      filter: db.reviewTasks.status.isIn(const ['done', 'pending']),
+    );
+    final completedExp = db.reviewTasks.id.count(
+      filter: db.reviewTasks.status.equals('done'),
+    );
 
-    final row = await (db.selectOnly(db.reviewTasks)
-          ..addColumns([totalExp, completedExp])
-          ..where(db.reviewTasks.scheduledDate.isBiggerOrEqualValue(start))
-          ..where(db.reviewTasks.scheduledDate.isSmallerThanValue(end)))
-        .getSingle();
+    final row =
+        await (db.selectOnly(db.reviewTasks)
+              ..addColumns([totalExp, completedExp])
+              ..where(db.reviewTasks.scheduledDate.isBiggerOrEqualValue(start))
+              ..where(db.reviewTasks.scheduledDate.isSmallerThanValue(end)))
+            .getSingle();
 
     final total = row.read(totalExp) ?? 0;
     final completed = row.read(completedExp) ?? 0;
@@ -387,7 +422,10 @@ class ReviewTaskDao {
       query.where(task.status.equals('pending'));
     }
 
-    query.orderBy([OrderingTerm.asc(task.scheduledDate), OrderingTerm.asc(task.reviewRound)]);
+    query.orderBy([
+      OrderingTerm.asc(task.scheduledDate),
+      OrderingTerm.asc(task.reviewRound),
+    ]);
 
     final rows = await query.get();
     return rows

@@ -44,10 +44,7 @@ class ExportParams {
 
 /// 导出预览（用于 UI 展示数据量）。
 class ExportPreview {
-  const ExportPreview({
-    required this.itemCount,
-    required this.taskCount,
-  });
+  const ExportPreview({required this.itemCount, required this.taskCount});
 
   final int itemCount;
   final int taskCount;
@@ -73,7 +70,8 @@ class ExportResult {
 
   int get totalCount => itemCount + taskCount;
 
-  String get fileName => file.uri.pathSegments.isEmpty ? file.path : file.uri.pathSegments.last;
+  String get fileName =>
+      file.uri.pathSegments.isEmpty ? file.path : file.uri.pathSegments.last;
 }
 
 /// 数据导出用例（F8）。
@@ -82,8 +80,8 @@ class ExportDataUseCase {
   const ExportDataUseCase({
     required LearningItemRepository learningItemRepository,
     required ReviewTaskRepository reviewTaskRepository,
-  })  : _learningItemRepository = learningItemRepository,
-        _reviewTaskRepository = reviewTaskRepository;
+  }) : _learningItemRepository = learningItemRepository,
+       _reviewTaskRepository = reviewTaskRepository;
 
   final LearningItemRepository _learningItemRepository;
   final ReviewTaskRepository _reviewTaskRepository;
@@ -97,13 +95,14 @@ class ExportDataUseCase {
       throw const ExportException('请至少选择一种导出内容');
     }
 
-    final items = params.includeItems ? await _learningItemRepository.getAll() : const <LearningItemEntity>[];
-    final tasks = params.includeTasks ? await _reviewTaskRepository.getAllTasks() : const <ReviewTaskEntity>[];
+    final items = params.includeItems
+        ? await _learningItemRepository.getAll()
+        : const <LearningItemEntity>[];
+    final tasks = params.includeTasks
+        ? await _reviewTaskRepository.getAllTasks()
+        : const <ReviewTaskEntity>[];
 
-    return ExportPreview(
-      itemCount: items.length,
-      taskCount: tasks.length,
-    );
+    return ExportPreview(itemCount: items.length, taskCount: tasks.length);
   }
 
   /// 执行导出并写入本地文件。
@@ -117,19 +116,35 @@ class ExportDataUseCase {
     }
 
     final exportedAt = DateTime.now();
-    final items = params.includeItems ? await _learningItemRepository.getAll() : const <LearningItemEntity>[];
-    final tasks = params.includeTasks ? await _reviewTaskRepository.getAllTasks() : const <ReviewTaskEntity>[];
+    final items = params.includeItems
+        ? await _learningItemRepository.getAll()
+        : const <LearningItemEntity>[];
+    final tasks = params.includeTasks
+        ? await _reviewTaskRepository.getAllTasks()
+        : const <ReviewTaskEntity>[];
 
     if (items.isEmpty && tasks.isEmpty) {
       throw const ExportException('暂无可导出的数据');
     }
 
     final content = switch (params.format) {
-      ExportFormat.json => _toJson(items: items, tasks: tasks, exportedAt: exportedAt),
-      ExportFormat.csv => _toCsv(items: items, tasks: tasks, exportedAt: exportedAt),
+      ExportFormat.json => _toJson(
+        items: items,
+        tasks: tasks,
+        exportedAt: exportedAt,
+      ),
+      ExportFormat.csv => _toCsv(
+        items: items,
+        tasks: tasks,
+        exportedAt: exportedAt,
+      ),
     };
 
-    final file = await _saveToFile(content: content, format: params.format, exportedAt: exportedAt);
+    final file = await _saveToFile(
+      content: content,
+      format: params.format,
+      exportedAt: exportedAt,
+    );
     final bytes = await file.length();
 
     return ExportResult(
@@ -211,7 +226,9 @@ class ExportDataUseCase {
 
     if (tasks.isNotEmpty) {
       buffer.writeln('复习任务');
-      buffer.writeln('id,learningItemId,reviewRound,scheduledDate,status,completedAt,skippedAt,createdAt');
+      buffer.writeln(
+        'id,learningItemId,reviewRound,scheduledDate,status,completedAt,skippedAt,createdAt',
+      );
       for (final task in tasks) {
         buffer
           ..write(_csvInt(task.id))
@@ -239,7 +256,11 @@ class ExportDataUseCase {
 
   String _csvText(String v) {
     // RFC4180：若包含逗号/引号/换行，则必须加引号，并将引号转义为双引号。
-    final needQuote = v.contains(',') || v.contains('"') || v.contains('\n') || v.contains('\r');
+    final needQuote =
+        v.contains(',') ||
+        v.contains('"') ||
+        v.contains('\n') ||
+        v.contains('\r');
     if (!needQuote) return v;
     final escaped = v.replaceAll('"', '""');
     return '"$escaped"';
@@ -254,7 +275,9 @@ class ExportDataUseCase {
     // 加入毫秒，避免短时间内多次导出导致文件名冲突。
     final stamp = DateFormat('yyyyMMdd_HHmmss_SSS').format(exportedAt);
     final ext = format == ExportFormat.json ? 'json' : 'csv';
-    final file = File('${dir.path}${Platform.pathSeparator}yike_export_$stamp.$ext');
+    final file = File(
+      '${dir.path}${Platform.pathSeparator}yike_export_$stamp.$ext',
+    );
     await file.writeAsString(content, encoding: utf8, flush: true);
     return file;
   }

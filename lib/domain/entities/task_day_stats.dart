@@ -37,4 +37,3 @@ class TaskDayStats {
   /// 是否存在已跳过任务。
   bool get hasSkipped => skippedCount > 0;
 }
-

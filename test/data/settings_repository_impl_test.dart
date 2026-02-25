@@ -30,7 +30,10 @@ void main() {
   test('getSettings 在无数据时返回 defaults', () async {
     final s = await repo.getSettings();
     expect(s.reminderTime, AppSettingsEntity.defaults.reminderTime);
-    expect(s.notificationsEnabled, AppSettingsEntity.defaults.notificationsEnabled);
+    expect(
+      s.notificationsEnabled,
+      AppSettingsEntity.defaults.notificationsEnabled,
+    );
   });
 
   test('saveSettings 后可正常读取（含 lastNotifiedDate）', () async {
@@ -48,4 +51,3 @@ void main() {
     expect(out.lastNotifiedDate, '2026-02-25');
   });
 }
-

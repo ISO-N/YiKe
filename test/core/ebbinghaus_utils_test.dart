@@ -21,4 +21,3 @@ void main() {
     expect(ReviewConfig.calculateReviewDate(d0, 5), DateTime(2026, 3, 12));
   });
 }
-

@@ -17,20 +17,82 @@ void main() {
   test('免打扰判断：不跨天', () {
     final start = const TimeOfDay(hour: 12, minute: 0);
     final end = const TimeOfDay(hour: 13, minute: 0);
-    expect(TimeUtils.isInDoNotDisturb(const TimeOfDay(hour: 11, minute: 59), start, end), false);
-    expect(TimeUtils.isInDoNotDisturb(const TimeOfDay(hour: 12, minute: 30), start, end), true);
-    expect(TimeUtils.isInDoNotDisturb(const TimeOfDay(hour: 13, minute: 0), start, end), true);
-    expect(TimeUtils.isInDoNotDisturb(const TimeOfDay(hour: 13, minute: 1), start, end), false);
+    expect(
+      TimeUtils.isInDoNotDisturb(
+        const TimeOfDay(hour: 11, minute: 59),
+        start,
+        end,
+      ),
+      false,
+    );
+    expect(
+      TimeUtils.isInDoNotDisturb(
+        const TimeOfDay(hour: 12, minute: 30),
+        start,
+        end,
+      ),
+      true,
+    );
+    expect(
+      TimeUtils.isInDoNotDisturb(
+        const TimeOfDay(hour: 13, minute: 0),
+        start,
+        end,
+      ),
+      true,
+    );
+    expect(
+      TimeUtils.isInDoNotDisturb(
+        const TimeOfDay(hour: 13, minute: 1),
+        start,
+        end,
+      ),
+      false,
+    );
   });
 
   test('免打扰判断：跨天', () {
     final start = const TimeOfDay(hour: 22, minute: 0);
     final end = const TimeOfDay(hour: 8, minute: 0);
-    expect(TimeUtils.isInDoNotDisturb(const TimeOfDay(hour: 21, minute: 59), start, end), false);
-    expect(TimeUtils.isInDoNotDisturb(const TimeOfDay(hour: 22, minute: 0), start, end), true);
-    expect(TimeUtils.isInDoNotDisturb(const TimeOfDay(hour: 2, minute: 0), start, end), true);
-    expect(TimeUtils.isInDoNotDisturb(const TimeOfDay(hour: 8, minute: 0), start, end), true);
-    expect(TimeUtils.isInDoNotDisturb(const TimeOfDay(hour: 8, minute: 1), start, end), false);
+    expect(
+      TimeUtils.isInDoNotDisturb(
+        const TimeOfDay(hour: 21, minute: 59),
+        start,
+        end,
+      ),
+      false,
+    );
+    expect(
+      TimeUtils.isInDoNotDisturb(
+        const TimeOfDay(hour: 22, minute: 0),
+        start,
+        end,
+      ),
+      true,
+    );
+    expect(
+      TimeUtils.isInDoNotDisturb(
+        const TimeOfDay(hour: 2, minute: 0),
+        start,
+        end,
+      ),
+      true,
+    );
+    expect(
+      TimeUtils.isInDoNotDisturb(
+        const TimeOfDay(hour: 8, minute: 0),
+        start,
+        end,
+      ),
+      true,
+    );
+    expect(
+      TimeUtils.isInDoNotDisturb(
+        const TimeOfDay(hour: 8, minute: 1),
+        start,
+        end,
+      ),
+      false,
+    );
   });
 }
-

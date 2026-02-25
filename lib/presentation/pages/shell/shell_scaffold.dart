@@ -45,7 +45,9 @@ class ShellScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final location = GoRouter.of(context).routeInformationProvider.value.uri.toString();
+    final location = GoRouter.of(
+      context,
+    ).routeInformationProvider.value.uri.toString();
     final currentIndex = _locationToIndex(location);
     return Scaffold(
       body: child,

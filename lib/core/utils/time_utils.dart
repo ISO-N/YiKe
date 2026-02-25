@@ -19,7 +19,8 @@ class TimeUtils {
     if (parts.length != 2) throw FormatException('时间格式不正确：$value');
     final h = int.parse(parts[0]);
     final m = int.parse(parts[1]);
-    if (h < 0 || h > 23 || m < 0 || m > 59) throw FormatException('时间值越界：$value');
+    if (h < 0 || h > 23 || m < 0 || m > 59)
+      throw FormatException('时间值越界：$value');
     return TimeOfDay(hour: h, minute: m);
   }
 
@@ -53,4 +54,3 @@ class TimeUtils {
     return n >= s || n <= e;
   }
 }
-

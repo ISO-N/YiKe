@@ -15,4 +15,3 @@ extension ContextExtensions on BuildContext {
   /// 快捷获取屏幕尺寸。
   Size get screenSize => MediaQuery.sizeOf(this);
 }
-

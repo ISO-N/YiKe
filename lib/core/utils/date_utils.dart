@@ -39,4 +39,3 @@ class YikeDateUtils {
     return DateFormat('yyyy-MM-dd').format(date);
   }
 }
-

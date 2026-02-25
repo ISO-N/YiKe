@@ -21,10 +21,8 @@ class SettingsState {
   final AppSettingsEntity settings;
   final String? errorMessage;
 
-  factory SettingsState.initial() => SettingsState(
-        isLoading: true,
-        settings: AppSettingsEntity.defaults,
-      );
+  factory SettingsState.initial() =>
+      SettingsState(isLoading: true, settings: AppSettingsEntity.defaults);
 
   SettingsState copyWith({
     bool? isLoading,
@@ -69,10 +67,11 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
 }
 
 /// 设置 Provider。
-final settingsProvider = StateNotifierProvider<SettingsNotifier, SettingsState>((ref) {
-  final repo = ref.read(settingsRepositoryProvider);
-  final notifier = SettingsNotifier(repo);
-  notifier.load();
-  return notifier;
-});
-
+final settingsProvider = StateNotifierProvider<SettingsNotifier, SettingsState>(
+  (ref) {
+    final repo = ref.read(settingsRepositoryProvider);
+    final notifier = SettingsNotifier(repo);
+    notifier.load();
+    return notifier;
+  },
+);

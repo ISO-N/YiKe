@@ -29,7 +29,9 @@ void main() {
   });
 
   Future<int> insertItemWithTags(String tags) {
-    return db.into(db.learningItems).insert(
+    return db
+        .into(db.learningItems)
+        .insert(
           LearningItemsCompanion.insert(
             title: 'Item',
             note: const drift.Value.absent(),

@@ -9,7 +9,9 @@ void main() {
   test('calculateReviewDate: round 越界会抛 RangeError', () {
     final d0 = DateTime(2026, 2, 25);
     expect(() => EbbinghausUtils.calculateReviewDate(d0, 0), throwsRangeError);
-    expect(() => EbbinghausUtils.calculateReviewDate(d0, 999), throwsRangeError);
+    expect(
+      () => EbbinghausUtils.calculateReviewDate(d0, 999),
+      throwsRangeError,
+    );
   });
 }
-

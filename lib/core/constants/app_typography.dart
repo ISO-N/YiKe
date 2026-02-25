@@ -38,4 +38,3 @@ class AppTypography {
     height: 1.4,
   );
 }
-

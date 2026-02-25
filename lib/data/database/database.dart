@@ -21,13 +21,7 @@ part 'database.g.dart';
 /// 说明：
 /// - 数据库文件：`yike.db`
 /// - v1.0 MVP：本地离线可用，任务数据不加密；设置项可在上层做加密存储。
-@DriftDatabase(
-  tables: [
-    LearningItems,
-    ReviewTasks,
-    AppSettingsTable,
-  ],
-)
+@DriftDatabase(tables: [LearningItems, ReviewTasks, AppSettingsTable])
 class AppDatabase extends _$AppDatabase {
   /// 创建数据库实例。
   ///
@@ -55,15 +49,15 @@ class AppDatabase extends _$AppDatabase {
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
-        onCreate: (migrator) async {
-          await migrator.createAll();
-        },
-        onUpgrade: (migrator, from, to) async {
-          // v1.0 MVP：预留升级入口。
-        },
-        beforeOpen: (details) async {
-          // 开启外键约束，确保级联删除生效。
-          await customStatement('PRAGMA foreign_keys = ON');
-        },
-      );
+    onCreate: (migrator) async {
+      await migrator.createAll();
+    },
+    onUpgrade: (migrator, from, to) async {
+      // v1.0 MVP：预留升级入口。
+    },
+    beforeOpen: (details) async {
+      // 开启外键约束，确保级联删除生效。
+      await customStatement('PRAGMA foreign_keys = ON');
+    },
+  );
 }

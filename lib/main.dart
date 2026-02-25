@@ -26,10 +26,6 @@ Future<void> main() async {
   await WidgetService.initialize();
 
   runApp(
-    UncontrolledProviderScope(
-      container: container,
-      child: const YiKeApp(),
-    ),
+    UncontrolledProviderScope(container: container, child: const YiKeApp()),
   );
 }
-

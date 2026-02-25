@@ -34,4 +34,3 @@ class CompleteReviewTaskUseCase {
     return _reviewTaskRepository.completeTasks(ids);
   }
 }
-

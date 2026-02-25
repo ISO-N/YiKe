@@ -119,7 +119,11 @@ class LearningItemRepositoryImpl implements LearningItemRepository {
     try {
       final decoded = jsonDecode(tagsJson);
       if (decoded is List) {
-        return decoded.whereType<String>().map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
+        return decoded
+            .whereType<String>()
+            .map((e) => e.trim())
+            .where((e) => e.isNotEmpty)
+            .toList();
       }
       return const [];
     } catch (_) {

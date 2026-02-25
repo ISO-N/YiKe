@@ -78,7 +78,10 @@ class CalendarGrid extends StatelessWidget {
           color: AppColors.primary,
           shape: BoxShape.circle,
         ),
-        selectedTextStyle: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
+        selectedTextStyle: const TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.w700,
+        ),
       ),
       eventLoader: (day) {
         final key = YikeDateUtils.atStartOfDay(day);

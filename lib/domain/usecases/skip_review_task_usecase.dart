@@ -34,4 +34,3 @@ class SkipReviewTaskUseCase {
     return _reviewTaskRepository.skipTasks(ids);
   }
 }
-

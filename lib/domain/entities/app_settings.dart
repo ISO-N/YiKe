@@ -53,7 +53,8 @@ class AppSettingsEntity {
       doNotDisturbEnd: doNotDisturbEnd ?? this.doNotDisturbEnd,
       notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
       notificationPermissionGuideDismissed:
-          notificationPermissionGuideDismissed ?? this.notificationPermissionGuideDismissed,
+          notificationPermissionGuideDismissed ??
+          this.notificationPermissionGuideDismissed,
       lastNotifiedDate: lastNotifiedDate ?? this.lastNotifiedDate,
     );
   }

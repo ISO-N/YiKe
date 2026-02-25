@@ -42,13 +42,19 @@ class SettingsRepositoryImpl implements SettingsRepository {
   @override
   Future<AppSettingsEntity> getSettings() async {
     final reminderTime =
-        await _getString(keyReminderTime) ?? AppSettingsEntity.defaults.reminderTime;
+        await _getString(keyReminderTime) ??
+        AppSettingsEntity.defaults.reminderTime;
     final dndStart =
-        await _getString(keyDndStart) ?? AppSettingsEntity.defaults.doNotDisturbStart;
-    final dndEnd = await _getString(keyDndEnd) ?? AppSettingsEntity.defaults.doNotDisturbEnd;
+        await _getString(keyDndStart) ??
+        AppSettingsEntity.defaults.doNotDisturbStart;
+    final dndEnd =
+        await _getString(keyDndEnd) ??
+        AppSettingsEntity.defaults.doNotDisturbEnd;
     final notificationsEnabled =
-        await _getBool(keyNotificationsEnabled) ?? AppSettingsEntity.defaults.notificationsEnabled;
-    final guideDismissed = await _getBool(keyNotificationPermissionGuideDismissed) ??
+        await _getBool(keyNotificationsEnabled) ??
+        AppSettingsEntity.defaults.notificationsEnabled;
+    final guideDismissed =
+        await _getBool(keyNotificationPermissionGuideDismissed) ??
         AppSettingsEntity.defaults.notificationPermissionGuideDismissed;
     final lastNotifiedDate = await _getString(keyLastNotifiedDate);
 
@@ -66,13 +72,20 @@ class SettingsRepositoryImpl implements SettingsRepository {
   Future<void> saveSettings(AppSettingsEntity settings) async {
     await dao.upsertValues({
       keyReminderTime: await _crypto.encrypt(jsonEncode(settings.reminderTime)),
-      keyDndStart: await _crypto.encrypt(jsonEncode(settings.doNotDisturbStart)),
+      keyDndStart: await _crypto.encrypt(
+        jsonEncode(settings.doNotDisturbStart),
+      ),
       keyDndEnd: await _crypto.encrypt(jsonEncode(settings.doNotDisturbEnd)),
-      keyNotificationsEnabled: await _crypto.encrypt(jsonEncode(settings.notificationsEnabled)),
-      keyNotificationPermissionGuideDismissed:
-          await _crypto.encrypt(jsonEncode(settings.notificationPermissionGuideDismissed)),
+      keyNotificationsEnabled: await _crypto.encrypt(
+        jsonEncode(settings.notificationsEnabled),
+      ),
+      keyNotificationPermissionGuideDismissed: await _crypto.encrypt(
+        jsonEncode(settings.notificationPermissionGuideDismissed),
+      ),
       if (settings.lastNotifiedDate != null)
-        keyLastNotifiedDate: await _crypto.encrypt(jsonEncode(settings.lastNotifiedDate)),
+        keyLastNotifiedDate: await _crypto.encrypt(
+          jsonEncode(settings.lastNotifiedDate),
+        ),
     });
   }
 

@@ -13,4 +13,3 @@ abstract class SettingsRepository {
   /// 保存设置（整体覆盖）。
   Future<void> saveSettings(AppSettingsEntity settings);
 }
-

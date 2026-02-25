@@ -30,10 +30,12 @@ void main() {
       await db.customSelect('SELECT 1 as v').getSingle();
       await db.close();
 
-      expect(File('${tmp.path}${Platform.pathSeparator}yike.db').existsSync(), true);
+      expect(
+        File('${tmp.path}${Platform.pathSeparator}yike.db').existsSync(),
+        true,
+      );
     } finally {
       PathProviderPlatform.instance = original;
     }
   });
 }
-

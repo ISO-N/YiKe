@@ -51,7 +51,9 @@ class LearningItemDao {
   /// 返回值：学习内容或 null。
   /// 异常：数据库查询失败时可能抛出异常。
   Future<LearningItem?> getLearningItemById(int id) {
-    return (db.select(db.learningItems)..where((t) => t.id.equals(id))).getSingleOrNull();
+    return (db.select(
+      db.learningItems,
+    )..where((t) => t.id.equals(id))).getSingleOrNull();
   }
 
   /// 查询所有学习内容（按创建时间倒序）。
@@ -59,7 +61,9 @@ class LearningItemDao {
   /// 返回值：学习内容列表。
   /// 异常：数据库查询失败时可能抛出异常。
   Future<List<LearningItem>> getAllLearningItems() {
-    return (db.select(db.learningItems)..orderBy([(t) => OrderingTerm.desc(t.createdAt)])).get();
+    return (db.select(
+      db.learningItems,
+    )..orderBy([(t) => OrderingTerm.desc(t.createdAt)])).get();
   }
 
   /// 根据日期查询学习内容（按学习日期）。
@@ -97,7 +101,8 @@ class LearningItemDao {
   /// 返回值：标签列表。
   /// 异常：数据库查询失败时可能抛出异常。
   Future<List<String>> getAllTags() async {
-    final query = db.selectOnly(db.learningItems)..addColumns([db.learningItems.tags]);
+    final query = db.selectOnly(db.learningItems)
+      ..addColumns([db.learningItems.tags]);
     final rows = await query.get();
     final set = <String>{};
     for (final row in rows) {
@@ -115,7 +120,8 @@ class LearningItemDao {
   /// - 多标签的 item 每个标签各计一次
   /// 返回值：Map（key=tag，value=count，不保证排序）。
   Future<Map<String, int>> getTagDistribution() async {
-    final query = db.selectOnly(db.learningItems)..addColumns([db.learningItems.tags]);
+    final query = db.selectOnly(db.learningItems)
+      ..addColumns([db.learningItems.tags]);
     final rows = await query.get();
     final map = <String, int>{};
     for (final row in rows) {
@@ -133,7 +139,11 @@ class LearningItemDao {
     try {
       final decoded = jsonDecode(tagsJson);
       if (decoded is List) {
-        return decoded.whereType<String>().map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
+        return decoded
+            .whereType<String>()
+            .map((e) => e.trim())
+            .where((e) => e.isNotEmpty)
+            .toList();
       }
       return const [];
     } catch (_) {

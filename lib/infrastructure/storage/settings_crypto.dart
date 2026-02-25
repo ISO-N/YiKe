@@ -16,7 +16,7 @@ import 'secure_storage_service.dart';
 /// - 为兼容早期/调试数据，解密时若未命中前缀将直接返回原文。
 class SettingsCrypto {
   SettingsCrypto({required SecureStorageService secureStorageService})
-      : _secureStorageService = secureStorageService;
+    : _secureStorageService = secureStorageService;
 
   final SecureStorageService _secureStorageService;
 
@@ -30,7 +30,8 @@ class SettingsCrypto {
   /// 返回值：带前缀的密文字符串（可存入数据库）。
   /// 异常：加密失败时可能抛出异常。
   Future<String> encrypt(String plainText) async {
-    final keyBase64 = await _secureStorageService.getOrCreateSettingsKeyBase64();
+    final keyBase64 = await _secureStorageService
+        .getOrCreateSettingsKeyBase64();
     final keyBytes = base64Url.decode(keyBase64);
     final secretKey = SecretKey(keyBytes);
 
@@ -66,7 +67,8 @@ class SettingsCrypto {
     final cipher = base64Url.decode(payload['c'] as String);
     final macBytes = base64Url.decode(payload['m'] as String);
 
-    final keyBase64 = await _secureStorageService.getOrCreateSettingsKeyBase64();
+    final keyBase64 = await _secureStorageService
+        .getOrCreateSettingsKeyBase64();
     final keyBytes = base64Url.decode(keyBase64);
     final secretKey = SecretKey(keyBytes);
 
@@ -77,4 +79,3 @@ class SettingsCrypto {
     return utf8.decode(clearTextBytes);
   }
 }
-

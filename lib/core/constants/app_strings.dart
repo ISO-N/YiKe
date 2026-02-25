@@ -18,4 +18,3 @@ class AppStrings {
   static const String emptyTodayTasks = '今天没有复习任务，继续保持！';
   static const String emptyOverdueTasks = '暂无逾期任务。';
 }
-

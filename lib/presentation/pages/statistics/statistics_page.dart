@@ -43,11 +43,7 @@ class StatisticsPage extends ConsumerWidget {
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [
-              Color(0xFFE6FFFB),
-              Color(0xFFF0FDFA),
-              Color(0xFFFFF7ED),
-            ],
+            colors: [Color(0xFFE6FFFB), Color(0xFFF0FDFA), Color(0xFFFFF7ED)],
           ),
         ),
         child: SafeArea(
@@ -84,7 +80,10 @@ class StatisticsPage extends ConsumerWidget {
                 GlassCard(
                   child: Padding(
                     padding: const EdgeInsets.all(AppSpacing.lg),
-                    child: Text('加载失败：${state.errorMessage}', style: const TextStyle(color: AppColors.error)),
+                    child: Text(
+                      '加载失败：${state.errorMessage}',
+                      style: const TextStyle(color: AppColors.error),
+                    ),
                   ),
                 ),
               ],
@@ -121,7 +120,10 @@ class _StreakCard extends StatelessWidget {
                 borderRadius: BorderRadius.circular(14),
                 border: Border.all(color: AppColors.cta.withAlpha(80)),
               ),
-              child: const Icon(Icons.local_fire_department, color: AppColors.cta),
+              child: const Icon(
+                Icons.local_fire_department,
+                color: AppColors.cta,
+              ),
             ),
             const SizedBox(width: AppSpacing.md),
             Expanded(
@@ -132,7 +134,9 @@ class _StreakCard extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     days == 0 ? '还没有形成连续打卡' : '已连续打卡 $days 天',
-                    style: AppTypography.bodySecondary.copyWith(color: AppColors.textSecondary),
+                    style: AppTypography.bodySecondary.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
                   ),
                 ],
               ),
@@ -179,14 +183,20 @@ class _CompletionCard extends StatelessWidget {
             Center(
               child: Text(
                 '$percent%',
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppColors.primary),
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.primary,
+                ),
               ),
             ),
             const SizedBox(height: 4),
             Center(
               child: Text(
                 '$completed / $total',
-                style: AppTypography.bodySecondary.copyWith(color: AppColors.textSecondary),
+                style: AppTypography.bodySecondary.copyWith(
+                  color: AppColors.textSecondary,
+                ),
               ),
             ),
           ],
@@ -237,8 +247,11 @@ class _TagPieChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final entries = distribution.entries.where((e) => e.key.trim().isNotEmpty && e.value > 0).toList()
-      ..sort((a, b) => b.value.compareTo(a.value));
+    final entries =
+        distribution.entries
+            .where((e) => e.key.trim().isNotEmpty && e.value > 0)
+            .toList()
+          ..sort((a, b) => b.value.compareTo(a.value));
 
     return GlassCard(
       child: Padding(
@@ -250,7 +263,9 @@ class _TagPieChart extends StatelessWidget {
             const SizedBox(height: AppSpacing.sm),
             Text(
               entries.isEmpty ? '还没有标签分类' : '按学习内容标签统计占比（多标签会重复计数）',
-              style: AppTypography.bodySecondary.copyWith(color: AppColors.textSecondary),
+              style: AppTypography.bodySecondary.copyWith(
+                color: AppColors.textSecondary,
+              ),
             ),
             const SizedBox(height: AppSpacing.lg),
             if (entries.isEmpty)
@@ -258,7 +273,11 @@ class _TagPieChart extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(vertical: 24),
                 child: Column(
                   children: const [
-                    Icon(Icons.pie_chart_outline, size: 48, color: AppColors.textSecondary),
+                    Icon(
+                      Icons.pie_chart_outline,
+                      size: 48,
+                      color: AppColors.textSecondary,
+                    ),
                     SizedBox(height: AppSpacing.md),
                     Text('暂无数据', style: AppTypography.bodySecondary),
                   ],
@@ -363,12 +382,18 @@ class _LegendRow extends StatelessWidget {
         ),
         const SizedBox(width: AppSpacing.sm),
         Expanded(
-          child: Text(title, style: AppTypography.bodySecondary, overflow: TextOverflow.ellipsis),
+          child: Text(
+            title,
+            style: AppTypography.bodySecondary,
+            overflow: TextOverflow.ellipsis,
+          ),
         ),
         const SizedBox(width: AppSpacing.sm),
         Text(
           '$value · ${p.toStringAsFixed(1)}%',
-          style: AppTypography.bodySecondary.copyWith(color: AppColors.textSecondary),
+          style: AppTypography.bodySecondary.copyWith(
+            color: AppColors.textSecondary,
+          ),
         ),
       ],
     );

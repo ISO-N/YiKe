@@ -15,10 +15,7 @@ class WidgetTaskItem {
   /// 参数：
   /// - [title] 任务标题
   /// - [status] 状态（pending/done/skipped）
-  const WidgetTaskItem({
-    required this.title,
-    required this.status,
-  });
+  const WidgetTaskItem({required this.title, required this.status});
 
   final String title;
   final String status;

@@ -34,7 +34,9 @@ void main() {
   });
 
   Future<int> insertItem({required List<String> tags}) {
-    return db.into(db.learningItems).insert(
+    return db
+        .into(db.learningItems)
+        .insert(
           LearningItemsCompanion.insert(
             title: 'Item',
             note: const drift.Value.absent(),
@@ -51,7 +53,9 @@ void main() {
     final itemId2 = await insertItem(tags: ['b']);
 
     // 连续打卡链：25 done、24 done、23 skipped（不中断）、22 done、21 pending（断签）
-    await db.into(db.reviewTasks).insert(
+    await db
+        .into(db.reviewTasks)
+        .insert(
           ReviewTasksCompanion.insert(
             learningItemId: itemId1,
             reviewRound: 1,
@@ -61,7 +65,9 @@ void main() {
             createdAt: drift.Value(DateTime(2026, 2, 25)),
           ),
         );
-    await db.into(db.reviewTasks).insert(
+    await db
+        .into(db.reviewTasks)
+        .insert(
           ReviewTasksCompanion.insert(
             learningItemId: itemId1,
             reviewRound: 1,
@@ -71,7 +77,9 @@ void main() {
             createdAt: drift.Value(DateTime(2026, 2, 24)),
           ),
         );
-    await db.into(db.reviewTasks).insert(
+    await db
+        .into(db.reviewTasks)
+        .insert(
           ReviewTasksCompanion.insert(
             learningItemId: itemId2,
             reviewRound: 1,
@@ -81,7 +89,9 @@ void main() {
             createdAt: drift.Value(DateTime(2026, 2, 23)),
           ),
         );
-    await db.into(db.reviewTasks).insert(
+    await db
+        .into(db.reviewTasks)
+        .insert(
           ReviewTasksCompanion.insert(
             learningItemId: itemId2,
             reviewRound: 1,
@@ -91,7 +101,9 @@ void main() {
             createdAt: drift.Value(DateTime(2026, 2, 22)),
           ),
         );
-    await db.into(db.reviewTasks).insert(
+    await db
+        .into(db.reviewTasks)
+        .insert(
           ReviewTasksCompanion.insert(
             learningItemId: itemId2,
             reviewRound: 1,
@@ -102,7 +114,9 @@ void main() {
         );
 
     // 额外插入一条本周 pending（用于完成率分母），以及一条本周 skipped（不计入分母）
-    await db.into(db.reviewTasks).insert(
+    await db
+        .into(db.reviewTasks)
+        .insert(
           ReviewTasksCompanion.insert(
             learningItemId: itemId1,
             reviewRound: 2,
@@ -112,7 +126,9 @@ void main() {
             createdAt: drift.Value(DateTime(2026, 2, 26)),
           ),
         );
-    await db.into(db.reviewTasks).insert(
+    await db
+        .into(db.reviewTasks)
+        .insert(
           ReviewTasksCompanion.insert(
             learningItemId: itemId1,
             reviewRound: 2,

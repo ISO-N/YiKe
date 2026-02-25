@@ -127,4 +127,3 @@ class ReviewTaskViewEntity {
   final DateTime? completedAt;
   final DateTime? skippedAt;
 }
-

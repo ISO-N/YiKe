@@ -49,8 +49,10 @@ class GetCalendarTasksUseCase {
   }
 
   /// 获取指定范围内的任务列表（含学习内容信息）。
-  Future<List<ReviewTaskViewEntity>> getTasksInRange(DateTime start, DateTime end) {
+  Future<List<ReviewTaskViewEntity>> getTasksInRange(
+    DateTime start,
+    DateTime end,
+  ) {
     return _reviewTaskRepository.getTasksInRange(start, end);
   }
 }
-

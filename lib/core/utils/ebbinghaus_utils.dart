@@ -22,4 +22,3 @@ class EbbinghausUtils {
     return learningDate.add(Duration(days: interval));
   }
 }
-

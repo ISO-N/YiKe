@@ -18,9 +18,7 @@ class AppInjection {
 
     // v1.0 MVP：数据库需要在后台任务与 UI 层共享同一套 schema，因此在启动时注入。
     return ProviderContainer(
-      overrides: [
-        appDatabaseProvider.overrideWithValue(db),
-      ],
+      overrides: [appDatabaseProvider.overrideWithValue(db)],
     );
   }
 }

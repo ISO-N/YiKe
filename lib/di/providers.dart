@@ -53,9 +53,7 @@ final learningItemRepositoryProvider = Provider<LearningItemRepository>((ref) {
 });
 
 final reviewTaskRepositoryProvider = Provider<ReviewTaskRepository>((ref) {
-  return ReviewTaskRepositoryImpl(
-    dao: ref.read(reviewTaskDaoProvider),
-  );
+  return ReviewTaskRepositoryImpl(dao: ref.read(reviewTaskDaoProvider));
 });
 
 final settingsRepositoryProvider = Provider<SettingsRepository>((ref) {
@@ -66,7 +64,9 @@ final settingsRepositoryProvider = Provider<SettingsRepository>((ref) {
 });
 
 /// UseCase Providers
-final createLearningItemUseCaseProvider = Provider<CreateLearningItemUseCase>((ref) {
+final createLearningItemUseCaseProvider = Provider<CreateLearningItemUseCase>((
+  ref,
+) {
   return CreateLearningItemUseCase(
     learningItemRepository: ref.read(learningItemRepositoryProvider),
     reviewTaskRepository: ref.read(reviewTaskRepositoryProvider),
@@ -79,7 +79,9 @@ final getHomeTasksUseCaseProvider = Provider<GetHomeTasksUseCase>((ref) {
   );
 });
 
-final completeReviewTaskUseCaseProvider = Provider<CompleteReviewTaskUseCase>((ref) {
+final completeReviewTaskUseCaseProvider = Provider<CompleteReviewTaskUseCase>((
+  ref,
+) {
   return CompleteReviewTaskUseCase(
     reviewTaskRepository: ref.read(reviewTaskRepositoryProvider),
   );
@@ -92,7 +94,9 @@ final skipReviewTaskUseCaseProvider = Provider<SkipReviewTaskUseCase>((ref) {
 });
 
 /// v2.0 UseCase Providers
-final getCalendarTasksUseCaseProvider = Provider<GetCalendarTasksUseCase>((ref) {
+final getCalendarTasksUseCaseProvider = Provider<GetCalendarTasksUseCase>((
+  ref,
+) {
   return GetCalendarTasksUseCase(
     reviewTaskRepository: ref.read(reviewTaskRepositoryProvider),
   );
@@ -111,4 +115,3 @@ final exportDataUseCaseProvider = Provider<ExportDataUseCase>((ref) {
     reviewTaskRepository: ref.read(reviewTaskRepositoryProvider),
   );
 });
-

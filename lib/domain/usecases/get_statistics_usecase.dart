@@ -38,10 +38,12 @@ class StatisticsResult {
   final Map<String, int> tagDistribution;
 
   /// 本周完成率（0~1）。
-  double get weekCompletionRate => weekTotal == 0 ? 0 : weekCompleted / weekTotal;
+  double get weekCompletionRate =>
+      weekTotal == 0 ? 0 : weekCompleted / weekTotal;
 
   /// 本月完成率（0~1）。
-  double get monthCompletionRate => monthTotal == 0 ? 0 : monthCompleted / monthTotal;
+  double get monthCompletionRate =>
+      monthTotal == 0 ? 0 : monthCompleted / monthTotal;
 }
 
 /// 获取统计数据用例（F7）。
@@ -50,8 +52,8 @@ class GetStatisticsUseCase {
   const GetStatisticsUseCase({
     required ReviewTaskRepository reviewTaskRepository,
     required LearningItemRepository learningItemRepository,
-  })  : _reviewTaskRepository = reviewTaskRepository,
-        _learningItemRepository = learningItemRepository;
+  }) : _reviewTaskRepository = reviewTaskRepository,
+       _learningItemRepository = learningItemRepository;
 
   final ReviewTaskRepository _reviewTaskRepository;
   final LearningItemRepository _learningItemRepository;
@@ -66,16 +68,22 @@ class GetStatisticsUseCase {
     final todayStart = YikeDateUtils.atStartOfDay(now);
 
     // 本周：按周一为一周起点（ISO 习惯）。
-    final weekStart = todayStart.subtract(Duration(days: todayStart.weekday - DateTime.monday));
+    final weekStart = todayStart.subtract(
+      Duration(days: todayStart.weekday - DateTime.monday),
+    );
     final weekEnd = weekStart.add(const Duration(days: 7));
 
     // 本月：从 1 号 00:00 到下月 1 号 00:00。
     final monthStart = DateTime(todayStart.year, todayStart.month, 1);
     final monthEnd = DateTime(todayStart.year, todayStart.month + 1, 1);
 
-    final consecutive = await _reviewTaskRepository.getConsecutiveCompletedDays(today: now);
-    final (weekCompleted, weekTotal) = await _reviewTaskRepository.getTaskStatsInRange(weekStart, weekEnd);
-    final (monthCompleted, monthTotal) = await _reviewTaskRepository.getTaskStatsInRange(monthStart, monthEnd);
+    final consecutive = await _reviewTaskRepository.getConsecutiveCompletedDays(
+      today: now,
+    );
+    final (weekCompleted, weekTotal) = await _reviewTaskRepository
+        .getTaskStatsInRange(weekStart, weekEnd);
+    final (monthCompleted, monthTotal) = await _reviewTaskRepository
+        .getTaskStatsInRange(monthStart, monthEnd);
     final tags = await _learningItemRepository.getTagDistribution();
 
     return StatisticsResult(

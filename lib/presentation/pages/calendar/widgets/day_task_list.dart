@@ -37,7 +37,12 @@ class DayTaskListSheet extends ConsumerWidget {
         maxChildSize: 0.95,
         builder: (context, controller) {
           return Padding(
-            padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.sm, AppSpacing.lg, AppSpacing.lg),
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.lg,
+              AppSpacing.sm,
+              AppSpacing.lg,
+              AppSpacing.lg,
+            ),
             child: ListView(
               controller: controller,
               children: [
@@ -48,16 +53,26 @@ class DayTaskListSheet extends ConsumerWidget {
                 const SizedBox(height: AppSpacing.sm),
                 Text(
                   '左滑/右滑可在首页完成与跳过；此处支持点击按钮操作。',
-                  style: AppTypography.bodySecondary.copyWith(color: AppColors.textSecondary),
+                  style: AppTypography.bodySecondary.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
                 ),
                 const SizedBox(height: AppSpacing.lg),
                 if (state.isLoadingTasks) ...[
-                  const Center(child: Padding(padding: EdgeInsets.all(24), child: CircularProgressIndicator())),
+                  const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(24),
+                      child: CircularProgressIndicator(),
+                    ),
+                  ),
                 ] else if (state.errorMessage != null) ...[
                   GlassCard(
                     child: Padding(
                       padding: const EdgeInsets.all(AppSpacing.lg),
-                      child: Text('加载失败：${state.errorMessage}', style: const TextStyle(color: AppColors.error)),
+                      child: Text(
+                        '加载失败：${state.errorMessage}',
+                        style: const TextStyle(color: AppColors.error),
+                      ),
                     ),
                   ),
                 ] else if (state.selectedDayTasks.isEmpty) ...[
@@ -66,7 +81,11 @@ class DayTaskListSheet extends ConsumerWidget {
                       padding: const EdgeInsets.all(AppSpacing.xl),
                       child: Column(
                         children: const [
-                          Icon(Icons.event_busy, size: 48, color: AppColors.textSecondary),
+                          Icon(
+                            Icons.event_busy,
+                            size: 48,
+                            color: AppColors.textSecondary,
+                          ),
                           SizedBox(height: AppSpacing.md),
                           Text('当天暂无复习任务', style: AppTypography.bodySecondary),
                         ],
@@ -81,7 +100,9 @@ class DayTaskListSheet extends ConsumerWidget {
                           ? () async {
                               await notifier.completeTask(task.taskId);
                               if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('已完成')));
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('已完成')),
+                                );
                               }
                             }
                           : null,
@@ -89,7 +110,9 @@ class DayTaskListSheet extends ConsumerWidget {
                           ? () async {
                               await notifier.skipTask(task.taskId);
                               if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('已跳过')));
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('已跳过')),
+                                );
                               }
                             }
                           : null,
@@ -141,7 +164,10 @@ class _TaskCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: AppSpacing.sm),
-            Text('第 ${task.reviewRound} 次复习', style: AppTypography.bodySecondary),
+            Text(
+              '第 ${task.reviewRound} 次复习',
+              style: AppTypography.bodySecondary,
+            ),
             if (task.tags.isNotEmpty) ...[
               const SizedBox(height: AppSpacing.sm),
               Wrap(
@@ -154,7 +180,9 @@ class _TaskCard extends StatelessWidget {
                         label: Text(t),
                         labelStyle: const TextStyle(fontSize: 12),
                         backgroundColor: AppColors.primary.withAlpha(24),
-                        side: BorderSide(color: AppColors.primary.withAlpha(60)),
+                        side: BorderSide(
+                          color: AppColors.primary.withAlpha(60),
+                        ),
                         visualDensity: VisualDensity.compact,
                       ),
                     )
@@ -172,7 +200,9 @@ class _TaskCard extends StatelessWidget {
                   Expanded(
                     child: FilledButton(
                       onPressed: onComplete,
-                      style: FilledButton.styleFrom(backgroundColor: AppColors.success),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: AppColors.success,
+                      ),
                       child: const Text('完成'),
                     ),
                   ),
@@ -187,7 +217,12 @@ class _TaskCard extends StatelessWidget {
               ),
             ] else ...[
               const SizedBox(height: AppSpacing.sm),
-              Text(_timestampText(), style: AppTypography.bodySecondary.copyWith(color: AppColors.textSecondary)),
+              Text(
+                _timestampText(),
+                style: AppTypography.bodySecondary.copyWith(
+                  color: AppColors.textSecondary,
+                ),
+              ),
             ],
           ],
         ),
@@ -227,7 +262,14 @@ class _StatusChip extends StatelessWidget {
         borderRadius: BorderRadius.circular(999),
         border: Border.all(color: color.withAlpha(90)),
       ),
-      child: Text(text, style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w700)),
+      child: Text(
+        text,
+        style: TextStyle(
+          color: color,
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
     );
   }
 }
