@@ -11,6 +11,7 @@ import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_strings.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_typography.dart';
+import '../../../core/utils/date_utils.dart';
 import '../../widgets/glass_card.dart';
 import '../../providers/home_tasks_provider.dart';
 
@@ -64,6 +65,8 @@ class HomePage extends ConsumerWidget {
             child: ListView(
               padding: const EdgeInsets.all(AppSpacing.lg),
               children: [
+                const _DateHeader(),
+                const SizedBox(height: AppSpacing.lg),
                 _ProgressCard(
                   completed: state.completedCount,
                   total: state.totalCount,
@@ -84,6 +87,26 @@ class HomePage extends ConsumerWidget {
                 if (state.isLoading) ...[
                   const Center(child: Padding(padding: EdgeInsets.all(24), child: CircularProgressIndicator())),
                 ] else ...[
+                  if (state.todayPending.length + state.overduePending.length > 20) ...[
+                    GlassCard(
+                      child: Padding(
+                        padding: const EdgeInsets.all(AppSpacing.lg),
+                        child: Row(
+                          children: const [
+                            Icon(Icons.warning_amber_rounded, color: AppColors.warning),
+                            SizedBox(width: AppSpacing.sm),
+                            Expanded(
+                              child: Text(
+                                '今日任务较多，建议优先完成逾期任务。',
+                                style: AppTypography.bodySecondary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+                  ],
                   if (state.overduePending.isNotEmpty) ...[
                     _SectionHeader(
                       title: '逾期任务',
@@ -96,6 +119,8 @@ class HomePage extends ConsumerWidget {
                         taskId: t.taskId,
                         title: t.title,
                         tags: t.tags,
+                        reviewRound: t.reviewRound,
+                        scheduledDate: t.scheduledDate,
                         isOverdue: true,
                         selectionMode: state.isSelectionMode,
                         selected: state.selectedTaskIds.contains(t.taskId),
@@ -122,6 +147,8 @@ class HomePage extends ConsumerWidget {
                         taskId: t.taskId,
                         title: t.title,
                         tags: t.tags,
+                        reviewRound: t.reviewRound,
+                        scheduledDate: t.scheduledDate,
                         isOverdue: false,
                         selectionMode: state.isSelectionMode,
                         selected: state.selectedTaskIds.contains(t.taskId),
@@ -192,6 +219,45 @@ class _ProgressCard extends StatelessWidget {
   }
 }
 
+class _DateHeader extends StatelessWidget {
+  const _DateHeader();
+
+  @override
+  Widget build(BuildContext context) {
+    final now = DateTime.now();
+    final weekday = _weekdayZh(now.weekday);
+    final text = '${YikeDateUtils.formatYmd(now)}  $weekday';
+    return Row(
+      children: [
+        const Icon(Icons.calendar_today_outlined, size: 18, color: AppColors.textSecondary),
+        const SizedBox(width: AppSpacing.sm),
+        Text(text, style: AppTypography.body.copyWith(fontWeight: FontWeight.w500)),
+      ],
+    );
+  }
+
+  String _weekdayZh(int weekday) {
+    switch (weekday) {
+      case DateTime.monday:
+        return '周一';
+      case DateTime.tuesday:
+        return '周二';
+      case DateTime.wednesday:
+        return '周三';
+      case DateTime.thursday:
+        return '周四';
+      case DateTime.friday:
+        return '周五';
+      case DateTime.saturday:
+        return '周六';
+      case DateTime.sunday:
+        return '周日';
+      default:
+        return '';
+    }
+  }
+}
+
 class _SectionHeader extends StatelessWidget {
   const _SectionHeader({required this.title, this.subtitle, required this.color});
 
@@ -234,6 +300,8 @@ class _TaskCard extends StatelessWidget {
     required this.taskId,
     required this.title,
     required this.tags,
+    required this.reviewRound,
+    required this.scheduledDate,
     required this.isOverdue,
     required this.selectionMode,
     required this.selected,
@@ -245,6 +313,8 @@ class _TaskCard extends StatelessWidget {
   final int taskId;
   final String title;
   final List<String> tags;
+  final int reviewRound;
+  final DateTime scheduledDate;
   final bool isOverdue;
   final bool selectionMode;
   final bool selected;
@@ -255,88 +325,168 @@ class _TaskCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final borderColor = isOverdue ? AppColors.warning : AppColors.glassBorder;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: AppSpacing.md),
-      child: GlassCard(
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            border: Border.all(color: borderColor),
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(AppSpacing.lg),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (selectionMode)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 2),
-                    child: Checkbox(
-                      value: selected,
-                      onChanged: (_) => onToggleSelected(),
-                    ),
-                  )
-                else
-                  Icon(
-                    isOverdue ? Icons.error_outline : Icons.circle_outlined,
-                    color: isOverdue ? AppColors.warning : AppColors.textSecondary,
-                    size: 22,
+    final dueText = _dueText();
+
+    final card = GlassCard(
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          border: Border.all(color: borderColor),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (selectionMode)
+                Padding(
+                  padding: const EdgeInsets.only(top: 2),
+                  child: Checkbox(
+                    value: selected,
+                    onChanged: (_) => onToggleSelected(),
                   ),
-                const SizedBox(width: AppSpacing.md),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(title, style: AppTypography.body.copyWith(fontWeight: FontWeight.w700)),
-                      if (tags.isNotEmpty) ...[
-                        const SizedBox(height: AppSpacing.sm),
-                        Wrap(
-                          spacing: 6,
-                          runSpacing: 6,
-                          children: tags
-                              .take(3)
-                              .map(
-                                (t) => Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(999),
-                                    border: Border.all(color: AppColors.glassBorder),
-                                  ),
-                                  child: Text(
-                                    t,
-                                    style: AppTypography.bodySecondary.copyWith(fontSize: 12),
-                                  ),
-                                ),
-                              )
-                              .toList(),
-                        ),
-                      ],
-                    ],
-                  ),
+                )
+              else
+                Icon(
+                  isOverdue ? Icons.error_outline : Icons.circle_outlined,
+                  color: isOverdue ? AppColors.warning : AppColors.textSecondary,
+                  size: 22,
                 ),
-                const SizedBox(width: AppSpacing.md),
-                if (!selectionMode)
-                  Column(
-                    children: [
-                      IconButton(
-                        tooltip: isOverdue ? '补做' : '完成',
-                        onPressed: onComplete,
-                        icon: const Icon(Icons.check_circle_outline),
-                        color: AppColors.success,
-                      ),
-                      IconButton(
-                        tooltip: '跳过',
-                        onPressed: onSkip,
-                        icon: const Icon(Icons.not_interested_outlined),
-                        color: AppColors.textSecondary,
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '$title（第$reviewRound次）',
+                      style: AppTypography.body.copyWith(fontWeight: FontWeight.w700),
+                    ),
+                    const SizedBox(height: AppSpacing.xs),
+                    Text(dueText, style: AppTypography.bodySecondary),
+                    if (tags.isNotEmpty) ...[
+                      const SizedBox(height: AppSpacing.sm),
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        children: tags
+                            .take(3)
+                            .map(
+                              (t) => Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(999),
+                                  border: Border.all(color: AppColors.glassBorder),
+                                ),
+                                child: Text(
+                                  t,
+                                  style: AppTypography.bodySecondary.copyWith(fontSize: 12),
+                                ),
+                              ),
+                            )
+                            .toList(),
                       ),
                     ],
-                  ),
-              ],
-            ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              if (!selectionMode)
+                Column(
+                  children: [
+                    IconButton(
+                      tooltip: isOverdue ? '补做' : '完成',
+                      onPressed: onComplete,
+                      icon: const Icon(Icons.check_circle_outline),
+                      color: AppColors.success,
+                    ),
+                    IconButton(
+                      tooltip: '跳过',
+                      onPressed: onSkip,
+                      icon: const Icon(Icons.not_interested_outlined),
+                      color: AppColors.textSecondary,
+                    ),
+                  ],
+                ),
+            ],
           ),
         ),
+      ),
+    );
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.md),
+      child: selectionMode
+          ? card
+          : Dismissible(
+              key: ValueKey('task_$taskId'),
+              direction: DismissDirection.horizontal,
+              background: _SwipeBackground(
+                alignment: Alignment.centerLeft,
+                color: AppColors.success,
+                icon: Icons.check,
+                text: '完成',
+              ),
+              secondaryBackground: _SwipeBackground(
+                alignment: Alignment.centerRight,
+                color: AppColors.error,
+                icon: Icons.not_interested,
+                text: '跳过',
+              ),
+              confirmDismiss: (direction) async {
+                // 避免误触：仅在滑动距离足够时触发（Dismissible 自带阈值），这里直接允许。
+                return true;
+              },
+              onDismissed: (direction) {
+                if (direction == DismissDirection.startToEnd) {
+                  onComplete();
+                } else if (direction == DismissDirection.endToStart) {
+                  onSkip();
+                }
+              },
+              child: card,
+            ),
+    );
+  }
+
+  String _dueText() {
+    final todayStart = DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
+    final scheduledStart = DateTime(scheduledDate.year, scheduledDate.month, scheduledDate.day);
+    final diffDays = todayStart.difference(scheduledStart).inDays;
+    if (diffDays <= 0) return '今日待复习';
+    return '逾期 $diffDays 天';
+  }
+}
+
+class _SwipeBackground extends StatelessWidget {
+  const _SwipeBackground({
+    required this.alignment,
+    required this.color,
+    required this.icon,
+    required this.text,
+  });
+
+  final Alignment alignment;
+  final Color color;
+  final IconData icon;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      alignment: alignment,
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+      decoration: BoxDecoration(
+        color: color.withAlpha(40),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: color),
+          const SizedBox(width: AppSpacing.sm),
+          Text(text, style: TextStyle(color: color, fontWeight: FontWeight.w700)),
+        ],
       ),
     );
   }

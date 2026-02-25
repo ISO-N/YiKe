@@ -30,12 +30,14 @@ class _InputPageState extends ConsumerState<InputPage> {
 
   bool _saving = false;
   final List<_DraftItemControllers> _items = [];
+  late final Future<List<String>> _availableTagsFuture;
 
   @override
   void initState() {
     super.initState();
     // v1.0 MVP：默认提供一条输入项。
     _items.add(_DraftItemControllers());
+    _availableTagsFuture = ref.read(learningItemRepositoryProvider).getAllTags();
   }
 
   @override
@@ -196,6 +198,31 @@ class _InputPageState extends ConsumerState<InputPage> {
                                 hintText: '例如：Java, 面试',
                               ),
                             ),
+                            const SizedBox(height: AppSpacing.sm),
+                            FutureBuilder<List<String>>(
+                              future: _availableTagsFuture,
+                              builder: (context, snapshot) {
+                                final tags = snapshot.data ?? const <String>[];
+                                if (tags.isEmpty) {
+                                  return const Text(
+                                    '还没有标签，创建一个吧',
+                                    style: AppTypography.bodySecondary,
+                                  );
+                                }
+                                return Wrap(
+                                  spacing: 6,
+                                  runSpacing: 6,
+                                  children: tags.take(12).map((t) {
+                                    return ActionChip(
+                                      label: Text(t),
+                                      onPressed: _saving
+                                          ? null
+                                          : () => _appendTag(controllers.tags, t),
+                                    );
+                                  }).toList(),
+                                );
+                              },
+                            ),
                           ],
                         ),
                       ),
@@ -222,6 +249,13 @@ class _InputPageState extends ConsumerState<InputPage> {
         ],
       ),
     );
+  }
+
+  void _appendTag(TextEditingController controller, String tag) {
+    final current = _parseTags(controller.text);
+    if (current.contains(tag)) return;
+    current.add(tag);
+    controller.text = current.join(', ');
   }
 }
 
