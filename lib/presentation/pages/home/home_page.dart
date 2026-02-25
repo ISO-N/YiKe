@@ -5,6 +5,7 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:app_settings/app_settings.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_spacing.dart';
@@ -12,10 +13,13 @@ import '../../../core/constants/app_strings.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/utils/date_utils.dart';
+import '../../../domain/entities/app_settings.dart';
 import '../../widgets/glass_card.dart';
 import '../../providers/home_tasks_provider.dart';
+import '../../providers/notification_permission_provider.dart';
+import '../../providers/settings_provider.dart';
 
-class HomePage extends ConsumerWidget {
+class HomePage extends ConsumerStatefulWidget {
   /// 首页（今日复习）。
   ///
   /// 返回值：页面 Widget。
@@ -23,9 +27,38 @@ class HomePage extends ConsumerWidget {
   const HomePage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends ConsumerState<HomePage> {
+  // 防止弹窗在一次会话内重复出现。
+  bool _permissionDialogShown = false;
+
+  @override
+  Widget build(BuildContext context) {
     final state = ref.watch(homeTasksProvider);
     final notifier = ref.read(homeTasksProvider.notifier);
+    final settingsState = ref.watch(settingsProvider);
+    final permissionAsync = ref.watch(notificationPermissionProvider);
+
+    final permission = permissionAsync.valueOrNull;
+    final shouldPromptPermission =
+        !settingsState.isLoading &&
+        settingsState.settings.notificationsEnabled &&
+        !settingsState.settings.notificationPermissionGuideDismissed &&
+        permission == NotificationPermissionState.disabled;
+
+    if (shouldPromptPermission && !_permissionDialogShown) {
+      _permissionDialogShown = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        if (!mounted) return;
+        await _showNotificationPermissionDialog(
+          context: context,
+          ref: ref,
+          settings: settingsState.settings,
+        );
+      });
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -173,6 +206,50 @@ class HomePage extends ConsumerWidget {
           : null,
     );
   }
+}
+
+Future<void> _showNotificationPermissionDialog({
+  required BuildContext context,
+  required WidgetRef ref,
+  required AppSettingsEntity settings,
+}) async {
+  final settingsNotifier = ref.read(settingsProvider.notifier);
+
+  await showDialog<void>(
+    context: context,
+    builder: (context) {
+      return AlertDialog(
+        title: const Text('开启通知，确保及时复习'),
+        content: const Text(
+          '检测到系统通知权限未开启。\n\n'
+          '为了在每日提醒时间收到复习通知（v1.0 允许 ±30 分钟误差），请前往系统设置开启通知权限。',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () async {
+              await settingsNotifier.save(
+                settings.copyWith(notificationPermissionGuideDismissed: true),
+              );
+              if (context.mounted) Navigator.of(context).pop();
+            },
+            child: const Text('不再提示'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('稍后'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              await AppSettings.openAppSettings(type: AppSettingsType.notification);
+              ref.invalidate(notificationPermissionProvider);
+              if (context.mounted) Navigator.of(context).pop();
+            },
+            child: const Text('去开启'),
+          ),
+        ],
+      );
+    },
+  );
 }
 
 class _ProgressCard extends StatelessWidget {

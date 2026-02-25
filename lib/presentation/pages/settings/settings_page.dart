@@ -5,12 +5,14 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:app_settings/app_settings.dart';
 
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/utils/time_utils.dart';
 import '../../../domain/entities/app_settings.dart';
 import '../../../infrastructure/notification/notification_service.dart';
+import '../../providers/notification_permission_provider.dart';
 import '../../providers/settings_provider.dart';
 import '../../widgets/glass_card.dart';
 
@@ -25,6 +27,7 @@ class SettingsPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(settingsProvider);
     final notifier = ref.read(settingsProvider.notifier);
+    final permissionAsync = ref.watch(notificationPermissionProvider);
 
     Future<void> save(AppSettingsEntity next) async {
       await notifier.save(next);
@@ -33,6 +36,13 @@ class SettingsPage extends ConsumerWidget {
           const SnackBar(content: Text('设置已保存')),
         );
       }
+    }
+
+    Future<void> openNotificationSettings() async {
+      // v1.0 MVP：优先打开“通知”面板；若平台不支持，插件会降级处理。
+      await AppSettings.openAppSettings(type: AppSettingsType.notification);
+      // 打开系统设置返回后，刷新一次设置页的权限状态。
+      ref.invalidate(notificationPermissionProvider);
     }
 
     Future<void> pickTime({
@@ -145,30 +155,66 @@ class SettingsPage extends ConsumerWidget {
                     children: [
                       const Text('通知权限', style: AppTypography.h2),
                       const SizedBox(height: AppSpacing.sm),
-                      FutureBuilder<bool?>(
-                        future: NotificationService.instance.areNotificationsEnabled(),
-                        builder: (context, snapshot) {
-                          final enabled = snapshot.data;
-                          final text = enabled == null
-                              ? '当前平台不支持读取权限状态'
-                              : (enabled ? '已开启' : '未开启（可能收不到提醒）');
-                          return Row(
+                      permissionAsync.when(
+                        data: (permission) {
+                          final text = switch (permission) {
+                            NotificationPermissionState.enabled => '已开启',
+                            NotificationPermissionState.disabled => '未开启（可能收不到提醒）',
+                            NotificationPermissionState.unknown => '当前平台不支持读取权限状态',
+                          };
+
+                          final showOpenSettings = permission != NotificationPermissionState.enabled;
+
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Expanded(child: Text(text, style: AppTypography.bodySecondary)),
-                              OutlinedButton(
-                                onPressed: () async {
-                                  final ok = await NotificationService.instance.requestPermission();
-                                  if (context.mounted) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(content: Text(ok == true ? '已请求通知权限' : '未获取到通知权限')),
-                                    );
-                                  }
-                                },
-                                child: const Text('请求权限'),
+                              Row(
+                                children: [
+                                  Expanded(child: Text(text, style: AppTypography.bodySecondary)),
+                                  OutlinedButton(
+                                    onPressed: () async {
+                                      final ok = await NotificationService.instance.requestPermission();
+                                      if (context.mounted) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(content: Text(ok == true ? '已请求通知权限' : '未获取到通知权限')),
+                                        );
+                                      }
+                                      ref.invalidate(notificationPermissionProvider);
+                                    },
+                                    child: const Text('请求权限'),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: AppSpacing.sm),
+                              ListTile(
+                                contentPadding: EdgeInsets.zero,
+                                title: const Text('打开系统通知设置'),
+                                subtitle: const Text('若已拒绝权限，请在系统设置中手动开启'),
+                                trailing: const Icon(Icons.open_in_new),
+                                onTap: showOpenSettings ? openNotificationSettings : null,
+                              ),
+                              const Divider(height: 1),
+                              SwitchListTile(
+                                contentPadding: EdgeInsets.zero,
+                                title: const Text('首页通知引导弹窗'),
+                                subtitle: const Text('关闭后首页不再弹出“去开启通知权限”的提示'),
+                                value: !state.settings.notificationPermissionGuideDismissed,
+                                onChanged: state.isLoading
+                                    ? null
+                                    : (v) => save(
+                                          state.settings.copyWith(
+                                            notificationPermissionGuideDismissed: !v,
+                                          ),
+                                        ),
                               ),
                             ],
                           );
                         },
+                        loading: () => const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 12),
+                          child: Center(child: CircularProgressIndicator()),
+                        ),
+                        error: (e, _) => Text('权限状态读取失败：$e', style: AppTypography.bodySecondary),
                       ),
                     ],
                   ),
