@@ -1,0 +1,142 @@
+// 文件用途：LearningItemDao 单元测试（插入、按条件查询、标签聚合）。
+// 作者：Codex
+// 创建日期：2026-02-25
+
+import 'dart:convert';
+
+import 'package:drift/drift.dart' as drift;
+import 'package:flutter_test/flutter_test.dart';
+import 'package:yike/data/database/daos/learning_item_dao.dart';
+import 'package:yike/data/database/database.dart';
+
+import '../helpers/test_database.dart';
+
+void main() {
+  late AppDatabase db;
+  late LearningItemDao dao;
+
+  setUp(() {
+    db = createInMemoryDatabase();
+    dao = LearningItemDao(db);
+  });
+
+  tearDown(() async {
+    await db.close();
+  });
+
+  test('insertLearningItem / getLearningItemById 正常读写', () async {
+    final id = await dao.insertLearningItem(
+      LearningItemsCompanion.insert(
+        title: 'T1',
+        tags: drift.Value(jsonEncode(['a', 'b'])),
+        learningDate: DateTime(2026, 2, 25),
+        createdAt: drift.Value(DateTime(2026, 2, 25, 10)),
+        updatedAt: drift.Value(DateTime(2026, 2, 25, 10)),
+      ),
+    );
+
+    final row = await dao.getLearningItemById(id);
+    expect(row, isNotNull);
+    expect(row!.title, 'T1');
+    expect(row.tags, '["a","b"]');
+  });
+
+  test('getAllLearningItems 按 createdAt 倒序', () async {
+    await dao.insertLearningItem(
+      LearningItemsCompanion.insert(
+        title: 'Old',
+        tags: const drift.Value('[]'),
+        learningDate: DateTime(2026, 2, 25),
+        createdAt: drift.Value(DateTime(2026, 2, 25, 9)),
+      ),
+    );
+    await dao.insertLearningItem(
+      LearningItemsCompanion.insert(
+        title: 'New',
+        tags: const drift.Value('[]'),
+        learningDate: DateTime(2026, 2, 25),
+        createdAt: drift.Value(DateTime(2026, 2, 25, 10)),
+      ),
+    );
+
+    final rows = await dao.getAllLearningItems();
+    expect(rows.map((e) => e.title).toList(), ['New', 'Old']);
+  });
+
+  test('getLearningItemsByDate 仅返回当天数据', () async {
+    await dao.insertLearningItem(
+      LearningItemsCompanion.insert(
+        title: 'D1',
+        tags: const drift.Value('[]'),
+        learningDate: DateTime(2026, 2, 25, 23, 59),
+        createdAt: drift.Value(DateTime(2026, 2, 25, 12)),
+      ),
+    );
+    await dao.insertLearningItem(
+      LearningItemsCompanion.insert(
+        title: 'D2',
+        tags: const drift.Value('[]'),
+        // 边界：DAO 使用 isBetweenValues(start, end)，此处避免落在 end 的包含边界上。
+        learningDate: DateTime(2026, 2, 26, 0, 0, 1),
+        createdAt: drift.Value(DateTime(2026, 2, 26, 12)),
+      ),
+    );
+
+    final rows = await dao.getLearningItemsByDate(DateTime(2026, 2, 25));
+    expect(rows.length, 1);
+    expect(rows.single.title, 'D1');
+  });
+
+  test('getLearningItemsByTag 使用 LIKE 匹配 JSON 文本', () async {
+    await dao.insertLearningItem(
+      LearningItemsCompanion.insert(
+        title: 'TagA',
+        tags: drift.Value(jsonEncode(['a'])),
+        learningDate: DateTime(2026, 2, 25),
+        createdAt: drift.Value(DateTime(2026, 2, 25, 10)),
+      ),
+    );
+    await dao.insertLearningItem(
+      LearningItemsCompanion.insert(
+        title: 'TagB',
+        tags: drift.Value(jsonEncode(['b'])),
+        learningDate: DateTime(2026, 2, 25),
+        createdAt: drift.Value(DateTime(2026, 2, 25, 11)),
+      ),
+    );
+
+    final rows = await dao.getLearningItemsByTag('a');
+    expect(rows.length, 1);
+    expect(rows.single.title, 'TagA');
+  });
+
+  test('getAllTags 会去重、trim、排序，且容错非法 JSON', () async {
+    await dao.insertLearningItem(
+      LearningItemsCompanion.insert(
+        title: 'A',
+        tags: drift.Value(jsonEncode(['  z  ', 'a', '', 'a'])),
+        learningDate: DateTime(2026, 2, 25),
+        createdAt: drift.Value(DateTime(2026, 2, 25, 10)),
+      ),
+    );
+    await dao.insertLearningItem(
+      LearningItemsCompanion.insert(
+        title: 'B',
+        tags: const drift.Value('not-json'),
+        learningDate: DateTime(2026, 2, 25),
+        createdAt: drift.Value(DateTime(2026, 2, 25, 11)),
+      ),
+    );
+    await dao.insertLearningItem(
+      LearningItemsCompanion.insert(
+        title: 'C',
+        tags: drift.Value(jsonEncode(['b'])),
+        learningDate: DateTime(2026, 2, 25),
+        createdAt: drift.Value(DateTime(2026, 2, 25, 12)),
+      ),
+    );
+
+    final tags = await dao.getAllTags();
+    expect(tags, ['a', 'b', 'z']);
+  });
+}
