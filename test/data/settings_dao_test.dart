@@ -26,10 +26,23 @@ void main() {
     expect(await dao.getValue('k1'), 'v1');
   });
 
+  test('upsertValue 对同一 key 二次写入会更新而不是抛错', () async {
+    await dao.upsertValue('k1', 'v1');
+    await dao.upsertValue('k1', 'v2');
+    expect(await dao.getValue('k1'), 'v2');
+  });
+
   test('upsertValues 支持批量写入', () async {
     await dao.upsertValues({'k1': 'v1', 'k2': 'v2'});
     expect(await dao.getValue('k1'), 'v1');
     expect(await dao.getValue('k2'), 'v2');
+  });
+
+  test('upsertValues 对重复 key 具备幂等性（可多次写入）', () async {
+    await dao.upsertValues({'k1': 'v1', 'k2': 'v2'});
+    await dao.upsertValues({'k1': 'v1b', 'k2': 'v2b'});
+    expect(await dao.getValue('k1'), 'v1b');
+    expect(await dao.getValue('k2'), 'v2b');
   });
 }
 
