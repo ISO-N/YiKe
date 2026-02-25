@@ -166,6 +166,7 @@ class HomeTasksNotifier extends StateNotifier<HomeTasksState> {
       await WidgetService.updateWidgetData(
         totalCount: state.totalCount,
         completedCount: state.completedCount,
+        pendingCount: tasks.where((t) => t.status == 'pending').length,
         tasks: tasks,
       );
     } catch (_) {

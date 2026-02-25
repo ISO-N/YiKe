@@ -49,6 +49,7 @@ class WidgetService {
   static Future<void> updateWidgetData({
     required int totalCount,
     required int completedCount,
+    required int pendingCount,
     required List<WidgetTaskItem> tasks,
   }) async {
     // v1.0 MVP：仅要求 Android 小组件；其他平台无配置时直接忽略。
@@ -57,6 +58,7 @@ class WidgetService {
     final widgetData = <String, dynamic>{
       'totalCount': totalCount,
       'completedCount': completedCount,
+      'pendingCount': pendingCount,
       'tasks': tasks.take(3).map((e) => e.toJson()).toList(),
       'lastUpdated': DateTime.now().toIso8601String(),
     };

@@ -131,10 +131,10 @@ Future<void> _syncWidget(AppDatabase db) async {
     final dao = ReviewTaskDao(db);
     final tasks = await dao.getTasksByDateWithItem(DateTime.now());
     final (completed, total) = await dao.getTaskStats(DateTime.now());
-
     await WidgetService.updateWidgetData(
       totalCount: total,
       completedCount: completed,
+      pendingCount: tasks.where((t) => t.task.status == 'pending').length,
       tasks: tasks
           .take(3)
           .map(

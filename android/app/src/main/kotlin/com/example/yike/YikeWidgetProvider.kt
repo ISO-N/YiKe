@@ -65,16 +65,24 @@ class YikeWidgetProvider : HomeWidgetProvider() {
 
         val totalCount = obj?.optInt("totalCount", 0) ?: 0
         val completedCount = obj?.optInt("completedCount", 0) ?: 0
+        val pendingCount = obj?.optInt("pendingCount", totalCount) ?: totalCount
         val tasks = obj?.optJSONArray("tasks") ?: JSONArray()
 
         if (isLarge) {
             views.setTextViewText(R.id.widget_progress, "$completedCount/$totalCount 已完成")
-            // 最多展示 3 条任务
-            bindTaskLine(views, R.id.widget_task_1, tasks, 0)
-            bindTaskLine(views, R.id.widget_task_2, tasks, 1)
-            bindTaskLine(views, R.id.widget_task_3, tasks, 2)
+            if (tasks.length() == 0) {
+                views.setTextViewText(R.id.widget_task_1, "⬜ 暂无任务")
+                views.setTextViewText(R.id.widget_task_2, "")
+                views.setTextViewText(R.id.widget_task_3, "")
+            } else {
+                // 最多展示 3 条任务
+                bindTaskLine(views, R.id.widget_task_1, tasks, 0)
+                bindTaskLine(views, R.id.widget_task_2, tasks, 1)
+                bindTaskLine(views, R.id.widget_task_3, tasks, 2)
+            }
         } else {
-            views.setTextViewText(R.id.widget_count, totalCount.toString())
+            // 小组件 2×2：仅展示“待复习数量”。
+            views.setTextViewText(R.id.widget_count, pendingCount.toString())
         }
     }
 
@@ -108,4 +116,3 @@ class YikeWidgetProvider : HomeWidgetProvider() {
         return minWidth >= 180 || minHeight >= 110
     }
 }
-
