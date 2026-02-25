@@ -7,6 +7,24 @@ import 'dart:convert';
 
 import 'package:home_widget/home_widget.dart';
 
+/// 小组件展示的任务条目。
+class WidgetTaskItem {
+  /// 构造函数。
+  ///
+  /// 参数：
+  /// - [title] 任务标题
+  /// - [status] 状态（pending/done/skipped）
+  const WidgetTaskItem({
+    required this.title,
+    required this.status,
+  });
+
+  final String title;
+  final String status;
+
+  Map<String, dynamic> toJson() => {'title': title, 'status': status};
+}
+
 class WidgetService {
   static const String _widgetDataKey = 'widget_data';
 
@@ -24,18 +42,18 @@ class WidgetService {
   /// 参数：
   /// - [totalCount] 今日任务总数
   /// - [completedCount] 今日已完成数
-  /// - [titles] 今日任务标题列表（建议最多 3 条）
+  /// - [tasks] 今日任务条目（建议最多 3 条，含状态）
   /// 返回值：Future（无返回值）。
   /// 异常：写入或刷新失败时可能抛出异常。
   static Future<void> updateWidgetData({
     required int totalCount,
     required int completedCount,
-    required List<String> titles,
+    required List<WidgetTaskItem> tasks,
   }) async {
     final widgetData = <String, dynamic>{
       'totalCount': totalCount,
       'completedCount': completedCount,
-      'tasks': titles.take(3).toList(),
+      'tasks': tasks.take(3).map((e) => e.toJson()).toList(),
       'lastUpdated': DateTime.now().toIso8601String(),
     };
 

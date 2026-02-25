@@ -19,6 +19,9 @@ abstract class ReviewTaskRepository {
   /// 获取逾期待复习任务（pending，scheduledDate < 今日）。
   Future<List<ReviewTaskViewEntity>> getOverduePendingTasks();
 
+  /// 获取指定日期的全部任务（包含完成/跳过），用于小组件与通知内容生成。
+  Future<List<ReviewTaskViewEntity>> getTasksByDate(DateTime date);
+
   /// 标记任务完成。
   Future<void> completeTask(int id);
 
@@ -34,4 +37,3 @@ abstract class ReviewTaskRepository {
   /// 获取指定日期统计（completed/total）。
   Future<(int completed, int total)> getTaskStats(DateTime date);
 }
-

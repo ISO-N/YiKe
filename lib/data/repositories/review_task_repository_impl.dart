@@ -63,6 +63,12 @@ class ReviewTaskRepositoryImpl implements ReviewTaskRepository {
   }
 
   @override
+  Future<List<ReviewTaskViewEntity>> getTasksByDate(DateTime date) async {
+    final rows = await dao.getTasksByDateWithItem(date);
+    return rows.map(_toViewEntity).toList();
+  }
+
+  @override
   Future<void> completeTask(int id) async {
     await dao.updateTaskStatus(id, 'done', completedAt: DateTime.now());
   }

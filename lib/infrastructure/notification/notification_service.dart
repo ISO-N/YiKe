@@ -28,6 +28,25 @@ class NotificationService {
         ?.requestNotificationsPermission();
   }
 
+  /// 查询通知是否启用（仅 Android 支持，其他平台返回 null）。
+  ///
+  /// 返回值：true/false/null（未知）。
+  /// 异常：查询失败时可能抛出异常。
+  Future<bool?> areNotificationsEnabled() async {
+    return _plugin
+        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+        ?.areNotificationsEnabled();
+  }
+
+  /// 重新请求通知权限（Android 13+）。
+  ///
+  /// 返回值：是否同意（若平台不支持则返回 null）。
+  Future<bool?> requestPermission() async {
+    return _plugin
+        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+        ?.requestNotificationsPermission();
+  }
+
   /// 发送复习提醒通知。
   ///
   /// 参数：

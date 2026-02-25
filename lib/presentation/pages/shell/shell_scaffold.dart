@@ -37,7 +37,8 @@ class ShellScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final currentIndex = _locationToIndex(GoRouterState.of(context).uri.toString());
+    final location = GoRouter.of(context).routeInformationProvider.value.uri.toString();
+    final currentIndex = _locationToIndex(location);
     return Scaffold(
       body: child,
       bottomNavigationBar: NavigationBar(
@@ -59,4 +60,3 @@ class ShellScaffold extends StatelessWidget {
     );
   }
 }
-

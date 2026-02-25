@@ -118,6 +118,36 @@ class ReviewTaskDao {
         .get();
   }
 
+  /// 查询指定日期的所有复习任务（join 学习内容，用于展示/小组件）。
+  ///
+  /// 说明：包含 pending/done/skipped。
+  Future<List<ReviewTaskWithItemModel>> getTasksByDateWithItem(DateTime date) async {
+    final start = DateTime(date.year, date.month, date.day);
+    final end = start.add(const Duration(days: 1));
+
+    final task = db.reviewTasks;
+    final item = db.learningItems;
+
+    final query = db.select(task).join([
+      innerJoin(item, item.id.equalsExp(task.learningItemId)),
+    ])
+      ..where(task.scheduledDate.isBetweenValues(start, end))
+      ..orderBy([
+        OrderingTerm.asc(task.status),
+        OrderingTerm.asc(task.reviewRound),
+      ]);
+
+    final rows = await query.get();
+    return rows
+        .map(
+          (row) => ReviewTaskWithItemModel(
+            task: row.readTable(task),
+            item: row.readTable(item),
+          ),
+        )
+        .toList();
+  }
+
   /// 查询今日待复习任务（pending，scheduledDate=今日）。
   Future<List<ReviewTaskWithItemModel>> getTodayPendingTasksWithItem() {
     return _getTasksWithItem(
