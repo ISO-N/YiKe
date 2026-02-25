@@ -48,7 +48,7 @@ dependencies:
 
   # 通知与后台任务
   flutter_local_notifications: ^17.2.3
-  workmanager: ^0.5.2
+  workmanager: ^0.9.0+3
 
   # 桌面小组件
   home_widget: ^0.6.0
