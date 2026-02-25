@@ -25,6 +25,8 @@ class NonUiCoverageConfig {
     '.g.dart',
     'lib/app.dart',
     'lib/main.dart',
+    // Drift 的表定义文件主要用于代码生成，运行时无法直接实例化/覆盖，避免纳入口径导致覆盖率失真。
+    'lib/data/database/tables/',
   ];
 
   /// 覆盖率阈值（百分比）。
@@ -68,10 +70,18 @@ Future<void> main(List<String> args) async {
   final lcovSummaries = await _parseLcovSummaries(lcovFile);
 
   // 3) 校验是否所有 scope 文件都出现在 lcov 中（避免“未加载文件不计入覆盖率”的虚高）。
-  final missing = scopeFiles.where((p) => !lcovSummaries.containsKey(p)).toList()..sort();
-  if (missing.isNotEmpty) {
+  final missingAll = scopeFiles.where((p) => !lcovSummaries.containsKey(p)).toList()..sort();
+  final missingCoverable = <String>[];
+  for (final p in missingAll) {
+    // 说明：部分“纯接口/纯声明”文件在 VM 覆盖率中可能不会生成 record（没有可插桩行）。
+    // 这类文件不应当作为“未加载导致覆盖率虚高”的判定依据，因此这里做一次轻量启发式识别。
+    if (await _isPotentiallyCoverable(repoRoot, p)) {
+      missingCoverable.add(p);
+    }
+  }
+  if (missingCoverable.isNotEmpty) {
     stderr.writeln('以下文件未出现在 lcov 中（通常意味着未被任何测试 import/加载）：');
-    for (final p in missing) {
+    for (final p in missingCoverable) {
       stderr.writeln('- $p');
     }
     stderr.writeln('建议：在 `test/coverage/non_ui_imports_test.dart` 中补充 import，或为这些文件添加单测。');
@@ -83,7 +93,8 @@ Future<void> main(List<String> args) async {
   var totalFound = 0;
   var totalHit = 0;
   for (final p in scopeFiles) {
-    final s = lcovSummaries[p]!;
+    final s = lcovSummaries[p];
+    if (s == null) continue;
     totalFound += s.linesFound;
     totalHit += s.linesHit;
   }
@@ -205,3 +216,20 @@ String _relativePath(String base, String full) {
   return f;
 }
 
+Future<bool> _isPotentiallyCoverable(Directory repoRoot, String normalizedRelativePath) async {
+  // 说明：该启发式用于识别“可能存在可插桩代码”的文件，避免纯接口/纯声明文件导致误报。
+  final file = File(
+    '${repoRoot.path}${Platform.pathSeparator}${normalizedRelativePath.replaceAll('/', Platform.pathSeparator)}',
+  );
+  if (!await file.exists()) return false;
+
+  final content = await file.readAsString();
+  // 箭头函数 / getter / 表达式体通常会产生可覆盖行。
+  if (content.contains('=>')) return true;
+
+  // 形如：foo(...) { ... } / foo(...) async { ... } 的函数体。
+  // Dart 的原始字符串正则：`\)\s*(async\s*)?\{`，匹配形如 `foo(...) {` 或 `foo(...) async {`。
+  final hasBlockBody = RegExp(r'\)\s*(async\s*)?\{');
+  if (hasBlockBody.hasMatch(content)) return true;
+  return false;
+}
