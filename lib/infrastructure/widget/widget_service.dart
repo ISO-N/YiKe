@@ -4,6 +4,7 @@
 library;
 
 import 'dart:convert';
+import 'dart:io' show Platform;
 
 import 'package:home_widget/home_widget.dart';
 
@@ -50,6 +51,9 @@ class WidgetService {
     required int completedCount,
     required List<WidgetTaskItem> tasks,
   }) async {
+    // v1.0 MVP：仅要求 Android 小组件；其他平台无配置时直接忽略。
+    if (!Platform.isAndroid) return;
+
     final widgetData = <String, dynamic>{
       'totalCount': totalCount,
       'completedCount': completedCount,
@@ -67,6 +71,7 @@ class WidgetService {
   /// 异常：无（读取异常会吞掉并返回 null）。
   static Future<Map<String, dynamic>?> getWidgetData() async {
     try {
+      if (!Platform.isAndroid) return null;
       final raw = await HomeWidget.getWidgetData<String>(_widgetDataKey);
       if (raw == null || raw.isEmpty) return null;
       return jsonDecode(raw) as Map<String, dynamic>;

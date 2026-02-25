@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  文件用途：小组件背景（深色玻璃效果）。
+  作者：Codex
+  创建日期：2026-02-25
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <solid android:color="#E60D9488" />
+    <corners android:radius="16dp" />
+    <padding
+        android:left="12dp"
+        android:top="12dp"
+        android:right="12dp"
+        android:bottom="12dp" />
+</shape>
+
