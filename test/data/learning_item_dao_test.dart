@@ -139,4 +139,28 @@ void main() {
     final tags = await dao.getAllTags();
     expect(tags, ['a', 'b', 'z']);
   });
+
+  test('getTagDistribution 按标签统计数量（多标签各计一次）', () async {
+    await dao.insertLearningItem(
+      LearningItemsCompanion.insert(
+        title: 'I1',
+        tags: drift.Value(jsonEncode(['a', 'b', 'a'])),
+        learningDate: DateTime(2026, 2, 25),
+        createdAt: drift.Value(DateTime(2026, 2, 25, 10)),
+      ),
+    );
+    await dao.insertLearningItem(
+      LearningItemsCompanion.insert(
+        title: 'I2',
+        tags: drift.Value(jsonEncode(['b', 'c'])),
+        learningDate: DateTime(2026, 2, 26),
+        createdAt: drift.Value(DateTime(2026, 2, 26, 10)),
+      ),
+    );
+
+    final dist = await dao.getTagDistribution();
+    expect(dist['a'], 1); // 同一条记录中重复标签不应重复计数
+    expect(dist['b'], 2);
+    expect(dist['c'], 1);
+  });
 }

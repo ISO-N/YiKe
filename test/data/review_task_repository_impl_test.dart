@@ -28,7 +28,7 @@ void main() {
     await db.close();
   });
 
-  Future<int> _insertItemWithTags(String tags) {
+  Future<int> insertItemWithTags(String tags) {
     return db.into(db.learningItems).insert(
           LearningItemsCompanion.insert(
             title: 'Item',
@@ -41,7 +41,7 @@ void main() {
   }
 
   test('createBatch 会逐条插入并回写 id', () async {
-    final itemId = await _insertItemWithTags(jsonEncode(['a']));
+    final itemId = await insertItemWithTags(jsonEncode(['a']));
     final base = DateTime(2026, 2, 25);
 
     final tasks = [
@@ -68,7 +68,7 @@ void main() {
   });
 
   test('getTodayPendingTasks 对非法 tags JSON 返回空 tags', () async {
-    final itemId = await _insertItemWithTags('not-json');
+    final itemId = await insertItemWithTags('not-json');
     final now = DateTime.now();
     final todayStart = DateTime(now.year, now.month, now.day);
 
@@ -88,7 +88,7 @@ void main() {
   });
 
   test('completeTask / skipTask 会更新状态与时间戳', () async {
-    final itemId = await _insertItemWithTags(jsonEncode([]));
+    final itemId = await insertItemWithTags(jsonEncode([]));
     final base = DateTime(2026, 2, 25);
     final taskId = await dao.insertReviewTask(
       ReviewTasksCompanion.insert(

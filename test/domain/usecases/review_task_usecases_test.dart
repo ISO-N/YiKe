@@ -4,6 +4,7 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:yike/domain/entities/review_task.dart';
+import 'package:yike/domain/entities/task_day_stats.dart';
 import 'package:yike/domain/repositories/review_task_repository.dart';
 import 'package:yike/domain/usecases/complete_review_task_usecase.dart';
 import 'package:yike/domain/usecases/get_home_tasks_usecase.dart';
@@ -64,6 +65,21 @@ class _FakeReviewTaskRepository implements ReviewTaskRepository {
     lastStatsDate = date;
     return (2, 5);
   }
+
+  @override
+  Future<Map<DateTime, TaskDayStats>> getMonthlyTaskStats(int year, int month) => throw UnimplementedError();
+
+  @override
+  Future<List<ReviewTaskViewEntity>> getTasksInRange(DateTime start, DateTime end) => throw UnimplementedError();
+
+  @override
+  Future<int> getConsecutiveCompletedDays({DateTime? today}) => throw UnimplementedError();
+
+  @override
+  Future<(int completed, int total)> getTaskStatsInRange(DateTime start, DateTime end) => throw UnimplementedError();
+
+  @override
+  Future<List<ReviewTaskEntity>> getAllTasks() => throw UnimplementedError();
 
   // 以下为当前测试不涉及的方法。
   @override

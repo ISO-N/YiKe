@@ -14,12 +14,16 @@ import 'package:yike/domain/entities/app_settings.dart';
 import 'package:yike/domain/entities/learning_item.dart';
 import 'package:yike/domain/entities/review_config.dart';
 import 'package:yike/domain/entities/review_task.dart';
+import 'package:yike/domain/entities/task_day_stats.dart';
 import 'package:yike/domain/repositories/learning_item_repository.dart';
 import 'package:yike/domain/repositories/review_task_repository.dart';
 import 'package:yike/domain/repositories/settings_repository.dart';
 import 'package:yike/domain/usecases/complete_review_task_usecase.dart';
 import 'package:yike/domain/usecases/create_learning_item_usecase.dart';
+import 'package:yike/domain/usecases/export_data_usecase.dart';
+import 'package:yike/domain/usecases/get_calendar_tasks_usecase.dart';
 import 'package:yike/domain/usecases/get_home_tasks_usecase.dart';
+import 'package:yike/domain/usecases/get_statistics_usecase.dart';
 import 'package:yike/domain/usecases/skip_review_task_usecase.dart';
 
 // data
@@ -45,12 +49,16 @@ void main() {
     expect(LearningItemEntity, isNotNull);
     expect(ReviewConfig, isNotNull);
     expect(ReviewTaskEntity, isNotNull);
+    expect(TaskDayStats, isNotNull);
     expect(LearningItemRepository, isNotNull);
     expect(ReviewTaskRepository, isNotNull);
     expect(SettingsRepository, isNotNull);
     expect(CompleteReviewTaskUseCase, isNotNull);
     expect(CreateLearningItemUseCase, isNotNull);
+    expect(ExportDataUseCase, isNotNull);
+    expect(GetCalendarTasksUseCase, isNotNull);
     expect(GetHomeTasksUseCase, isNotNull);
+    expect(GetStatisticsUseCase, isNotNull);
     expect(SkipReviewTaskUseCase, isNotNull);
     expect(LearningItemDao, isNotNull);
     expect(ReviewTaskDao, isNotNull);

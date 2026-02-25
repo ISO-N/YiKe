@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:yike/domain/entities/learning_item.dart';
 import 'package:yike/domain/entities/review_config.dart';
 import 'package:yike/domain/entities/review_task.dart';
+import 'package:yike/domain/entities/task_day_stats.dart';
 import 'package:yike/domain/repositories/learning_item_repository.dart';
 import 'package:yike/domain/repositories/review_task_repository.dart';
 import 'package:yike/domain/usecases/create_learning_item_usecase.dart';
@@ -28,6 +29,9 @@ class _FakeLearningItemRepository implements LearningItemRepository {
 
   @override
   Future<List<String>> getAllTags() => throw UnimplementedError();
+
+  @override
+  Future<Map<String, int>> getTagDistribution() => throw UnimplementedError();
 
   @override
   Future<List<LearningItemEntity>> getByDate(DateTime date) => throw UnimplementedError();
@@ -66,6 +70,21 @@ class _FakeReviewTaskRepository implements ReviewTaskRepository {
 
   @override
   Future<List<ReviewTaskViewEntity>> getOverduePendingTasks() => throw UnimplementedError();
+
+  @override
+  Future<Map<DateTime, TaskDayStats>> getMonthlyTaskStats(int year, int month) => throw UnimplementedError();
+
+  @override
+  Future<List<ReviewTaskViewEntity>> getTasksInRange(DateTime start, DateTime end) => throw UnimplementedError();
+
+  @override
+  Future<int> getConsecutiveCompletedDays({DateTime? today}) => throw UnimplementedError();
+
+  @override
+  Future<(int completed, int total)> getTaskStatsInRange(DateTime start, DateTime end) => throw UnimplementedError();
+
+  @override
+  Future<List<ReviewTaskEntity>> getAllTasks() => throw UnimplementedError();
 
   @override
   Future<(int completed, int total)> getTaskStats(DateTime date) => throw UnimplementedError();
