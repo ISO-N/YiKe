@@ -93,7 +93,12 @@ class FileParser {
       return utf8.decode(bytes, allowMalformed: false);
     } catch (_) {
       // 关键逻辑：GBK/GB2312 在部分历史 CSV 中常见，这里做兜底解码。
-      return gbk.decode(bytes);
+      // 保护：若第三方 GBK 解码在特定环境不可用/异常，则回退为“允许损坏的 UTF-8”，避免导入流程直接崩溃。
+      try {
+        return gbk.decode(bytes);
+      } catch (_) {
+        return utf8.decode(bytes, allowMalformed: true);
+      }
     }
   }
 
