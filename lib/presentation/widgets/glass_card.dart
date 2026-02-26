@@ -34,21 +34,32 @@ class GlassCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
+    final decorated = DecoratedBox(
+      decoration: BoxDecoration(
+        // 关键逻辑：引用 AppColors 常量，保持配色的单一真源。
+        color: isDark ? AppColors.darkGlassSurface : AppColors.glassSurface,
+        borderRadius: BorderRadius.circular(borderRadius),
+        border: Border.all(
+          color: isDark ? AppColors.darkGlassBorder : AppColors.glassBorder,
+        ),
+      ),
+      child: child,
+    );
+
+    // 关键逻辑：当 blurSigma <= 0 时不创建 BackdropFilter，避免在大面积内容场景下
+    // 引入不必要的离屏渲染与合成开销（桌面端滚动时更明显）。
+    if (blurSigma <= 0) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(borderRadius),
+        child: decorated,
+      );
+    }
+
     return ClipRRect(
       borderRadius: BorderRadius.circular(borderRadius),
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: blurSigma, sigmaY: blurSigma),
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            // 关键逻辑：引用 AppColors 常量，保持配色的单一真源。
-            color: isDark ? AppColors.darkGlassSurface : AppColors.glassSurface,
-            borderRadius: BorderRadius.circular(borderRadius),
-            border: Border.all(
-              color: isDark ? AppColors.darkGlassBorder : AppColors.glassBorder,
-            ),
-          ),
-          child: child,
-        ),
+        child: decorated,
       ),
     );
   }
