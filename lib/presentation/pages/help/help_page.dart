@@ -35,6 +35,15 @@ class _HelpPageState extends State<HelpPage> {
   final ScrollController _scrollController = ScrollController();
   Future<_HelpMarkdownData>? _future;
 
+  // 布局诊断：用于定位 Windows 端滚动条拖动“跳跃”的根因。
+  // 说明：仅在 Debug 模式下打印，Release 不会产生任何开销或日志。
+  final GlobalKey _headerKey = GlobalKey(debugLabel: 'help_header_card');
+  final GlobalKey _tocKey = GlobalKey(debugLabel: 'help_toc_card');
+  final GlobalKey _markdownKey = GlobalKey(debugLabel: 'help_markdown_card');
+  final GlobalKey _footerKey = GlobalKey(debugLabel: 'help_footer_card');
+  bool _hasLoggedInitialLayout = false;
+  double? _lastMaxScrollExtent;
+
   @override
   void initState() {
     super.initState();
@@ -140,6 +149,10 @@ class _HelpPageState extends State<HelpPage> {
             builders['h2'] = headerAnchors;
             builders['h3'] = headerAnchors;
 
+            // 仅 Debug：记录初次布局后的 ScrollExtent 与各区块高度，判断是否存在“页面底部还有一大块空白”
+            // 导致滚动条比例异常，从而出现拖动跳跃。
+            _debugLogInitialLayoutOnce();
+
             // 关键逻辑（Windows 体验修复）：
             // Flutter 在桌面端会通过默认 ScrollBehavior 自动包一层 Scrollbar。
             // 在部分 Windows 环境下，自动 Scrollbar 的拖动会出现“滑块跳跃”的交互问题。
@@ -148,38 +161,47 @@ class _HelpPageState extends State<HelpPage> {
               controller: _scrollController,
               padding: const EdgeInsets.all(AppSpacing.lg),
               children: [
-                _HeaderCard(tocCount: data.tocItems.length),
-                const SizedBox(height: AppSpacing.lg),
-                _TocCard(
-                  items: data.tocItems,
-                  onTap: (anchorId) => _scrollToAnchor(data, anchorId),
+                KeyedSubtree(
+                  key: _headerKey,
+                  child: _HeaderCard(tocCount: data.tocItems.length),
                 ),
                 const SizedBox(height: AppSpacing.lg),
-                GlassCard(
-                  blurSigma: disableHeavyBlurOnWindows ? 0 : 14,
-                  child: Padding(
-                    padding: const EdgeInsets.all(AppSpacing.lg),
-                    child: MarkdownBody(
-                      data: data.markdown,
-                      selectable: true,
-                      builders: builders,
-                      styleSheet:
-                          MarkdownStyleSheet.fromTheme(
-                            Theme.of(context),
-                          ).copyWith(
-                            h1: Theme.of(context).textTheme.headlineMedium,
-                            h2: Theme.of(context).textTheme.titleLarge,
-                            h3: Theme.of(context).textTheme.titleMedium,
-                            p: Theme.of(
-                              context,
-                            ).textTheme.bodyMedium?.copyWith(height: 1.6),
-                            blockquotePadding: const EdgeInsets.all(12),
-                          ),
+                KeyedSubtree(
+                  key: _tocKey,
+                  child: _TocCard(
+                    items: data.tocItems,
+                    onTap: (anchorId) => _scrollToAnchor(data, anchorId),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                KeyedSubtree(
+                  key: _markdownKey,
+                  child: GlassCard(
+                    blurSigma: disableHeavyBlurOnWindows ? 0 : 14,
+                    child: Padding(
+                      padding: const EdgeInsets.all(AppSpacing.lg),
+                      child: MarkdownBody(
+                        data: data.markdown,
+                        selectable: true,
+                        builders: builders,
+                        styleSheet:
+                            MarkdownStyleSheet.fromTheme(
+                              Theme.of(context),
+                            ).copyWith(
+                              h1: Theme.of(context).textTheme.headlineMedium,
+                              h2: Theme.of(context).textTheme.titleLarge,
+                              h3: Theme.of(context).textTheme.titleMedium,
+                              p: Theme.of(
+                                context,
+                              ).textTheme.bodyMedium?.copyWith(height: 1.6),
+                              blockquotePadding: const EdgeInsets.all(12),
+                            ),
+                      ),
                     ),
                   ),
                 ),
                 const SizedBox(height: AppSpacing.lg),
-                _FooterCard(),
+                KeyedSubtree(key: _footerKey, child: _FooterCard()),
                 const SizedBox(height: 24),
               ],
             );
@@ -188,18 +210,97 @@ class _HelpPageState extends State<HelpPage> {
               behavior: ScrollConfiguration.of(context).copyWith(
                 scrollbars: false,
               ),
-              child: Scrollbar(
-                controller: _scrollController,
-                thumbVisibility: true,
-                trackVisibility: true,
-                interactive: true,
-                child: listView,
+              child: NotificationListener<ScrollNotification>(
+                onNotification: _onScrollNotification,
+                child: Scrollbar(
+                  controller: _scrollController,
+                  thumbVisibility: true,
+                  trackVisibility: true,
+                  interactive: true,
+                  child: listView,
+                ),
               ),
             );
           },
         ),
       ),
     );
+  }
+
+  /// Debug-only：打印帮助页初次布局的关键信息。
+  void _debugLogInitialLayoutOnce() {
+    assert(() {
+      if (_hasLoggedInitialLayout) return true;
+      if (defaultTargetPlatform != TargetPlatform.windows) return true;
+      _hasLoggedInitialLayout = true;
+
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+
+        final headerSize = _headerKey.currentContext?.size;
+        final tocSize = _tocKey.currentContext?.size;
+        final markdownSize = _markdownKey.currentContext?.size;
+        final footerSize = _footerKey.currentContext?.size;
+
+        debugPrint(
+          'HelpPage(Windows) layout: '
+          'header=$headerSize, toc=$tocSize, markdown=$markdownSize, footer=$footerSize',
+        );
+
+        if (_scrollController.hasClients) {
+          final pos = _scrollController.position;
+          debugPrint(
+            'HelpPage(Windows) scroll: '
+            'pixels=${pos.pixels.toStringAsFixed(1)}, '
+            'max=${pos.maxScrollExtent.toStringAsFixed(1)}, '
+            'viewport=${pos.viewportDimension.toStringAsFixed(1)}',
+          );
+        }
+      });
+      return true;
+    }());
+  }
+
+  /// Debug-only：监控拖动时 ScrollMetrics 是否动态变化。
+  bool _onScrollNotification(ScrollNotification notification) {
+    assert(() {
+      if (defaultTargetPlatform != TargetPlatform.windows) return true;
+
+      final metrics = notification.metrics;
+      final currentMax = metrics.maxScrollExtent;
+      final lastMax = _lastMaxScrollExtent;
+      _lastMaxScrollExtent = currentMax;
+
+      // 只有在用户拖动导致的滚动更新时才重点关注。
+      if (notification is ScrollUpdateNotification &&
+          notification.dragDetails != null) {
+        final delta = notification.scrollDelta ?? 0;
+
+        // 若 maxScrollExtent 在拖动过程中发生变化，滚动条比例会变化，用户会感知为“滑块跳跃”。
+        if (lastMax != null && (currentMax - lastMax).abs() > 1) {
+          debugPrint(
+            'HelpPage(Windows) metrics changed during drag: '
+            'max $lastMax -> $currentMax, '
+            'pixels=${metrics.pixels.toStringAsFixed(1)}, '
+            'delta=${delta.toStringAsFixed(1)}',
+          );
+        }
+
+        // 若单次滚动增量异常偏大，也打印出来辅助判断是否存在“隐藏超长内容”。
+        if (delta.abs() > metrics.viewportDimension * 0.8) {
+          debugPrint(
+            'HelpPage(Windows) large drag update: '
+            'delta=${delta.toStringAsFixed(1)}, '
+            'pixels=${metrics.pixels.toStringAsFixed(1)}, '
+            'max=${metrics.maxScrollExtent.toStringAsFixed(1)}, '
+            'viewport=${metrics.viewportDimension.toStringAsFixed(1)}',
+          );
+        }
+      }
+      return true;
+    }());
+
+    return false;
   }
 }
 
