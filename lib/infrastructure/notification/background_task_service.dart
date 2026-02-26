@@ -3,6 +3,7 @@
 /// 创建日期：2026-02-25
 library;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:workmanager/workmanager.dart';
 
@@ -23,11 +24,29 @@ class BackgroundTaskService {
   static const String _dailyReviewCheckTaskName = 'dailyReviewCheck';
   static const String _dailyReviewCheckUniqueName = 'daily_review_check';
 
+  /// Workmanager 当前是否可用。
+  ///
+  /// 说明：workmanager 仅在 Android / iOS 有平台实现；桌面端（Windows/macOS/Linux）
+  /// 会走到占位实现并抛出 UnimplementedError，因此必须在调用前做平台判断。
+  static bool get _isWorkmanagerSupported {
+    if (kIsWeb) return false;
+    return defaultTargetPlatform == TargetPlatform.android ||
+        defaultTargetPlatform == TargetPlatform.iOS;
+  }
+
   /// 初始化后台任务系统。
   ///
   /// 返回值：Future（无返回值）。
   /// 异常：注册失败时可能抛出异常。
   static Future<void> initialize() async {
+    // Windows 白屏修复：桌面端跳过 workmanager 初始化，避免启动阶段直接崩溃。
+    if (!_isWorkmanagerSupported) {
+      if (kDebugMode) {
+        debugPrint('后台任务：当前平台不支持 Workmanager，已跳过初始化。');
+      }
+      return;
+    }
+
     await Workmanager().initialize(callbackDispatcher);
 
     // 每小时检查一次（在提醒时间附近触发通知）。
