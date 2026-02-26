@@ -1,6 +1,7 @@
 /// 文件用途：设置页（通知开关、提醒时间、免打扰时段等）。
 /// 作者：Codex
 /// 创建日期：2026-02-25
+/// 最后更新：2026-02-26（新增主题模式设置入口）
 library;
 
 import 'package:flutter/material.dart';
@@ -16,7 +17,9 @@ import '../../../domain/entities/app_settings.dart';
 import '../../../infrastructure/notification/notification_service.dart';
 import '../../providers/notification_permission_provider.dart';
 import '../../providers/settings_provider.dart';
+import '../../providers/theme_provider.dart';
 import '../../widgets/glass_card.dart';
+import 'widgets/theme_mode_sheet.dart';
 
 class SettingsPage extends ConsumerWidget {
   /// 设置页。
@@ -30,6 +33,7 @@ class SettingsPage extends ConsumerWidget {
     final state = ref.watch(settingsProvider);
     final notifier = ref.read(settingsProvider.notifier);
     final permissionAsync = ref.watch(notificationPermissionProvider);
+    final currentThemeMode = ref.watch(themeModeProvider);
 
     Future<void> save(AppSettingsEntity next) async {
       await notifier.save(next);
@@ -62,6 +66,13 @@ class SettingsPage extends ConsumerWidget {
       onPicked(TimeUtils.formatHHmm(picked));
     }
 
+    void showThemeModeSheet() {
+      showModalBottomSheet(
+        context: context,
+        builder: (context) => const ThemeModeSheet(),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('设置'),
@@ -83,12 +94,12 @@ class SettingsPage extends ConsumerWidget {
                   padding: const EdgeInsets.all(AppSpacing.lg),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
-                      Text('通知与提醒', style: AppTypography.h2),
-                      SizedBox(height: AppSpacing.sm),
+                    children: [
+                      Text('通知与提醒', style: AppTypography.h2(context)),
+                      const SizedBox(height: AppSpacing.sm),
                       Text(
                         'v1.0 MVP：使用后台定时检查方式提醒，时间精度约 ±30 分钟。',
-                        style: AppTypography.bodySecondary,
+                        style: AppTypography.bodySecondary(context),
                       ),
                     ],
                   ),
@@ -163,7 +174,7 @@ class SettingsPage extends ConsumerWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('通知权限', style: AppTypography.h2),
+                      Text('通知权限', style: AppTypography.h2(context)),
                       const SizedBox(height: AppSpacing.sm),
                       permissionAsync.when(
                         data: (permission) {
@@ -186,7 +197,7 @@ class SettingsPage extends ConsumerWidget {
                                   Expanded(
                                     child: Text(
                                       text,
-                                      style: AppTypography.bodySecondary,
+                                      style: AppTypography.bodySecondary(context),
                                     ),
                                   ),
                                   OutlinedButton(
@@ -251,7 +262,7 @@ class SettingsPage extends ConsumerWidget {
                         ),
                         error: (e, _) => Text(
                           '权限状态读取失败：$e',
-                          style: AppTypography.bodySecondary,
+                          style: AppTypography.bodySecondary(context),
                         ),
                       ),
                     ],
@@ -265,13 +276,37 @@ class SettingsPage extends ConsumerWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('数据', style: AppTypography.h2),
+                      Text('外观设置', style: AppTypography.h2(context)),
+                      const SizedBox(height: AppSpacing.sm),
+                      Text(
+                        '可选择跟随系统、浅色或深色主题。',
+                        style: AppTypography.bodySecondary(context),
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: const Icon(Icons.palette_outlined),
+                        title: const Text('主题模式'),
+                        subtitle: Text(currentThemeMode.label),
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: showThemeModeSheet,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              GlassCard(
+                child: Padding(
+                  padding: const EdgeInsets.all(AppSpacing.lg),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('数据', style: AppTypography.h2(context)),
                       const SizedBox(height: AppSpacing.sm),
                       Text(
                         '将学习内容与复习任务导出为文件，可用于备份或分析。',
-                        style: AppTypography.bodySecondary.copyWith(
-                          color: Colors.black54,
-                        ),
+                        style: AppTypography.bodySecondary(context),
                       ),
                       const SizedBox(height: AppSpacing.md),
                       ListTile(

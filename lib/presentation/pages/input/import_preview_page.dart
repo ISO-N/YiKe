@@ -284,19 +284,19 @@ class _ImportPreviewPageState extends ConsumerState<ImportPreviewPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('导入预览', style: AppTypography.h2),
+                      Text('导入预览', style: AppTypography.h2(context)),
                       const SizedBox(height: AppSpacing.sm),
                       Text(
                         _filePath == null
                             ? '请选择 TXT/CSV/Markdown 文件进行导入'
                             : '文件：${_filePath!.split(RegExp(r'[\\/]')).last}',
-                        style: AppTypography.bodySecondary,
+                        style: AppTypography.bodySecondary(context),
                       ),
                       if (_error != null) ...[
                         const SizedBox(height: AppSpacing.sm),
                         Text(
                           _error!,
-                          style: AppTypography.bodySecondary.copyWith(
+                          style: AppTypography.bodySecondary(context).copyWith(
                             color: AppColors.error,
                           ),
                         ),
@@ -304,7 +304,7 @@ class _ImportPreviewPageState extends ConsumerState<ImportPreviewPage> {
                       const SizedBox(height: AppSpacing.sm),
                       Text(
                         '已选 $selectedCount 条 / 共 ${_items.length} 条',
-                        style: AppTypography.bodySecondary,
+                        style: AppTypography.bodySecondary(context),
                       ),
                     ],
                   ),
@@ -323,9 +323,14 @@ class _ImportPreviewPageState extends ConsumerState<ImportPreviewPage> {
                             itemBuilder: (context, index) {
                               final it = _items[index];
                               final hasError = it.item.errorMessage != null;
+                              final isDark =
+                                  Theme.of(context).brightness == Brightness.dark;
+                              final normalBorderColor = isDark
+                                  ? AppColors.darkGlassBorder
+                                  : AppColors.glassBorder;
                               final borderColor = hasError
                                   ? AppColors.error
-                                  : AppColors.glassBorder;
+                                  : normalBorderColor;
                               return GlassCard(
                                 child: Container(
                                   decoration: BoxDecoration(
@@ -363,10 +368,11 @@ class _ImportPreviewPageState extends ConsumerState<ImportPreviewPage> {
                                           )
                                         : (it.item.note == null ||
                                               it.item.note!.trim().isEmpty)
-                                            ? const Text(
+                                            ? Text(
                                                 '无备注',
-                                                style:
-                                                    AppTypography.bodySecondary,
+                                                style: AppTypography.bodySecondary(
+                                                  context,
+                                                ),
                                               )
                                             : Text(
                                                 it.item.note!,
@@ -413,10 +419,10 @@ class _EmptyHint extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
+    return Center(
       child: Text(
         '暂无导入内容\n点击右上角文件按钮选择文件',
-        style: AppTypography.bodySecondary,
+        style: AppTypography.bodySecondary(context),
         textAlign: TextAlign.center,
       ),
     );

@@ -206,7 +206,7 @@ class _OcrResultPageState extends ConsumerState<OcrResultPage> {
                                     Expanded(
                                       child: Text(
                                         multi ? '图片 ${index + 1}' : '图片预览',
-                                        style: AppTypography.h2,
+                                        style: AppTypography.h2(context),
                                       ),
                                     ),
                                     IconButton(
@@ -232,9 +232,7 @@ class _OcrResultPageState extends ConsumerState<OcrResultPage> {
                                 const SizedBox(height: AppSpacing.md),
                                 Text(
                                   '识别结果（可编辑）',
-                                  style: AppTypography.bodySecondary.copyWith(
-                                    color: AppColors.textSecondary,
-                                  ),
+                                  style: AppTypography.bodySecondary(context),
                                 ),
                                 const SizedBox(height: AppSpacing.sm),
                                 TextField(
@@ -262,7 +260,7 @@ class _OcrResultPageState extends ConsumerState<OcrResultPage> {
                                 const SizedBox(height: AppSpacing.sm),
                                 Text(
                                   '置信度：${(d.confidence * 100).toStringAsFixed(0)}%',
-                                  style: AppTypography.bodySecondary,
+                                  style: AppTypography.bodySecondary(context),
                                 ),
                                 const SizedBox(height: AppSpacing.sm),
                                 FilledButton(

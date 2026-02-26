@@ -50,14 +50,12 @@ class _ReviewPreviewPanelState extends ConsumerState<ReviewPreviewPanel> {
             children: [
               Icon(_expanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down),
               const SizedBox(width: AppSpacing.sm),
-              const Expanded(
-                child: Text('复习计划预览', style: AppTypography.h2),
+              Expanded(
+                child: Text('复习计划预览', style: AppTypography.h2(context)),
               ),
               Text(
                 '默认复习间隔',
-                style: AppTypography.bodySecondary.copyWith(
-                  color: AppColors.textSecondary,
-                ),
+                style: AppTypography.bodySecondary(context),
               ),
             ],
           ),
@@ -103,7 +101,7 @@ class _ReviewPreviewPanelState extends ConsumerState<ReviewPreviewPanel> {
                 children: [
                   Text(
                     '已启用 $enabledCount / ${_draft.length} 轮',
-                    style: AppTypography.bodySecondary,
+                    style: AppTypography.bodySecondary(context),
                   ),
                   const SizedBox(height: AppSpacing.md),
                   ..._draft.map((c) => _RoundTile(
@@ -170,7 +168,7 @@ class _ReviewPreviewPanelState extends ConsumerState<ReviewPreviewPanel> {
                       if (state.errorMessage != null)
                         Text(
                           '保存失败：${state.errorMessage}',
-                          style: AppTypography.bodySecondary.copyWith(
+                          style: AppTypography.bodySecondary(context).copyWith(
                             color: AppColors.error,
                           ),
                         ),
@@ -203,6 +201,9 @@ class _RoundTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final borderColor = isDark ? AppColors.darkGlassBorder : AppColors.glassBorder;
+
     final date = DateTime(learningDate.year, learningDate.month, learningDate.day)
         .add(Duration(days: config.intervalDays));
     final dateText =
@@ -212,7 +213,7 @@ class _RoundTile extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: AppSpacing.md),
       child: Container(
         decoration: BoxDecoration(
-          border: Border.all(color: AppColors.glassBorder),
+          border: Border.all(color: borderColor),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Padding(
@@ -225,7 +226,7 @@ class _RoundTile extends StatelessWidget {
                   Expanded(
                     child: Text(
                       '第${config.round}次复习  +${config.intervalDays}天  $dateText',
-                      style: AppTypography.body,
+                      style: AppTypography.body(context),
                     ),
                   ),
                   Switch(
@@ -250,7 +251,7 @@ class _RoundTile extends StatelessWidget {
               if (config.intervalDays > 30)
                 Text(
                   '间隔过长可能导致遗忘',
-                  style: AppTypography.bodySecondary.copyWith(
+                  style: AppTypography.bodySecondary(context).copyWith(
                     color: AppColors.warning,
                   ),
                 ),

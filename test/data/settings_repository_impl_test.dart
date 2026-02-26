@@ -88,9 +88,9 @@ void main() {
     // 说明：直接写入明文 JSON（不带加密前缀），用于触发解析与过滤分支。
     await dao.upsertValue(
       SettingsRepositoryImpl.keyReviewIntervals,
-      '[{\"round\":0,\"interval\":1,\"enabled\":true},'
-      '{\"round\":1,\"interval\":0,\"enabled\":true},'
-      '{\"round\":2,\"interval\":2,\"enabled\":false}]',
+      '[{"round":0,"interval":1,"enabled":true},'
+      '{"round":1,"interval":0,"enabled":true},'
+      '{"round":2,"interval":2,"enabled":false}]',
     );
 
     final out = await repo.getReviewIntervalConfigs();
@@ -106,7 +106,7 @@ void main() {
     await dao.upsertValue(SettingsRepositoryImpl.keyReminderTime, '123');
 
     // notifications_enabled：存储为字符串，_getBool 应返回 null 并回退默认值。
-    await dao.upsertValue(SettingsRepositoryImpl.keyNotificationsEnabled, '\"true\"');
+    await dao.upsertValue(SettingsRepositoryImpl.keyNotificationsEnabled, '"true"');
 
     final out = await repo.getSettings();
     expect(out.reminderTime, '123');

@@ -171,28 +171,27 @@ class _TemplateCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('📋', style: TextStyle(fontSize: 22)),
+            const Icon(Icons.article_outlined, size: 22),
             const SizedBox(height: AppSpacing.sm),
             Text(
               name,
-              style: AppTypography.h2.copyWith(fontSize: 16),
+              style: AppTypography.h2(context).copyWith(fontSize: 16),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
             const SizedBox(height: AppSpacing.xs),
             Text(
               preview,
-              style: AppTypography.bodySecondary,
+              style: AppTypography.bodySecondary(context),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
             const Spacer(),
             Row(
               children: [
-                Text(
-                  '🏷️ $tagCount',
-                  style: AppTypography.bodySecondary,
-                ),
+                const Icon(Icons.sell_outlined, size: 18),
+                const SizedBox(width: AppSpacing.xs),
+                Text('$tagCount', style: AppTypography.bodySecondary(context)),
                 const Spacer(),
                 IconButton(
                   tooltip: '编辑',
@@ -218,10 +217,10 @@ class _EmptyHint extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
+    return Center(
       child: Text(
         '还没有模板\n点击右上角 + 新建一个吧',
-        style: AppTypography.bodySecondary,
+        style: AppTypography.bodySecondary(context),
         textAlign: TextAlign.center,
       ),
     );

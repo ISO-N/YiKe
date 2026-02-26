@@ -6,7 +6,6 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../di/providers.dart';
@@ -173,7 +172,7 @@ class _TemplateEditPageState extends ConsumerState<TemplateEditPage> {
           child: ListView(
             padding: const EdgeInsets.all(AppSpacing.lg),
             children: [
-              const Text('模板名称', style: AppTypography.bodySecondary),
+              Text('模板名称', style: AppTypography.bodySecondary(context)),
               const SizedBox(height: AppSpacing.sm),
               TextFormField(
                 controller: _nameController,
@@ -187,7 +186,7 @@ class _TemplateEditPageState extends ConsumerState<TemplateEditPage> {
                 },
               ),
               const SizedBox(height: AppSpacing.lg),
-              const Text('标题模板', style: AppTypography.bodySecondary),
+              Text('标题模板', style: AppTypography.bodySecondary(context)),
               const SizedBox(height: AppSpacing.sm),
               TextFormField(
                 controller: _titleController,
@@ -203,9 +202,7 @@ class _TemplateEditPageState extends ConsumerState<TemplateEditPage> {
               const SizedBox(height: AppSpacing.sm),
               Text(
                 '{date} → 2026-02-26，{day} → 2026-2-26，{weekday} → 周三',
-                style: AppTypography.bodySecondary.copyWith(
-                  color: AppColors.textSecondary,
-                ),
+                style: AppTypography.bodySecondary(context),
               ),
               const SizedBox(height: AppSpacing.sm),
               GlassCard(
@@ -214,7 +211,7 @@ class _TemplateEditPageState extends ConsumerState<TemplateEditPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('替换预览', style: AppTypography.bodySecondary),
+                      Text('替换预览', style: AppTypography.bodySecondary(context)),
                       const SizedBox(height: AppSpacing.xs),
                       Text(preview['title'] ?? ''),
                       if ((preview['note'] ?? '').trim().isNotEmpty) ...[
@@ -226,7 +223,7 @@ class _TemplateEditPageState extends ConsumerState<TemplateEditPage> {
                 ),
               ),
               const SizedBox(height: AppSpacing.lg),
-              const Text('备注模板', style: AppTypography.bodySecondary),
+              Text('备注模板', style: AppTypography.bodySecondary(context)),
               const SizedBox(height: AppSpacing.sm),
               TextFormField(
                 controller: _noteController,
@@ -235,7 +232,7 @@ class _TemplateEditPageState extends ConsumerState<TemplateEditPage> {
                 decoration: const InputDecoration(hintText: '可选，例如：今日复习第 {weekday}'),
               ),
               const SizedBox(height: AppSpacing.lg),
-              const Text('默认标签', style: AppTypography.bodySecondary),
+              Text('默认标签', style: AppTypography.bodySecondary(context)),
               const SizedBox(height: AppSpacing.sm),
               TextFormField(
                 controller: _tagsController,

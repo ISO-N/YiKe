@@ -110,13 +110,23 @@ class _SpeechInputFieldState extends ConsumerState<SpeechInputField> {
           builder: (context, setLocal) {
             dialogSetState = setLocal;
             return AlertDialog(
-              title: const Text('🎤 录音中...'),
+              title: const Text('录音中...'),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   const _Wave(),
                   const SizedBox(height: AppSpacing.md),
-                  const Text('请开始说话', style: AppTypography.bodySecondary),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.mic, size: 18),
+                      const SizedBox(width: AppSpacing.xs),
+                      Text(
+                        '请开始说话',
+                        style: AppTypography.bodySecondary(context),
+                      ),
+                    ],
+                  ),
                   if (latest.trim().isNotEmpty) ...[
                     const SizedBox(height: AppSpacing.md),
                     Text(latest, maxLines: 3, overflow: TextOverflow.ellipsis),
@@ -222,7 +232,15 @@ class _WaveState extends State<_Wave> with SingleTickerProviderStateMixin {
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 900),
-    )..repeat(reverse: true);
+    );
+
+    // 无障碍：尊重系统“减少动态效果”设置，必要时关闭波形动画。
+    final features = WidgetsBinding.instance.platformDispatcher.accessibilityFeatures;
+    final disableAnimations =
+        features.disableAnimations || features.accessibleNavigation;
+    if (!disableAnimations) {
+      _controller.repeat(reverse: true);
+    }
   }
 
   @override

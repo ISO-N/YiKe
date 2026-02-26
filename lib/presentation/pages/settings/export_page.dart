@@ -131,7 +131,7 @@ class _ExportPageState extends ConsumerState<ExportPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('导出格式', style: AppTypography.h2),
+                    Text('导出格式', style: AppTypography.h2(context)),
                     const SizedBox(height: AppSpacing.sm),
                     SegmentedButton<ExportFormat>(
                       segments: const [
@@ -157,9 +157,7 @@ class _ExportPageState extends ConsumerState<ExportPage> {
                       _format == ExportFormat.json
                           ? '完整数据，适合备份与恢复'
                           : '表格数据，适合分析与查看',
-                      style: AppTypography.bodySecondary.copyWith(
-                        color: AppColors.textSecondary,
-                      ),
+                      style: AppTypography.bodySecondary(context),
                     ),
                   ],
                 ),
@@ -172,7 +170,7 @@ class _ExportPageState extends ConsumerState<ExportPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('导出内容', style: AppTypography.h2),
+                    Text('导出内容', style: AppTypography.h2(context)),
                     const SizedBox(height: AppSpacing.sm),
                     CheckboxListTile(
                       title: const Text('学习内容'),
@@ -193,9 +191,7 @@ class _ExportPageState extends ConsumerState<ExportPage> {
                     const SizedBox(height: AppSpacing.sm),
                     Text(
                       '提示：至少选择一项；应用设置不会被导出。',
-                      style: AppTypography.bodySecondary.copyWith(
-                        color: AppColors.textSecondary,
-                      ),
+                      style: AppTypography.bodySecondary(context),
                     ),
                   ],
                 ),
@@ -208,7 +204,7 @@ class _ExportPageState extends ConsumerState<ExportPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('数据预览', style: AppTypography.h2),
+                    Text('数据预览', style: AppTypography.h2(context)),
                     const SizedBox(height: AppSpacing.sm),
                     if (_isPreviewLoading)
                       const Center(
@@ -223,7 +219,7 @@ class _ExportPageState extends ConsumerState<ExportPage> {
                         style: const TextStyle(color: AppColors.error),
                       )
                     else if (preview == null)
-                      const Text('暂无数据', style: AppTypography.bodySecondary)
+                      Text('暂无数据', style: AppTypography.bodySecondary(context))
                     else
                       Row(
                         children: [
@@ -257,9 +253,7 @@ class _ExportPageState extends ConsumerState<ExportPage> {
                       const SizedBox(height: AppSpacing.sm),
                       Text(
                         '暂无数据可导出',
-                        style: AppTypography.bodySecondary.copyWith(
-                          color: AppColors.textSecondary,
-                        ),
+                        style: AppTypography.bodySecondary(context),
                       ),
                     ],
                   ],
@@ -290,29 +284,28 @@ class _PreviewTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
-        color: AppColors.primary.withAlpha(14),
+        color: primary.withValues(alpha: 0.14),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.primary.withAlpha(50)),
+        border: Border.all(color: primary.withValues(alpha: 0.35)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             title,
-            style: AppTypography.bodySecondary.copyWith(
-              color: AppColors.textSecondary,
-            ),
+            style: AppTypography.bodySecondary(context),
           ),
           const SizedBox(height: 6),
           Text(
             '$value',
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 22,
               fontWeight: FontWeight.w900,
-              color: AppColors.primary,
+              color: primary,
             ),
           ),
         ],
