@@ -17,6 +17,7 @@ import '../../../di/providers.dart';
 import '../../../domain/entities/app_settings.dart';
 import '../../../domain/entities/learning_topic.dart';
 import '../../widgets/glass_card.dart';
+import '../../widgets/gradient_background.dart';
 import '../../providers/home_tasks_provider.dart';
 import '../../providers/notification_permission_provider.dart';
 import '../../providers/settings_provider.dart';
@@ -38,6 +39,9 @@ class _HomePageState extends ConsumerState<HomePage> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final primary = isDark ? AppColors.primaryLight : AppColors.primary;
+
     final state = ref.watch(homeTasksProvider);
     final notifier = ref.read(homeTasksProvider.notifier);
     final settingsState = ref.watch(settingsProvider);
@@ -94,14 +98,7 @@ class _HomePageState extends ConsumerState<HomePage> {
         icon: const Icon(Icons.add),
         label: const Text(AppStrings.input),
       ),
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFFE6FFFB), Color(0xFFF0FDFA), Color(0xFFFFF7ED)],
-          ),
-        ),
+      body: GradientBackground(
         child: SafeArea(
           child: RefreshIndicator(
             onRefresh: notifier.load,
@@ -141,16 +138,16 @@ class _HomePageState extends ConsumerState<HomePage> {
                       child: Padding(
                         padding: const EdgeInsets.all(AppSpacing.lg),
                         child: Row(
-                          children: const [
-                            Icon(
+                          children: [
+                            const Icon(
                               Icons.warning_amber_rounded,
                               color: AppColors.warning,
                             ),
-                            SizedBox(width: AppSpacing.sm),
+                            const SizedBox(width: AppSpacing.sm),
                             Expanded(
                               child: Text(
                                 '今日任务较多，建议优先完成逾期任务。',
-                                style: AppTypography.bodySecondary,
+                                style: AppTypography.bodySecondary(context),
                               ),
                             ),
                           ],
@@ -187,7 +184,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                   _SectionHeader(
                     title: '今日待复习',
                     subtitle: state.todayPending.isEmpty ? '今天没有待复习任务' : null,
-                    color: AppColors.primary,
+                    color: primary,
                   ),
                   const SizedBox(height: AppSpacing.sm),
                   if (state.todayPending.isEmpty &&
@@ -258,11 +255,11 @@ class _HomePageState extends ConsumerState<HomePage> {
               ),
               const Divider(height: 1),
               if (topics.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.all(AppSpacing.lg),
+                Padding(
+                  padding: const EdgeInsets.all(AppSpacing.lg),
                   child: Text(
                     '暂无主题',
-                    style: AppTypography.bodySecondary,
+                    style: AppTypography.bodySecondary(context),
                   ),
                 )
               else
@@ -346,6 +343,9 @@ class _ProgressCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final progressTrackColor = isDark ? AppColors.darkDivider : Colors.white;
+
     final progress = total == 0 ? 0.0 : (completed / total).clamp(0.0, 1.0);
     return GlassCard(
       child: Padding(
@@ -353,7 +353,7 @@ class _ProgressCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('今日进度', style: AppTypography.h2),
+            Text('今日进度', style: AppTypography.h2(context)),
             const SizedBox(height: AppSpacing.sm),
             Row(
               children: [
@@ -363,7 +363,7 @@ class _ProgressCard extends StatelessWidget {
                     child: LinearProgressIndicator(
                       value: progress,
                       minHeight: 10,
-                      backgroundColor: Colors.white,
+                      backgroundColor: progressTrackColor,
                       valueColor: const AlwaysStoppedAnimation<Color>(
                         AppColors.success,
                       ),
@@ -389,20 +389,25 @@ class _DateHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final secondaryText =
+        Theme.of(context).textTheme.bodySmall?.color ?? AppColors.textSecondary;
+
     final now = DateTime.now();
     final weekday = _weekdayZh(now.weekday);
     final text = '${YikeDateUtils.formatYmd(now)}  $weekday';
     return Row(
       children: [
-        const Icon(
+        Icon(
           Icons.calendar_today_outlined,
           size: 18,
-          color: AppColors.textSecondary,
+          color: secondaryText,
         ),
         const SizedBox(width: AppSpacing.sm),
         Text(
           text,
-          style: AppTypography.body.copyWith(fontWeight: FontWeight.w500),
+          style: AppTypography.body(context).copyWith(
+            fontWeight: FontWeight.w500,
+          ),
         ),
       ],
     );
@@ -455,13 +460,13 @@ class _SectionHeader extends StatelessWidget {
           ),
         ),
         const SizedBox(width: AppSpacing.sm),
-        Text(title, style: AppTypography.h2),
+        Text(title, style: AppTypography.h2(context)),
         if (subtitle != null) ...[
           const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: Text(
               subtitle!,
-              style: AppTypography.bodySecondary,
+              style: AppTypography.bodySecondary(context),
               overflow: TextOverflow.ellipsis,
             ),
           ),
@@ -500,7 +505,13 @@ class _TaskCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final borderColor = isOverdue ? AppColors.warning : AppColors.glassBorder;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final normalBorderColor = isDark ? AppColors.darkGlassBorder : AppColors.glassBorder;
+    final secondaryText =
+        Theme.of(context).textTheme.bodySmall?.color ?? AppColors.textSecondary;
+    final primary = isDark ? AppColors.primaryLight : AppColors.primary;
+
+    final borderColor = isOverdue ? AppColors.warning : normalBorderColor;
     final dueText = _dueText();
 
     final card = GlassCard(
@@ -527,7 +538,7 @@ class _TaskCard extends StatelessWidget {
                   isOverdue ? Icons.error_outline : Icons.circle_outlined,
                   color: isOverdue
                       ? AppColors.warning
-                      : AppColors.textSecondary,
+                      : secondaryText,
                   size: 22,
                 ),
               const SizedBox(width: AppSpacing.md),
@@ -537,12 +548,12 @@ class _TaskCard extends StatelessWidget {
                   children: [
                     Text(
                       '$title（第$reviewRound次）',
-                      style: AppTypography.body.copyWith(
+                      style: AppTypography.body(context).copyWith(
                         fontWeight: FontWeight.w700,
                       ),
                     ),
                     const SizedBox(height: AppSpacing.xs),
-                    Text(dueText, style: AppTypography.bodySecondary),
+                    Text(dueText, style: AppTypography.bodySecondary(context)),
                     if (tags.isNotEmpty) ...[
                       const SizedBox(height: AppSpacing.sm),
                       Wrap(
@@ -557,15 +568,17 @@ class _TaskCard extends StatelessWidget {
                                   vertical: 4,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: Colors.white,
+                                  color: primary.withOpacity(0.18),
                                   borderRadius: BorderRadius.circular(999),
                                   border: Border.all(
-                                    color: AppColors.glassBorder,
+                                    color: primary.withOpacity(0.35),
                                   ),
                                 ),
                                 child: Text(
                                   t,
-                                  style: AppTypography.bodySecondary.copyWith(
+                                  style: AppTypography
+                                      .bodySecondary(context)
+                                      .copyWith(
                                     fontSize: 12,
                                   ),
                                 ),
@@ -591,7 +604,7 @@ class _TaskCard extends StatelessWidget {
                       tooltip: '跳过',
                       onPressed: onSkip,
                       icon: const Icon(Icons.not_interested_outlined),
-                      color: AppColors.textSecondary,
+                      color: secondaryText,
                     ),
                   ],
                 ),
@@ -719,7 +732,7 @@ class _BatchActionBar extends StatelessWidget {
                 Expanded(
                   child: Text(
                     '已选择 $selectedCount 项',
-                    style: AppTypography.bodySecondary,
+                    style: AppTypography.bodySecondary(context),
                   ),
                 ),
                 FilledButton(
@@ -752,16 +765,16 @@ class _EmptyState extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.xl),
         child: Column(
-          children: const [
-            Icon(
+          children: [
+            const Icon(
               Icons.check_circle_outline,
               size: 48,
               color: AppColors.success,
             ),
-            SizedBox(height: AppSpacing.md),
+            const SizedBox(height: AppSpacing.md),
             Text(
               AppStrings.emptyTodayTasks,
-              style: AppTypography.bodySecondary,
+              style: AppTypography.bodySecondary(context),
               textAlign: TextAlign.center,
             ),
           ],
@@ -782,7 +795,7 @@ class _EmptySectionHint extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
       child: Text(
         text,
-        style: AppTypography.bodySecondary,
+        style: AppTypography.bodySecondary(context),
         textAlign: TextAlign.center,
       ),
     );

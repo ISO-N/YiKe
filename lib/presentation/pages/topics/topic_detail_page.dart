@@ -280,18 +280,21 @@ class _TopicDetailPageState extends ConsumerState<TopicDetailPage> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(topic!.name, style: AppTypography.h2),
+                                Text(
+                                  topic!.name,
+                                  style: AppTypography.h2(context),
+                                ),
                                 if ((topic.description ?? '').trim().isNotEmpty) ...[
                                   const SizedBox(height: AppSpacing.sm),
                                   Text(
                                     topic.description!,
-                                    style: AppTypography.bodySecondary,
+                                    style: AppTypography.bodySecondary(context),
                                   ),
                                 ],
                                 const SizedBox(height: AppSpacing.sm),
                                 Text(
                                   '${topic.itemIds.length} 条内容   $completed/$total 完成',
-                                  style: AppTypography.bodySecondary,
+                                  style: AppTypography.bodySecondary(context),
                                 ),
                                 const SizedBox(height: AppSpacing.sm),
                                 ClipRRect(
@@ -299,7 +302,11 @@ class _TopicDetailPageState extends ConsumerState<TopicDetailPage> {
                                   child: LinearProgressIndicator(
                                     value: progress,
                                     minHeight: 8,
-                                    backgroundColor: AppColors.glassBorder,
+                                    backgroundColor:
+                                        Theme.of(context).brightness ==
+                                                Brightness.dark
+                                            ? AppColors.darkGlassBorder
+                                            : AppColors.glassBorder,
                                   ),
                                 ),
                               ],
@@ -309,8 +316,11 @@ class _TopicDetailPageState extends ConsumerState<TopicDetailPage> {
                         const SizedBox(height: AppSpacing.lg),
                         Row(
                           children: [
-                            const Expanded(
-                              child: Text('关联内容', style: AppTypography.h2),
+                            Expanded(
+                              child: Text(
+                                '关联内容',
+                                style: AppTypography.h2(context),
+                              ),
                             ),
                             FilledButton(
                               onPressed: _addRelations,
@@ -321,10 +331,10 @@ class _TopicDetailPageState extends ConsumerState<TopicDetailPage> {
                         const SizedBox(height: AppSpacing.md),
                         Expanded(
                           child: _items.isEmpty
-                              ? const Center(
+                              ? Center(
                                   child: Text(
                                     '暂无内容，点击上方按钮添加',
-                                    style: AppTypography.bodySecondary,
+                                    style: AppTypography.bodySecondary(context),
                                   ),
                                 )
                               : ListView.separated(
@@ -368,7 +378,7 @@ class _TopicDetailPageState extends ConsumerState<TopicDetailPage> {
                                           title: Text(v.item.title),
                                           subtitle: Text(
                                             '$subtitle  （$done/$total）',
-                                            style: AppTypography.bodySecondary,
+                                            style: AppTypography.bodySecondary(context),
                                           ),
                                         ),
                                       ),

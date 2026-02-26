@@ -94,12 +94,12 @@ class SettingsPage extends ConsumerWidget {
                   padding: const EdgeInsets.all(AppSpacing.lg),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
-                      Text('通知与提醒', style: AppTypography.h2),
-                      SizedBox(height: AppSpacing.sm),
+                    children: [
+                      Text('通知与提醒', style: AppTypography.h2(context)),
+                      const SizedBox(height: AppSpacing.sm),
                       Text(
                         'v1.0 MVP：使用后台定时检查方式提醒，时间精度约 ±30 分钟。',
-                        style: AppTypography.bodySecondary,
+                        style: AppTypography.bodySecondary(context),
                       ),
                     ],
                   ),
@@ -174,7 +174,7 @@ class SettingsPage extends ConsumerWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('通知权限', style: AppTypography.h2),
+                      Text('通知权限', style: AppTypography.h2(context)),
                       const SizedBox(height: AppSpacing.sm),
                       permissionAsync.when(
                         data: (permission) {
@@ -197,7 +197,7 @@ class SettingsPage extends ConsumerWidget {
                                   Expanded(
                                     child: Text(
                                       text,
-                                      style: AppTypography.bodySecondary,
+                                      style: AppTypography.bodySecondary(context),
                                     ),
                                   ),
                                   OutlinedButton(
@@ -262,7 +262,7 @@ class SettingsPage extends ConsumerWidget {
                         ),
                         error: (e, _) => Text(
                           '权限状态读取失败：$e',
-                          style: AppTypography.bodySecondary,
+                          style: AppTypography.bodySecondary(context),
                         ),
                       ),
                     ],
@@ -276,11 +276,11 @@ class SettingsPage extends ConsumerWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('外观设置', style: AppTypography.h2),
+                      Text('外观设置', style: AppTypography.h2(context)),
                       const SizedBox(height: AppSpacing.sm),
-                      const Text(
+                      Text(
                         '可选择跟随系统、浅色或深色主题。',
-                        style: AppTypography.bodySecondary,
+                        style: AppTypography.bodySecondary(context),
                       ),
                       const SizedBox(height: AppSpacing.md),
                       ListTile(
@@ -302,13 +302,11 @@ class SettingsPage extends ConsumerWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('数据', style: AppTypography.h2),
+                      Text('数据', style: AppTypography.h2(context)),
                       const SizedBox(height: AppSpacing.sm),
                       Text(
                         '将学习内容与复习任务导出为文件，可用于备份或分析。',
-                        style: AppTypography.bodySecondary.copyWith(
-                          color: Colors.black54,
-                        ),
+                        style: AppTypography.bodySecondary(context),
                       ),
                       const SizedBox(height: AppSpacing.md),
                       ListTile(

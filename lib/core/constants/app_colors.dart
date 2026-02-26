@@ -25,6 +25,7 @@ class AppColors {
   static const Color background = Color(0xFFF0FDFA); // Teal 50
   static const Color textPrimary = Color(0xFF0F172A); // Slate 900
   static const Color textSecondary = Color(0xFF64748B); // Slate 500
+  static const Color divider = Color(0xFFE2E8F0); // Slate 200
 
   /// 深色背景色（深蓝黑）。
   static const Color darkBackground = Color(0xFF1A1A2E);

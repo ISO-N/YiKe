@@ -13,6 +13,7 @@ import '../../../core/constants/app_typography.dart';
 import '../../../core/utils/date_utils.dart';
 import '../../providers/calendar_provider.dart';
 import '../../widgets/glass_card.dart';
+import '../../widgets/gradient_background.dart';
 import 'widgets/calendar_grid.dart';
 import 'widgets/day_task_list.dart';
 
@@ -45,14 +46,7 @@ class CalendarPage extends ConsumerWidget {
           ),
         ],
       ),
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFFE6FFFB), Color(0xFFF0FDFA), Color(0xFFFFF7ED)],
-          ),
-        ),
+      body: GradientBackground(
         child: SafeArea(
           child: ListView(
             padding: const EdgeInsets.all(AppSpacing.lg),
@@ -60,16 +54,14 @@ class CalendarPage extends ConsumerWidget {
               GlassCard(
                 child: Padding(
                   padding: const EdgeInsets.all(AppSpacing.lg),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('日历视图', style: AppTypography.h2),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                      Text('日历视图', style: AppTypography.h2(context)),
                       const SizedBox(height: AppSpacing.sm),
                       Text(
                         '点击日期可查看当日任务列表',
-                        style: AppTypography.bodySecondary.copyWith(
-                          color: AppColors.textSecondary,
-                        ),
+                        style: AppTypography.bodySecondary(context),
                       ),
                       const SizedBox(height: AppSpacing.lg),
                       CalendarGrid(
@@ -124,21 +116,27 @@ class _LegendCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final primary = isDark ? AppColors.primaryLight : AppColors.primary;
+
     return GlassCard(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.lg),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('状态说明', style: AppTypography.h2),
+            Text('状态说明', style: AppTypography.h2(context)),
             const SizedBox(height: AppSpacing.sm),
             Wrap(
               spacing: 12,
               runSpacing: 8,
-              children: const [
-                _LegendItem(color: AppColors.warning, text: '有逾期任务'),
-                _LegendItem(color: AppColors.primary, text: '有待复习任务'),
-                _LegendItem(color: AppColors.success, text: '已处理（完成/跳过）'),
+              children: [
+                const _LegendItem(color: AppColors.warning, text: '有逾期任务'),
+                _LegendItem(color: primary, text: '有待复习任务'),
+                const _LegendItem(
+                  color: AppColors.success,
+                  text: '已处理（完成/跳过）',
+                ),
               ],
             ),
           ],
@@ -165,7 +163,7 @@ class _LegendItem extends StatelessWidget {
           decoration: BoxDecoration(color: color, shape: BoxShape.circle),
         ),
         const SizedBox(width: 6),
-        Text(text, style: AppTypography.bodySecondary),
+        Text(text, style: AppTypography.bodySecondary(context)),
       ],
     );
   }

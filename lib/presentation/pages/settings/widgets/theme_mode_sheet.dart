@@ -16,7 +16,9 @@ class ThemeModeSheet extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final currentMode = ref.watch(themeModeProvider);
-    final dividerColor = Theme.of(context).dividerColor;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final handleColor =
+        isDark ? Colors.white.withOpacity(0.22) : Colors.black.withOpacity(0.12);
 
     return SafeArea(
       child: Padding(
@@ -31,7 +33,7 @@ class ThemeModeSheet extends ConsumerWidget {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: dividerColor.withOpacity(0.8),
+                color: handleColor,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -85,4 +87,3 @@ class ThemeModeSheet extends ConsumerWidget {
     }
   }
 }
-

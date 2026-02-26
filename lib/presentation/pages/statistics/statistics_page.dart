@@ -13,6 +13,7 @@ import '../../../core/constants/app_strings.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../providers/statistics_provider.dart';
 import '../../widgets/glass_card.dart';
+import '../../widgets/gradient_background.dart';
 
 /// 统计页面（Tab）。
 class StatisticsPage extends ConsumerWidget {
@@ -38,14 +39,7 @@ class StatisticsPage extends ConsumerWidget {
           ),
         ],
       ),
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFFE6FFFB), Color(0xFFF0FDFA), Color(0xFFFFF7ED)],
-          ),
-        ),
+      body: GradientBackground(
         child: SafeArea(
           child: ListView(
             padding: const EdgeInsets.all(AppSpacing.lg),
@@ -130,13 +124,11 @@ class _StreakCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('连续打卡', style: AppTypography.h2),
+                  Text('连续打卡', style: AppTypography.h2(context)),
                   const SizedBox(height: 4),
                   Text(
                     days == 0 ? '还没有形成连续打卡' : '已连续打卡 $days 天',
-                    style: AppTypography.bodySecondary.copyWith(
-                      color: AppColors.textSecondary,
-                    ),
+                    style: AppTypography.bodySecondary(context),
                   ),
                 ],
               ),
@@ -163,6 +155,9 @@ class _CompletionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final primary = isDark ? AppColors.primaryLight : AppColors.primary;
+
     final percent = (rate * 100).clamp(0, 100).toStringAsFixed(0);
     return GlassCard(
       child: Padding(
@@ -170,7 +165,7 @@ class _CompletionCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(title, style: AppTypography.h2),
+            Text(title, style: AppTypography.h2(context)),
             const SizedBox(height: AppSpacing.md),
             Center(
               child: SizedBox(
@@ -183,10 +178,10 @@ class _CompletionCard extends StatelessWidget {
             Center(
               child: Text(
                 '$percent%',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w800,
-                  color: AppColors.primary,
+                  color: primary,
                 ),
               ),
             ),
@@ -194,9 +189,7 @@ class _CompletionCard extends StatelessWidget {
             Center(
               child: Text(
                 '$completed / $total',
-                style: AppTypography.bodySecondary.copyWith(
-                  color: AppColors.textSecondary,
-                ),
+                style: AppTypography.bodySecondary(context),
               ),
             ),
           ],
@@ -213,6 +206,9 @@ class _RingProgress extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final primary = isDark ? AppColors.primaryLight : AppColors.primary;
+
     final v = rate.clamp(0, 1);
     final remaining = (1 - v).clamp(0, 1);
 
@@ -224,13 +220,13 @@ class _RingProgress extends StatelessWidget {
         sections: [
           PieChartSectionData(
             value: remaining * 100,
-            color: AppColors.primary.withAlpha(18),
+            color: primary.withOpacity(0.18),
             radius: 12,
             showTitle: false,
           ),
           PieChartSectionData(
             value: v * 100,
-            color: AppColors.primary,
+            color: primary,
             radius: 12,
             showTitle: false,
           ),
@@ -247,6 +243,9 @@ class _TagPieChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final secondaryText = isDark ? AppColors.darkTextSecondary : AppColors.textSecondary;
+
     final entries =
         distribution.entries
             .where((e) => e.key.trim().isNotEmpty && e.value > 0)
@@ -259,27 +258,25 @@ class _TagPieChart extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('标签分布', style: AppTypography.h2),
+            Text('标签分布', style: AppTypography.h2(context)),
             const SizedBox(height: AppSpacing.sm),
             Text(
               entries.isEmpty ? '还没有标签分类' : '按学习内容标签统计占比（多标签会重复计数）',
-              style: AppTypography.bodySecondary.copyWith(
-                color: AppColors.textSecondary,
-              ),
+              style: AppTypography.bodySecondary(context),
             ),
             const SizedBox(height: AppSpacing.lg),
             if (entries.isEmpty)
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 24),
                 child: Column(
-                  children: const [
+                  children: [
                     Icon(
                       Icons.pie_chart_outline,
                       size: 48,
-                      color: AppColors.textSecondary,
+                      color: secondaryText,
                     ),
-                    SizedBox(height: AppSpacing.md),
-                    Text('暂无数据', style: AppTypography.bodySecondary),
+                    const SizedBox(height: AppSpacing.md),
+                    Text('暂无数据', style: AppTypography.bodySecondary(context)),
                   ],
                 ),
               )
@@ -292,26 +289,49 @@ class _TagPieChart extends StatelessWidget {
   }
 }
 
-class _PieWithLegend extends StatelessWidget {
+class _PieWithLegend extends StatefulWidget {
   const _PieWithLegend({required this.entries});
 
   final List<MapEntry<String, int>> entries;
 
   @override
+  State<_PieWithLegend> createState() => _PieWithLegendState();
+}
+
+class _PieWithLegendState extends State<_PieWithLegend> {
+  int? _touchedIndex;
+
+  @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final tooltipBackground = isDark ? const Color(0xFF1E293B) : Colors.white;
+    final tooltipTextColor =
+        isDark ? AppColors.darkTextPrimary : AppColors.textPrimary;
+
+    final entries = widget.entries;
     final total = entries.fold<int>(0, (sum, e) => sum + e.value);
-    final palette = _palette();
+    final palette = _palette(isDark: isDark);
     final sections = <PieChartSectionData>[];
 
     for (var i = 0; i < entries.length; i++) {
       final color = palette[i % palette.length];
       final v = entries[i].value.toDouble();
+      final isTouched = _touchedIndex == i;
+      final percent = total == 0 ? 0.0 : (entries[i].value / total) * 100;
       sections.add(
         PieChartSectionData(
           value: v,
           color: color,
-          radius: 18,
+          radius: isTouched ? 22 : 18,
           showTitle: false,
+          badgeWidget: isTouched
+              ? _PieTooltip(
+                  text: '${entries[i].key} · ${entries[i].value}（${percent.toStringAsFixed(1)}%）',
+                  backgroundColor: tooltipBackground,
+                  textColor: tooltipTextColor,
+                )
+              : null,
+          badgePositionPercentageOffset: 1.18,
         ),
       );
     }
@@ -326,6 +346,19 @@ class _PieWithLegend extends StatelessWidget {
               centerSpaceRadius: 38,
               startDegreeOffset: -90,
               sections: sections,
+              pieTouchData: PieTouchData(
+                touchCallback: (event, response) {
+                  setState(() {
+                    if (!event.isInterestedForInteractions) {
+                      _touchedIndex = null;
+                      return;
+                    }
+                    final index =
+                        response?.touchedSection?.touchedSectionIndex ?? -1;
+                    _touchedIndex = index < 0 ? null : index;
+                  });
+                },
+              ),
             ),
           ),
         ),
@@ -343,9 +376,10 @@ class _PieWithLegend extends StatelessWidget {
     );
   }
 
-  List<Color> _palette() {
-    return const [
-      AppColors.primary,
+  List<Color> _palette({required bool isDark}) {
+    final primary = isDark ? AppColors.primaryLight : AppColors.primary;
+    return [
+      primary,
       AppColors.success,
       AppColors.warning,
       AppColors.cta,
@@ -354,6 +388,48 @@ class _PieWithLegend extends StatelessWidget {
       Color(0xFFA855F7), // Purple
       Color(0xFFEC4899), // Pink
     ];
+  }
+}
+
+class _PieTooltip extends StatelessWidget {
+  const _PieTooltip({
+    required this.text,
+    required this.backgroundColor,
+    required this.textColor,
+  });
+
+  final String text;
+  final Color backgroundColor;
+  final Color textColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      constraints: const BoxConstraints(maxWidth: 220),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Theme.of(context).dividerColor),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 12,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Text(
+        text,
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
+        style: TextStyle(
+          color: textColor,
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
   }
 }
 
@@ -384,16 +460,14 @@ class _LegendRow extends StatelessWidget {
         Expanded(
           child: Text(
             title,
-            style: AppTypography.bodySecondary,
+            style: AppTypography.bodySecondary(context),
             overflow: TextOverflow.ellipsis,
           ),
         ),
         const SizedBox(width: AppSpacing.sm),
         Text(
           '$value · ${p.toStringAsFixed(1)}%',
-          style: AppTypography.bodySecondary.copyWith(
-            color: AppColors.textSecondary,
-          ),
+          style: AppTypography.bodySecondary(context),
         ),
       ],
     );

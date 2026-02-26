@@ -47,6 +47,12 @@ class CalendarGrid extends StatelessWidget {
       );
     }
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final primary = isDark ? AppColors.primaryLight : AppColors.primary;
+    final textPrimary = isDark ? AppColors.darkTextPrimary : AppColors.textPrimary;
+    final textSecondary =
+        isDark ? AppColors.darkTextSecondary : AppColors.textSecondary;
+
     final todayStart = YikeDateUtils.atStartOfDay(DateTime.now());
 
     return TableCalendar<TaskDayStats>(
@@ -62,20 +68,38 @@ class CalendarGrid extends StatelessWidget {
       calendarFormat: CalendarFormat.month,
       startingDayOfWeek: StartingDayOfWeek.monday,
       rowHeight: 48,
-      headerStyle: const HeaderStyle(
+      headerStyle: HeaderStyle(
         formatButtonVisible: false,
         titleCentered: true,
-        leftChevronIcon: Icon(Icons.chevron_left),
-        rightChevronIcon: Icon(Icons.chevron_right),
+        titleTextStyle: TextStyle(
+          color: textPrimary,
+          fontSize: 16,
+          fontWeight: FontWeight.w600,
+        ),
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.darkBackground : AppColors.background,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        leftChevronIcon: Icon(Icons.chevron_left, color: textPrimary),
+        rightChevronIcon: Icon(Icons.chevron_right, color: textPrimary),
+      ),
+      daysOfWeekStyle: DaysOfWeekStyle(
+        weekdayStyle: TextStyle(color: textSecondary),
+        weekendStyle: TextStyle(color: textSecondary),
       ),
       calendarStyle: CalendarStyle(
         outsideDaysVisible: false,
+        defaultTextStyle: TextStyle(color: textPrimary),
         todayDecoration: BoxDecoration(
-          color: AppColors.primary.withAlpha(36),
+          color: primary.withOpacity(isDark ? 0.22 : 0.18),
           shape: BoxShape.circle,
         ),
-        selectedDecoration: const BoxDecoration(
-          color: AppColors.primary,
+        todayTextStyle: TextStyle(
+          color: textPrimary,
+          fontWeight: FontWeight.w700,
+        ),
+        selectedDecoration: BoxDecoration(
+          color: primary,
           shape: BoxShape.circle,
         ),
         selectedTextStyle: const TextStyle(
@@ -99,6 +123,7 @@ class CalendarGrid extends StatelessWidget {
             stats: stats,
             dayStart: key,
             todayStart: todayStart,
+            primary: primary,
           );
           if (color == null) return null;
           return Padding(
@@ -126,6 +151,7 @@ class CalendarGrid extends StatelessWidget {
     required TaskDayStats stats,
     required DateTime dayStart,
     required DateTime todayStart,
+    required Color primary,
   }) {
     if (stats.totalCount == 0) return null;
 
@@ -133,7 +159,7 @@ class CalendarGrid extends StatelessWidget {
     final hasOverdue = stats.pendingCount > 0 && isPastDay;
     if (hasOverdue) return AppColors.warning;
 
-    if (stats.pendingCount > 0) return AppColors.primary;
+    if (stats.pendingCount > 0) return primary;
 
     // 无 pending 视为“已处理”（done 或 skipped）。
     return AppColors.success;

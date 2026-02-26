@@ -152,12 +152,12 @@ class TopicsPage extends ConsumerWidget {
                                     children: [
                                       Row(
                                         children: [
-                                          const Text('🗂️', style: TextStyle(fontSize: 20)),
+                                          const Icon(Icons.folder_outlined, size: 20),
                                           const SizedBox(width: AppSpacing.sm),
                                           Expanded(
                                             child: Text(
                                               topic.name,
-                                              style: AppTypography.h2,
+                                              style: AppTypography.h2(context),
                                               maxLines: 1,
                                               overflow: TextOverflow.ellipsis,
                                             ),
@@ -167,7 +167,7 @@ class TopicsPage extends ConsumerWidget {
                                       const SizedBox(height: AppSpacing.sm),
                                       Text(
                                         '${overview.itemCount} 条内容   $completed/$total 完成',
-                                        style: AppTypography.bodySecondary,
+                                        style: AppTypography.bodySecondary(context),
                                       ),
                                       const SizedBox(height: AppSpacing.sm),
                                       ClipRRect(
@@ -175,7 +175,11 @@ class TopicsPage extends ConsumerWidget {
                                         child: LinearProgressIndicator(
                                           value: progress,
                                           minHeight: 8,
-                                          backgroundColor: AppColors.glassBorder,
+                                          backgroundColor:
+                                              Theme.of(context).brightness ==
+                                                      Brightness.dark
+                                                  ? AppColors.darkGlassBorder
+                                                  : AppColors.glassBorder,
                                         ),
                                       ),
                                       const SizedBox(height: AppSpacing.md),
@@ -244,10 +248,10 @@ class _EmptyHint extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
+    return Center(
       child: Text(
         '还没有主题\n点击右上角 + 新建一个吧',
-        style: AppTypography.bodySecondary,
+        style: AppTypography.bodySecondary(context),
         textAlign: TextAlign.center,
       ),
     );

@@ -26,6 +26,9 @@ class DayTaskListSheet extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final secondaryText =
+        Theme.of(context).textTheme.bodySmall?.color ?? AppColors.textSecondary;
+
     final state = ref.watch(calendarProvider);
     final notifier = ref.read(calendarProvider.notifier);
 
@@ -48,14 +51,12 @@ class DayTaskListSheet extends ConsumerWidget {
               children: [
                 Text(
                   '当天任务 · ${YikeDateUtils.formatYmd(selectedDay)}',
-                  style: AppTypography.h2,
+                  style: AppTypography.h2(context),
                 ),
                 const SizedBox(height: AppSpacing.sm),
                 Text(
                   '左滑/右滑可在首页完成与跳过；此处支持点击按钮操作。',
-                  style: AppTypography.bodySecondary.copyWith(
-                    color: AppColors.textSecondary,
-                  ),
+                  style: AppTypography.bodySecondary(context),
                 ),
                 const SizedBox(height: AppSpacing.lg),
                 if (state.isLoadingTasks) ...[
@@ -80,14 +81,17 @@ class DayTaskListSheet extends ConsumerWidget {
                     child: Padding(
                       padding: const EdgeInsets.all(AppSpacing.xl),
                       child: Column(
-                        children: const [
+                        children: [
                           Icon(
                             Icons.event_busy,
                             size: 48,
-                            color: AppColors.textSecondary,
+                            color: secondaryText,
                           ),
-                          SizedBox(height: AppSpacing.md),
-                          Text('当天暂无复习任务', style: AppTypography.bodySecondary),
+                          const SizedBox(height: AppSpacing.md),
+                          Text(
+                            '当天暂无复习任务',
+                            style: AppTypography.bodySecondary(context),
+                          ),
                         ],
                       ),
                     ),
@@ -143,6 +147,9 @@ class _TaskCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final primary = isDark ? AppColors.primaryLight : AppColors.primary;
+
     return GlassCard(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.lg),
@@ -154,7 +161,7 @@ class _TaskCard extends StatelessWidget {
                 Expanded(
                   child: Text(
                     task.title,
-                    style: AppTypography.h2.copyWith(fontSize: 16),
+                    style: AppTypography.h2(context).copyWith(fontSize: 16),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -166,7 +173,7 @@ class _TaskCard extends StatelessWidget {
             const SizedBox(height: AppSpacing.sm),
             Text(
               '第 ${task.reviewRound} 次复习',
-              style: AppTypography.bodySecondary,
+              style: AppTypography.bodySecondary(context),
             ),
             if (task.tags.isNotEmpty) ...[
               const SizedBox(height: AppSpacing.sm),
@@ -179,9 +186,9 @@ class _TaskCard extends StatelessWidget {
                       (t) => Chip(
                         label: Text(t),
                         labelStyle: const TextStyle(fontSize: 12),
-                        backgroundColor: AppColors.primary.withAlpha(24),
+                        backgroundColor: primary.withOpacity(0.18),
                         side: BorderSide(
-                          color: AppColors.primary.withAlpha(60),
+                          color: primary.withOpacity(0.35),
                         ),
                         visualDensity: VisualDensity.compact,
                       ),
@@ -191,7 +198,7 @@ class _TaskCard extends StatelessWidget {
             ],
             if (task.note != null && task.note!.trim().isNotEmpty) ...[
               const SizedBox(height: AppSpacing.sm),
-              Text(task.note!, style: AppTypography.bodySecondary),
+              Text(task.note!, style: AppTypography.bodySecondary(context)),
             ],
             if (onComplete != null || onSkip != null) ...[
               const SizedBox(height: AppSpacing.lg),
@@ -219,9 +226,7 @@ class _TaskCard extends StatelessWidget {
               const SizedBox(height: AppSpacing.sm),
               Text(
                 _timestampText(),
-                style: AppTypography.bodySecondary.copyWith(
-                  color: AppColors.textSecondary,
-                ),
+                style: AppTypography.bodySecondary(context),
               ),
             ],
           ],
@@ -249,8 +254,11 @@ class _StatusChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final primary = isDark ? AppColors.primaryLight : AppColors.primary;
+
     final (text, color) = switch (status) {
-      ReviewTaskStatus.pending => ('待复习', AppColors.primary),
+      ReviewTaskStatus.pending => ('待复习', primary),
       ReviewTaskStatus.done => ('已完成', AppColors.success),
       ReviewTaskStatus.skipped => ('已跳过', AppColors.warning),
     };

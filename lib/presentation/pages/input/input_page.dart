@@ -161,7 +161,7 @@ class _InputPageState extends ConsumerState<InputPage> {
                           padding: const EdgeInsets.only(bottom: AppSpacing.sm),
                           child: Text(
                             '• ${errors[index]}',
-                            style: AppTypography.bodySecondary,
+                            style: AppTypography.bodySecondary(context),
                           ),
                         );
                       },
@@ -241,6 +241,10 @@ class _InputPageState extends ConsumerState<InputPage> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final secondaryText =
+        Theme.of(context).textTheme.bodySmall?.color ?? AppColors.textSecondary;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('录入'),
@@ -260,12 +264,16 @@ class _InputPageState extends ConsumerState<InputPage> {
             AppSpacing.lg,
           ),
           decoration: BoxDecoration(
-            color: Colors.white.withAlpha(240),
-            boxShadow: const [
+            color: isDark
+                ? AppColors.darkSurface.withOpacity(0.95)
+                : Colors.white.withAlpha(240),
+            boxShadow: [
               BoxShadow(
                 blurRadius: 12,
-                offset: Offset(0, -2),
-                color: Color(0x22000000),
+                offset: const Offset(0, -2),
+                color: isDark
+                    ? Colors.black.withOpacity(0.45)
+                    : const Color(0x22000000),
               ),
             ],
           ),
@@ -322,12 +330,12 @@ class _InputPageState extends ConsumerState<InputPage> {
                     padding: const EdgeInsets.all(AppSpacing.lg),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      children: const [
-                        Text('今天学了什么？', style: AppTypography.h2),
-                        SizedBox(height: AppSpacing.sm),
+                      children: [
+                        Text('今天学了什么？', style: AppTypography.h2(context)),
+                        const SizedBox(height: AppSpacing.sm),
                         Text(
                           '录入后会按复习间隔自动生成复习任务（可在下方预览调整）。',
-                          style: AppTypography.bodySecondary,
+                          style: AppTypography.bodySecondary(context),
                         ),
                       ],
                     ),
@@ -351,13 +359,13 @@ class _InputPageState extends ConsumerState<InputPage> {
                               children: [
                                 Text(
                                   '条目 ${index + 1}',
-                                  style: AppTypography.h2,
+                                  style: AppTypography.h2(context),
                                 ),
                                 if (_activeIndex == index) ...[
                                   const SizedBox(width: AppSpacing.sm),
-                                  const Text(
+                                  Text(
                                     '当前',
-                                    style: AppTypography.bodySecondary,
+                                    style: AppTypography.bodySecondary(context),
                                   ),
                                 ],
                                 const Spacer(),
@@ -368,7 +376,7 @@ class _InputPageState extends ConsumerState<InputPage> {
                                       : () => _removeItem(index),
                                   icon: const Icon(Icons.delete_outline),
                                   color: _items.length <= 1
-                                      ? AppColors.textSecondary
+                                      ? secondaryText
                                       : AppColors.error,
                                 ),
                               ],
@@ -410,7 +418,7 @@ class _InputPageState extends ConsumerState<InputPage> {
                               title: const Text('添加到主题'),
                               subtitle: Text(
                                 _topicName(controllers.topicId) ?? '不选择主题',
-                                style: AppTypography.bodySecondary,
+                                style: AppTypography.bodySecondary(context),
                               ),
                               trailing: const Icon(Icons.chevron_right),
                               onTap: _saving ? null : () => _pickTopic(index),
@@ -421,9 +429,9 @@ class _InputPageState extends ConsumerState<InputPage> {
                               builder: (context, snapshot) {
                                 final tags = snapshot.data ?? const <String>[];
                                 if (tags.isEmpty) {
-                                  return const Text(
+                                  return Text(
                                     '还没有标签，创建一个吧',
-                                    style: AppTypography.bodySecondary,
+                                    style: AppTypography.bodySecondary(context),
                                   );
                                 }
                                 return Wrap(
@@ -588,11 +596,11 @@ class _InputPageState extends ConsumerState<InputPage> {
               ),
               const Divider(height: 1),
               if (topics.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.all(AppSpacing.lg),
+                Padding(
+                  padding: const EdgeInsets.all(AppSpacing.lg),
                   child: Text(
                     '暂无主题，可先在设置页创建主题',
-                    style: AppTypography.bodySecondary,
+                    style: AppTypography.bodySecondary(context),
                   ),
                 )
               else
@@ -643,14 +651,14 @@ class _InputPageState extends ConsumerState<InputPage> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('选择模板', style: AppTypography.h2),
+                    Text('选择模板', style: AppTypography.h2(context)),
                     const SizedBox(height: AppSpacing.md),
                     if (state.isLoading)
                       const Center(child: CircularProgressIndicator())
                     else if (state.templates.isEmpty)
-                      const Text(
+                      Text(
                         '还没有模板，点击下方“管理模板”创建',
-                        style: AppTypography.bodySecondary,
+                        style: AppTypography.bodySecondary(context),
                       )
                     else
                       SizedBox(
@@ -684,14 +692,16 @@ class _InputPageState extends ConsumerState<InputPage> {
                                     children: [
                                       Text(
                                         t.name,
-                                        style: AppTypography.h2.copyWith(fontSize: 16),
+                                        style: AppTypography
+                                            .h2(context)
+                                            .copyWith(fontSize: 16),
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
                                       ),
                                       const SizedBox(height: AppSpacing.xs),
                                       Text(
                                         t.titlePattern,
-                                        style: AppTypography.bodySecondary,
+                                        style: AppTypography.bodySecondary(context),
                                         maxLines: 2,
                                         overflow: TextOverflow.ellipsis,
                                       ),
