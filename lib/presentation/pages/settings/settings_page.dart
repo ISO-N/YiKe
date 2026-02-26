@@ -1,6 +1,7 @@
 /// 文件用途：设置页（通知开关、提醒时间、免打扰时段等）。
 /// 作者：Codex
 /// 创建日期：2026-02-25
+/// 最后更新：2026-02-26（新增主题模式设置入口）
 library;
 
 import 'package:flutter/material.dart';
@@ -16,7 +17,9 @@ import '../../../domain/entities/app_settings.dart';
 import '../../../infrastructure/notification/notification_service.dart';
 import '../../providers/notification_permission_provider.dart';
 import '../../providers/settings_provider.dart';
+import '../../providers/theme_provider.dart';
 import '../../widgets/glass_card.dart';
+import 'widgets/theme_mode_sheet.dart';
 
 class SettingsPage extends ConsumerWidget {
   /// 设置页。
@@ -30,6 +33,7 @@ class SettingsPage extends ConsumerWidget {
     final state = ref.watch(settingsProvider);
     final notifier = ref.read(settingsProvider.notifier);
     final permissionAsync = ref.watch(notificationPermissionProvider);
+    final currentThemeMode = ref.watch(themeModeProvider);
 
     Future<void> save(AppSettingsEntity next) async {
       await notifier.save(next);
@@ -60,6 +64,13 @@ class SettingsPage extends ConsumerWidget {
       );
       if (picked == null) return;
       onPicked(TimeUtils.formatHHmm(picked));
+    }
+
+    void showThemeModeSheet() {
+      showModalBottomSheet(
+        context: context,
+        builder: (context) => const ThemeModeSheet(),
+      );
     }
 
     return Scaffold(
@@ -253,6 +264,32 @@ class SettingsPage extends ConsumerWidget {
                           '权限状态读取失败：$e',
                           style: AppTypography.bodySecondary,
                         ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              GlassCard(
+                child: Padding(
+                  padding: const EdgeInsets.all(AppSpacing.lg),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('外观设置', style: AppTypography.h2),
+                      const SizedBox(height: AppSpacing.sm),
+                      const Text(
+                        '可选择跟随系统、浅色或深色主题。',
+                        style: AppTypography.bodySecondary,
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: const Icon(Icons.palette_outlined),
+                        title: const Text('主题模式'),
+                        subtitle: Text(currentThemeMode.label),
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: showThemeModeSheet,
                       ),
                     ],
                   ),
