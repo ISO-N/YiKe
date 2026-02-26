@@ -12,7 +12,9 @@ import '../../../../core/constants/app_typography.dart';
 import '../../../../core/utils/date_utils.dart';
 import '../../../../domain/entities/review_task.dart';
 import '../../../providers/calendar_provider.dart';
+import '../../../providers/task_filter_provider.dart';
 import '../../../widgets/glass_card.dart';
+import '../../../widgets/task_filter_bar.dart';
 
 /// 当日任务 BottomSheet。
 class DayTaskListSheet extends ConsumerWidget {
@@ -31,6 +33,10 @@ class DayTaskListSheet extends ConsumerWidget {
 
     final state = ref.watch(calendarProvider);
     final notifier = ref.read(calendarProvider.notifier);
+
+    final filter = ref.watch(reviewTaskFilterProvider);
+    final counts = ref.watch(selectedDayTaskCountsProvider);
+    final filteredTasks = ref.watch(filteredSelectedDayTasksProvider);
 
     return SafeArea(
       child: DraggableScrollableSheet(
@@ -59,6 +65,16 @@ class DayTaskListSheet extends ConsumerWidget {
                   style: AppTypography.bodySecondary(context),
                 ),
                 const SizedBox(height: AppSpacing.lg),
+                if (!state.isLoadingTasks && state.errorMessage == null) ...[
+                  TaskFilterBar(
+                    filter: filter,
+                    counts: counts,
+                    onChanged: (next) {
+                      ref.read(reviewTaskFilterProvider.notifier).state = next;
+                    },
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                ],
                 if (state.isLoadingTasks) ...[
                   const Center(
                     child: Padding(
@@ -96,8 +112,28 @@ class DayTaskListSheet extends ConsumerWidget {
                       ),
                     ),
                   ),
+                ] else if (filteredTasks.isEmpty) ...[
+                  GlassCard(
+                    child: Padding(
+                      padding: const EdgeInsets.all(AppSpacing.xl),
+                      child: Column(
+                        children: [
+                          Icon(
+                            Icons.filter_alt_off,
+                            size: 48,
+                            color: secondaryText,
+                          ),
+                          const SizedBox(height: AppSpacing.md),
+                          Text(
+                            '当前筛选下暂无任务',
+                            style: AppTypography.bodySecondary(context),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 ] else ...[
-                  for (final task in state.selectedDayTasks) ...[
+                  for (final task in filteredTasks) ...[
                     _TaskCard(
                       task: task,
                       onComplete: task.status == ReviewTaskStatus.pending
