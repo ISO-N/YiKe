@@ -22,8 +22,10 @@ import '../../widgets/glass_card.dart';
 import '../../widgets/gradient_background.dart';
 import '../../providers/home_tasks_provider.dart';
 import '../../providers/notification_permission_provider.dart';
+import '../../providers/search_provider.dart';
 import '../../providers/settings_provider.dart';
 import '../../providers/sync_provider.dart';
+import '../../widgets/search_bar.dart';
 
 class HomePage extends ConsumerStatefulWidget {
   /// 首页（今日复习）。
@@ -50,6 +52,13 @@ class _HomePageState extends ConsumerState<HomePage> {
     final settingsState = ref.watch(settingsProvider);
     final permissionAsync = ref.watch(notificationPermissionProvider);
     final syncUi = ref.watch(syncControllerProvider);
+
+    final searchQuery = ref.watch(learningSearchQueryProvider);
+    final searchQueryNotifier = ref.read(learningSearchQueryProvider.notifier);
+    final searchKeyword = searchQuery.trim();
+    final searchAsync = searchKeyword.isEmpty
+        ? null
+        : ref.watch(learningSearchResultsProvider);
 
     final permission = permissionAsync.valueOrNull;
     final shouldPromptPermission =
@@ -117,6 +126,21 @@ class _HomePageState extends ConsumerState<HomePage> {
             child: ListView(
               padding: const EdgeInsets.all(AppSpacing.lg),
               children: [
+                LearningSearchBar(
+                  query: searchQuery,
+                  enabled: !state.isLoading,
+                  onChanged: (v) => searchQueryNotifier.state = v,
+                  onClear: () => searchQueryNotifier.state = '',
+                ),
+                if (searchKeyword.isNotEmpty) ...[
+                  const SizedBox(height: AppSpacing.md),
+                  _SearchResultsCard(
+                    keyword: searchKeyword,
+                    results: searchAsync,
+                    onTapItem: (id) => context.push('/items/$id'),
+                  ),
+                ],
+                const SizedBox(height: AppSpacing.lg),
                 const _DateHeader(),
                 const SizedBox(height: AppSpacing.lg),
                 _ProgressCard(
@@ -380,6 +404,7 @@ Future<void> _showNotificationPermissionDialog({
   );
 }
 
+/// 今日进度卡片（v1.0 起：首页基础信息展示）。
 class _ProgressCard extends StatelessWidget {
   const _ProgressCard({required this.completed, required this.total});
 
@@ -423,6 +448,106 @@ class _ProgressCard extends StatelessWidget {
               ],
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// 搜索结果卡片（v3.1 F14.1）。
+class _SearchResultsCard extends StatelessWidget {
+  const _SearchResultsCard({
+    required this.keyword,
+    required this.results,
+    required this.onTapItem,
+  });
+
+  final String keyword;
+  final AsyncValue<List<LearningItemSearchResult>>? results;
+  final ValueChanged<int> onTapItem;
+
+  @override
+  Widget build(BuildContext context) {
+    final async = results;
+    if (async == null) return const SizedBox.shrink();
+
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final highlightBg = isDark
+        ? AppColors.primaryLight.withValues(alpha: 0.22)
+        : AppColors.primary.withValues(alpha: 0.18);
+
+    final highlightStyle = AppTypography.body(context).copyWith(
+      backgroundColor: highlightBg,
+      fontWeight: FontWeight.w800,
+    );
+    final normalTitle = AppTypography.body(context).copyWith(
+      fontWeight: FontWeight.w700,
+    );
+    final normalNote = AppTypography.bodySecondary(context);
+
+    return GlassCard(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        child: async.when(
+          loading: () => const Center(
+            child: Padding(
+              padding: EdgeInsets.all(12),
+              child: CircularProgressIndicator(),
+            ),
+          ),
+          error: (e, _) => Text(
+            '搜索失败：$e',
+            style: const TextStyle(color: AppColors.error),
+          ),
+          data: (list) {
+            if (list.isEmpty) {
+              return Text(
+                '未找到匹配结果',
+                style: AppTypography.bodySecondary(context),
+              );
+            }
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '搜索结果（最多 50 条） · ${list.length}',
+                  style: AppTypography.bodySecondary(context),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                for (final item in list) ...[
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: RichText(
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      text: buildHighlightedTextSpan(
+                        text: item.title,
+                        keyword: keyword,
+                        normalStyle: normalTitle,
+                        highlightStyle: highlightStyle,
+                      ),
+                    ),
+                    subtitle: item.note == null || item.note!.trim().isEmpty
+                        ? null
+                        : RichText(
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            text: buildHighlightedTextSpan(
+                              text: item.note!,
+                              keyword: keyword,
+                              normalStyle: normalNote,
+                              highlightStyle: highlightStyle,
+                            ),
+                          ),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => onTapItem(item.id),
+                  ),
+                  const Divider(height: 1),
+                ],
+              ],
+            );
+          },
         ),
       ),
     );

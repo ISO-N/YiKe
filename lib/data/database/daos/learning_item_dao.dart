@@ -66,6 +66,38 @@ class LearningItemDao {
     )..orderBy([(t) => OrderingTerm.desc(t.createdAt)])).get();
   }
 
+  /// F14.1：按关键词搜索学习内容（title/note）。
+  ///
+  /// 说明：
+  /// - 仅搜索 title 与 note（不包含 tags）
+  /// - 默认最多返回 50 条
+  /// - 使用 LIKE 做模糊匹配（SQLite 对 ASCII 默认大小写不敏感，非 ASCII 行为与系统 collation 相关）
+  ///
+  /// 参数：
+  /// - [keyword] 关键词（会 trim；空字符串返回空列表）
+  /// - [limit] 结果上限（1-200，超出会被裁剪）
+  /// 返回值：匹配的学习内容列表（按 createdAt 倒序）。
+  /// 异常：数据库查询失败时可能抛出异常。
+  Future<List<LearningItem>> searchLearningItems({
+    required String keyword,
+    int limit = 50,
+  }) {
+    final q = keyword.trim();
+    if (q.isEmpty) return Future.value(const <LearningItem>[]);
+
+    final capped = limit.clamp(1, 200);
+    final pattern = '%$q%';
+
+    final query = db.select(db.learningItems)
+      ..where(
+        (t) => t.title.like(pattern) | (t.note.isNotNull() & t.note.like(pattern)),
+      )
+      ..orderBy([(t) => OrderingTerm.desc(t.createdAt)])
+      ..limit(capped);
+
+    return query.get();
+  }
+
   /// 删除所有模拟学习内容（v3.1 Debug）。
   ///
   /// 说明：
