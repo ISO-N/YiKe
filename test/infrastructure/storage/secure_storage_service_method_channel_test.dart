@@ -59,8 +59,9 @@ void main() {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(channel, (call) async {
           if (call.method == 'read') return null;
-          if (call.method == 'write')
+          if (call.method == 'write') {
             throw PlatformException(code: 'write_failed');
+          }
           return null;
         });
 
@@ -70,10 +71,12 @@ void main() {
     // 此时将 read 改为抛异常，以验证“异常环境下会优先复用内存 key”。
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(channel, (call) async {
-          if (call.method == 'read')
+          if (call.method == 'read') {
             throw PlatformException(code: 'read_failed');
-          if (call.method == 'write')
+          }
+          if (call.method == 'write') {
             throw PlatformException(code: 'write_failed');
+          }
           return null;
         });
 

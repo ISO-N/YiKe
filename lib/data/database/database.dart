@@ -11,8 +11,11 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
 import 'tables/learning_items_table.dart';
+import 'tables/learning_templates_table.dart';
+import 'tables/learning_topics_table.dart';
 import 'tables/review_tasks_table.dart';
 import 'tables/settings_table.dart';
+import 'tables/topic_item_relations_table.dart';
 
 part 'database.g.dart';
 
@@ -21,7 +24,16 @@ part 'database.g.dart';
 /// 说明：
 /// - 数据库文件：`yike.db`
 /// - v1.0 MVP：本地离线可用，任务数据不加密；设置项可在上层做加密存储。
-@DriftDatabase(tables: [LearningItems, ReviewTasks, AppSettingsTable])
+@DriftDatabase(
+  tables: [
+    LearningItems,
+    ReviewTasks,
+    AppSettingsTable,
+    LearningTemplates,
+    LearningTopics,
+    TopicItemRelations,
+  ],
+)
 class AppDatabase extends _$AppDatabase {
   /// 创建数据库实例。
   ///
@@ -45,7 +57,7 @@ class AppDatabase extends _$AppDatabase {
   }
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -53,7 +65,12 @@ class AppDatabase extends _$AppDatabase {
       await migrator.createAll();
     },
     onUpgrade: (migrator, from, to) async {
-      // v1.0 MVP：预留升级入口。
+      // v2.1：新增学习模板、学习主题与关联表。
+      if (from < 2) {
+        await migrator.createTable(learningTemplates);
+        await migrator.createTable(learningTopics);
+        await migrator.createTable(topicItemRelations);
+      }
     },
     beforeOpen: (details) async {
       // 开启外键约束，确保级联删除生效。
