@@ -13,7 +13,9 @@ import '../../../core/constants/app_strings.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/utils/date_utils.dart';
+import '../../../di/providers.dart';
 import '../../../domain/entities/app_settings.dart';
+import '../../../domain/entities/learning_topic.dart';
 import '../../widgets/glass_card.dart';
 import '../../providers/home_tasks_provider.dart';
 import '../../providers/notification_permission_provider.dart';
@@ -64,6 +66,18 @@ class _HomePageState extends ConsumerState<HomePage> {
       appBar: AppBar(
         title: const Text(AppStrings.todayReview),
         actions: [
+          IconButton(
+            tooltip: state.topicFilterId == null
+                ? '筛选：全部'
+                : '筛选：主题 #${state.topicFilterId}',
+            onPressed: state.isLoading ? null : () => _showTopicFilterSheet(),
+            icon: Icon(
+              Icons.filter_list,
+              color: state.topicFilterId == null
+                  ? null
+                  : Theme.of(context).colorScheme.primary,
+            ),
+          ),
           IconButton(
             tooltip: '刷新',
             onPressed: state.isLoading ? null : () => notifier.load(),
@@ -217,6 +231,64 @@ class _HomePageState extends ConsumerState<HomePage> {
             )
           : null,
     );
+  }
+
+  Future<void> _showTopicFilterSheet() async {
+    final current = ref.read(homeTasksProvider).topicFilterId;
+    List<LearningTopicEntity> topics = const [];
+    try {
+      topics = await ref.read(manageTopicUseCaseProvider).getAll();
+    } catch (_) {
+      // 主题加载失败时仍允许切回“全部”。
+    }
+    if (!mounted) return;
+
+    final picked = await showModalBottomSheet<int>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                title: const Text('全部'),
+                trailing: current == null ? const Icon(Icons.check) : null,
+                onTap: () => Navigator.of(context).pop(-1),
+              ),
+              const Divider(height: 1),
+              if (topics.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.all(AppSpacing.lg),
+                  child: Text(
+                    '暂无主题',
+                    style: AppTypography.bodySecondary,
+                  ),
+                )
+              else
+                ...topics.map((t) {
+                  return ListTile(
+                    title: Text(t.name),
+                    subtitle: (t.description ?? '').trim().isEmpty
+                        ? null
+                        : Text(
+                            t.description!,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                    trailing: current == t.id ? const Icon(Icons.check) : null,
+                    onTap: () => Navigator.of(context).pop(t.id!),
+                  );
+                }),
+            ],
+          ),
+        );
+      },
+    );
+
+    if (picked == null) return;
+    final next = picked == -1 ? null : picked;
+    await ref.read(homeTasksProvider.notifier).setTopicFilter(next);
   }
 }
 

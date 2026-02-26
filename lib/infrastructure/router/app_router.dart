@@ -10,9 +10,13 @@ import 'package:go_router/go_router.dart';
 import '../../presentation/pages/home/home_page.dart';
 import '../../presentation/pages/calendar/calendar_page.dart';
 import '../../presentation/pages/input/input_page.dart';
+import '../../presentation/pages/input/import_preview_page.dart';
+import '../../presentation/pages/input/templates_page.dart';
 import '../../presentation/pages/settings/export_page.dart';
 import '../../presentation/pages/settings/settings_page.dart';
 import '../../presentation/pages/statistics/statistics_page.dart';
+import '../../presentation/pages/topics/topic_detail_page.dart';
+import '../../presentation/pages/topics/topics_page.dart';
 import '../../presentation/pages/shell/shell_scaffold.dart';
 
 /// App 路由 Provider。
@@ -54,12 +58,46 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         },
       ),
       GoRoute(
+        path: '/input/import',
+        pageBuilder: (context, state) {
+          return const MaterialPage(
+            fullscreenDialog: true,
+            child: ImportPreviewPage(),
+          );
+        },
+      ),
+      GoRoute(
+        path: '/input/templates',
+        pageBuilder: (context, state) {
+          return const MaterialPage(
+            fullscreenDialog: true,
+            child: TemplatesPage(),
+          );
+        },
+      ),
+      GoRoute(
         path: '/settings/export',
         pageBuilder: (context, state) {
           return const MaterialPage(
             fullscreenDialog: true,
             child: ExportPage(),
           );
+        },
+      ),
+      GoRoute(
+        path: '/topics',
+        pageBuilder: (context, state) {
+          return const MaterialPage(child: TopicsPage());
+        },
+      ),
+      GoRoute(
+        path: '/topics/:id',
+        pageBuilder: (context, state) {
+          final id = int.tryParse(state.pathParameters['id'] ?? '');
+          if (id == null) {
+            return const MaterialPage(child: TopicsPage());
+          }
+          return MaterialPage(child: TopicDetailPage(topicId: id));
         },
       ),
     ],

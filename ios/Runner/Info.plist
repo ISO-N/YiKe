@@ -66,5 +66,12 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<!-- v2.1：语音输入 / OCR / 相册选择权限说明 -->
+	<key>NSMicrophoneUsageDescription</key>
+	<string>用于语音输入快速录入学习内容。</string>
+	<key>NSCameraUsageDescription</key>
+	<string>用于拍照识别（OCR）快速录入学习内容。</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>用于从相册选择图片进行 OCR 识别。</string>
 </dict>
 </plist>
