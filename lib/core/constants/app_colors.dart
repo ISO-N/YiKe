@@ -1,6 +1,7 @@
-/// 文件用途：统一管理应用颜色常量（v1.0 MVP）。
+/// 文件用途：统一管理应用颜色常量（含 v2.2 深色主题配色）。
 /// 作者：Codex
 /// 创建日期：2026-02-25
+/// 最后更新：2026-02-26（新增深色主题配色）
 library;
 
 import 'package:flutter/material.dart';
@@ -25,9 +26,30 @@ class AppColors {
   static const Color textPrimary = Color(0xFF0F172A); // Slate 900
   static const Color textSecondary = Color(0xFF64748B); // Slate 500
 
+  /// 深色背景色（深蓝黑）。
+  static const Color darkBackground = Color(0xFF1A1A2E);
+
+  /// 深色表面色（卡片/底部导航等）。
+  static const Color darkSurface = Color(0xFF16213E);
+
+  /// 深色文字主色。
+  static const Color darkTextPrimary = Color(0xFFF1F5F9); // Slate 100
+
+  /// 深色文字次色。
+  static const Color darkTextSecondary = Color(0xFF94A3B8); // Slate 400
+
   /// 毛玻璃卡片底色（80% 不透明）。
   static const Color glassSurface = Color.fromRGBO(255, 255, 255, 0.80);
 
   /// 毛玻璃边框（40% 不透明）。
   static const Color glassBorder = Color.fromRGBO(255, 255, 255, 0.40);
+
+  /// 深色毛玻璃底色（80% 不透明）。
+  static const Color darkGlassSurface = Color.fromRGBO(22, 33, 62, 0.80);
+
+  /// 深色毛玻璃边框（10% 不透明）。
+  static const Color darkGlassBorder = Color.fromRGBO(255, 255, 255, 0.10);
+
+  /// 深色分割线（10% 不透明）。
+  static const Color darkDivider = Color.fromRGBO(255, 255, 255, 0.10);
 }
