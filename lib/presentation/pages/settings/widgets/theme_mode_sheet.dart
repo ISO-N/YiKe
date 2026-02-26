@@ -18,59 +18,61 @@ class ThemeModeSheet extends ConsumerWidget {
     final currentMode = ref.watch(themeModeProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final handleColor =
-        isDark ? Colors.white.withOpacity(0.22) : Colors.black.withOpacity(0.12);
+        isDark
+            ? Colors.white.withValues(alpha: 0.22)
+            : Colors.black.withValues(alpha: 0.12);
 
     return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.only(bottom: 12),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(height: 8),
+      child: RadioGroup<AppThemeMode>(
+        groupValue: currentMode,
+        onChanged: (value) async {
+          if (value == null) return;
+          await ref.read(themeModeProvider.notifier).setThemeMode(value);
+          if (context.mounted) Navigator.pop(context);
+        },
+        child: Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 8),
 
-            // 交互提示：可拖拽关闭。
-            Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: handleColor,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              '选择主题模式',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
-            ),
-            const SizedBox(height: 8),
-            ...AppThemeMode.values.map(
-              (mode) => RadioListTile<AppThemeMode>(
-                value: mode,
-                groupValue: currentMode,
-                title: Text(mode.label),
-                subtitle: Text(_getSubtitle(mode)),
-                onChanged: (value) async {
-                  if (value == null) return;
-                  await ref
-                      .read(themeModeProvider.notifier)
-                      .setThemeMode(value);
-                  if (context.mounted) Navigator.pop(context);
-                },
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: SizedBox(
-                width: double.infinity,
-                child: TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('取消'),
+              // 交互提示：可拖拽关闭。
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: handleColor,
+                  borderRadius: BorderRadius.circular(2),
                 ),
               ),
-            ),
-          ],
+              const SizedBox(height: 16),
+              Text(
+                '选择主题模式',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+              ),
+              const SizedBox(height: 8),
+              ...AppThemeMode.values.map(
+                (mode) => RadioListTile<AppThemeMode>(
+                  value: mode,
+                  title: Text(mode.label),
+                  subtitle: Text(_getSubtitle(mode)),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('取消'),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

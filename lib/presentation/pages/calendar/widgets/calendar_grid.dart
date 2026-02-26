@@ -91,7 +91,7 @@ class CalendarGrid extends StatelessWidget {
         outsideDaysVisible: false,
         defaultTextStyle: TextStyle(color: textPrimary),
         todayDecoration: BoxDecoration(
-          color: primary.withOpacity(isDark ? 0.22 : 0.18),
+          color: primary.withValues(alpha: isDark ? 0.22 : 0.18),
           shape: BoxShape.circle,
         ),
         todayTextStyle: TextStyle(

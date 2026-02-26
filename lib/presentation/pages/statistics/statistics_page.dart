@@ -220,7 +220,7 @@ class _RingProgress extends StatelessWidget {
         sections: [
           PieChartSectionData(
             value: remaining * 100,
-            color: primary.withOpacity(0.18),
+            color: primary.withValues(alpha: 0.18),
             radius: 12,
             showTitle: false,
           ),
@@ -413,7 +413,7 @@ class _PieTooltip extends StatelessWidget {
         border: Border.all(color: Theme.of(context).dividerColor),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
+            color: Colors.black.withValues(alpha: 0.08),
             blurRadius: 12,
             offset: const Offset(0, 6),
           ),

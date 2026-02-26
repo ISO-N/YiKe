@@ -34,8 +34,8 @@ void main() {
     // 说明：第三列 tags 需要通过引号包裹，避免被 CSV 解析为多列。
     await file.writeAsString(
       '标题,备注,标签\n'
-      'T1, N1 ,\"a, b，c;d；a\"\n'
-      ',N2,\"x\"\n',
+      'T1, N1 ,"a, b，c;d；a"\n'
+      ',N2,"x"\n',
     );
 
     final items = await FileParser.parseFile(file.path);

@@ -265,14 +265,14 @@ class _InputPageState extends ConsumerState<InputPage> {
           ),
           decoration: BoxDecoration(
             color: isDark
-                ? AppColors.darkSurface.withOpacity(0.95)
+                ? AppColors.darkSurface.withValues(alpha: 0.95)
                 : Colors.white.withAlpha(240),
             boxShadow: [
               BoxShadow(
                 blurRadius: 12,
                 offset: const Offset(0, -2),
                 color: isDark
-                    ? Colors.black.withOpacity(0.45)
+                    ? Colors.black.withValues(alpha: 0.45)
                     : const Color(0x22000000),
               ),
             ],

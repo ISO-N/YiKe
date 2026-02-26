@@ -186,9 +186,9 @@ class _TaskCard extends StatelessWidget {
                       (t) => Chip(
                         label: Text(t),
                         labelStyle: const TextStyle(fontSize: 12),
-                        backgroundColor: primary.withOpacity(0.18),
+                        backgroundColor: primary.withValues(alpha: 0.18),
                         side: BorderSide(
-                          color: primary.withOpacity(0.35),
+                          color: primary.withValues(alpha: 0.35),
                         ),
                         visualDensity: VisualDensity.compact,
                       ),

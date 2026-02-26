@@ -568,10 +568,10 @@ class _TaskCard extends StatelessWidget {
                                   vertical: 4,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: primary.withOpacity(0.18),
+                                  color: primary.withValues(alpha: 0.18),
                                   borderRadius: BorderRadius.circular(999),
                                   border: Border.all(
-                                    color: primary.withOpacity(0.35),
+                                    color: primary.withValues(alpha: 0.35),
                                   ),
                                 ),
                                 child: Text(
