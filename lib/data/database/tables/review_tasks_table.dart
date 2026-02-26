@@ -39,6 +39,9 @@ class ReviewTasks extends Table {
   /// 创建时间。
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
 
+  /// 更新时间（用于同步冲突解决，v3.0 新增）。
+  DateTimeColumn get updatedAt => dateTime().nullable()();
+
   @override
   List<String> get customConstraints => const [
     // 复习轮次范围约束（避免 Analyzer 对 self-reference 的提示）。

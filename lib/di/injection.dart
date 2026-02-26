@@ -6,6 +6,8 @@ library;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/database/database.dart';
+import '../infrastructure/sync/device_identity_service.dart';
+import '../infrastructure/storage/secure_storage_service.dart';
 import 'providers.dart';
 
 class AppInjection {
@@ -16,9 +18,19 @@ class AppInjection {
   static Future<ProviderContainer> createContainer() async {
     final db = await AppDatabase.open();
 
+    // v3.0：生成并注入稳定的设备 ID（用于局域网发现/配对/同步）。
+    final secureStorageService = SecureStorageService();
+    final deviceId = await DeviceIdentityService(
+      secureStorageService: secureStorageService,
+    ).getOrCreateDeviceId();
+
     // v1.0 MVP：数据库需要在后台任务与 UI 层共享同一套 schema，因此在启动时注入。
     return ProviderContainer(
-      overrides: [appDatabaseProvider.overrideWithValue(db)],
+      overrides: [
+        appDatabaseProvider.overrideWithValue(db),
+        secureStorageServiceProvider.overrideWithValue(secureStorageService),
+        deviceIdProvider.overrideWithValue(deviceId),
+      ],
     );
   }
 }

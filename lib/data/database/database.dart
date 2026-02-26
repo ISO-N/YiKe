@@ -15,6 +15,9 @@ import 'tables/learning_templates_table.dart';
 import 'tables/learning_topics_table.dart';
 import 'tables/review_tasks_table.dart';
 import 'tables/settings_table.dart';
+import 'tables/sync_devices_table.dart';
+import 'tables/sync_entity_mappings_table.dart';
+import 'tables/sync_logs_table.dart';
 import 'tables/topic_item_relations_table.dart';
 
 part 'database.g.dart';
@@ -32,6 +35,9 @@ part 'database.g.dart';
     LearningTemplates,
     LearningTopics,
     TopicItemRelations,
+    SyncDevices,
+    SyncLogs,
+    SyncEntityMappings,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -57,7 +63,7 @@ class AppDatabase extends _$AppDatabase {
   }
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -70,6 +76,20 @@ class AppDatabase extends _$AppDatabase {
         await migrator.createTable(learningTemplates);
         await migrator.createTable(learningTopics);
         await migrator.createTable(topicItemRelations);
+      }
+
+      // v3.0：新增局域网同步相关表 + 复习任务更新时间字段。
+      if (from < 3) {
+        await migrator.createTable(syncDevices);
+        await migrator.createTable(syncLogs);
+        await migrator.createTable(syncEntityMappings);
+
+        await migrator.addColumn(reviewTasks, reviewTasks.updatedAt);
+
+        // 兼容：为历史任务补齐 updatedAt，便于同步冲突解决（以 createdAt 兜底）。
+        await customStatement(
+          'UPDATE review_tasks SET updated_at = created_at WHERE updated_at IS NULL',
+        );
       }
     },
     beforeOpen: (details) async {

@@ -13,6 +13,7 @@ import '../../domain/repositories/review_task_repository.dart';
 import '../models/review_task_with_item_model.dart';
 import '../database/daos/review_task_dao.dart';
 import '../database/database.dart';
+import '../sync/sync_log_writer.dart';
 
 /// 复习任务仓储实现。
 class ReviewTaskRepositoryImpl implements ReviewTaskRepository {
@@ -21,12 +22,15 @@ class ReviewTaskRepositoryImpl implements ReviewTaskRepository {
   /// 参数：
   /// - [dao] 复习任务 DAO。
   /// 异常：无。
-  ReviewTaskRepositoryImpl({required this.dao});
+  ReviewTaskRepositoryImpl({required this.dao, SyncLogWriter? syncLogWriter})
+    : _sync = syncLogWriter;
 
   final ReviewTaskDao dao;
+  final SyncLogWriter? _sync;
 
   @override
   Future<ReviewTaskEntity> create(ReviewTaskEntity task) async {
+    final now = DateTime.now();
     final id = await dao.insertReviewTask(
       ReviewTasksCompanion.insert(
         learningItemId: task.learningItemId,
@@ -36,8 +40,42 @@ class ReviewTaskRepositoryImpl implements ReviewTaskRepository {
         completedAt: Value(task.completedAt),
         skippedAt: Value(task.skippedAt),
         createdAt: Value(task.createdAt),
+        updatedAt: Value(now),
       ),
     );
+
+    final sync = _sync;
+    if (sync != null) {
+      final ts = now.millisecondsSinceEpoch;
+      final origin = await sync.resolveOriginKey(
+        entityType: 'review_task',
+        localEntityId: id,
+        appliedAtMs: ts,
+      );
+      final learningOrigin = await sync.resolveOriginKey(
+        entityType: 'learning_item',
+        localEntityId: task.learningItemId,
+        appliedAtMs: ts,
+      );
+      await sync.logEvent(
+        origin: origin,
+        entityType: 'review_task',
+        operation: 'create',
+        data: {
+          'learning_origin_device_id': learningOrigin.deviceId,
+          'learning_origin_entity_id': learningOrigin.entityId,
+          'review_round': task.reviewRound,
+          'scheduled_date': task.scheduledDate.toIso8601String(),
+          'status': task.status.toDbValue(),
+          'completed_at': task.completedAt?.toIso8601String(),
+          'skipped_at': task.skippedAt?.toIso8601String(),
+          'created_at': task.createdAt.toIso8601String(),
+          'updated_at': now.toIso8601String(),
+        },
+        timestampMs: ts,
+      );
+    }
+
     return task.copyWith(id: id);
   }
 
@@ -74,21 +112,29 @@ class ReviewTaskRepositoryImpl implements ReviewTaskRepository {
   @override
   Future<void> completeTask(int id) async {
     await dao.updateTaskStatus(id, 'done', completedAt: DateTime.now());
+    await _logTaskUpdateById(id);
   }
 
   @override
   Future<void> skipTask(int id) async {
     await dao.updateTaskStatus(id, 'skipped', skippedAt: DateTime.now());
+    await _logTaskUpdateById(id);
   }
 
   @override
   Future<void> completeTasks(List<int> ids) async {
     await dao.updateTaskStatusBatch(ids, 'done', timestamp: DateTime.now());
+    for (final id in ids) {
+      await _logTaskUpdateById(id);
+    }
   }
 
   @override
   Future<void> skipTasks(List<int> ids) async {
     await dao.updateTaskStatusBatch(ids, 'skipped', timestamp: DateTime.now());
+    for (final id in ids) {
+      await _logTaskUpdateById(id);
+    }
   }
 
   @override
@@ -174,5 +220,43 @@ class ReviewTaskRepositoryImpl implements ReviewTaskRepository {
     } catch (_) {
       return const [];
     }
+  }
+
+  Future<void> _logTaskUpdateById(int id) async {
+    final sync = _sync;
+    if (sync == null) return;
+
+    final row = await dao.getReviewTaskById(id);
+    if (row == null) return;
+
+    final ts = DateTime.now().millisecondsSinceEpoch;
+    final origin = await sync.resolveOriginKey(
+      entityType: 'review_task',
+      localEntityId: row.id,
+      appliedAtMs: ts,
+    );
+    final learningOrigin = await sync.resolveOriginKey(
+      entityType: 'learning_item',
+      localEntityId: row.learningItemId,
+      appliedAtMs: ts,
+    );
+
+    await sync.logEvent(
+      origin: origin,
+      entityType: 'review_task',
+      operation: 'update',
+      data: {
+        'learning_origin_device_id': learningOrigin.deviceId,
+        'learning_origin_entity_id': learningOrigin.entityId,
+        'review_round': row.reviewRound,
+        'scheduled_date': row.scheduledDate.toIso8601String(),
+        'status': row.status,
+        'completed_at': row.completedAt?.toIso8601String(),
+        'skipped_at': row.skippedAt?.toIso8601String(),
+        'created_at': row.createdAt.toIso8601String(),
+        'updated_at': (row.updatedAt ?? row.createdAt).toIso8601String(),
+      },
+      timestampMs: ts,
+    );
   }
 }

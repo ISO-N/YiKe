@@ -7,13 +7,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/utils/responsive_utils.dart';
 import '../../presentation/pages/home/home_page.dart';
 import '../../presentation/pages/calendar/calendar_page.dart';
+import '../../presentation/pages/help/help_page.dart';
 import '../../presentation/pages/input/input_page.dart';
 import '../../presentation/pages/input/import_preview_page.dart';
 import '../../presentation/pages/input/templates_page.dart';
 import '../../presentation/pages/settings/export_page.dart';
 import '../../presentation/pages/settings/settings_page.dart';
+import '../../presentation/pages/settings/sync_settings_page.dart';
 import '../../presentation/pages/statistics/statistics_page.dart';
 import '../../presentation/pages/topics/topic_detail_page.dart';
 import '../../presentation/pages/topics/topics_page.dart';
@@ -45,6 +48,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                 const NoTransitionPage(child: StatisticsPage()),
           ),
           GoRoute(
+            path: '/help',
+            pageBuilder: (context, state) =>
+                const NoTransitionPage(child: HelpPage()),
+          ),
+          GoRoute(
             path: '/settings',
             pageBuilder: (context, state) =>
                 const NoTransitionPage(child: SettingsPage()),
@@ -54,24 +62,39 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/input',
         pageBuilder: (context, state) {
-          return const MaterialPage(fullscreenDialog: true, child: InputPage());
+          return _dialogPageIfDesktop(
+            context,
+            const InputPage(),
+            fallback: const MaterialPage(
+              fullscreenDialog: true,
+              child: InputPage(),
+            ),
+          );
         },
       ),
       GoRoute(
         path: '/input/import',
         pageBuilder: (context, state) {
-          return const MaterialPage(
-            fullscreenDialog: true,
-            child: ImportPreviewPage(),
+          return _dialogPageIfDesktop(
+            context,
+            const ImportPreviewPage(),
+            fallback: const MaterialPage(
+              fullscreenDialog: true,
+              child: ImportPreviewPage(),
+            ),
           );
         },
       ),
       GoRoute(
         path: '/input/templates',
         pageBuilder: (context, state) {
-          return const MaterialPage(
-            fullscreenDialog: true,
-            child: TemplatesPage(),
+          return _dialogPageIfDesktop(
+            context,
+            const TemplatesPage(),
+            fallback: const MaterialPage(
+              fullscreenDialog: true,
+              child: TemplatesPage(),
+            ),
           );
         },
       ),
@@ -82,6 +105,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             fullscreenDialog: true,
             child: ExportPage(),
           );
+        },
+      ),
+      GoRoute(
+        path: '/settings/sync',
+        pageBuilder: (context, state) {
+          return const MaterialPage(child: SyncSettingsPage());
         },
       ),
       GoRoute(
@@ -103,3 +132,44 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     ],
   );
 });
+
+Page<dynamic> _dialogPageIfDesktop(
+  BuildContext context,
+  Widget child, {
+  required Page<dynamic> fallback,
+  Size dialogSize = const Size(600, 500),
+}) {
+  final isDesktop =
+      MediaQuery.of(context).size.width >= ResponsiveBreakpoints.desktop;
+  if (!isDesktop) return fallback;
+
+  return CustomTransitionPage(
+    opaque: false,
+    barrierDismissible: true,
+    barrierColor: Colors.black54,
+    transitionDuration: const Duration(milliseconds: 200),
+    child: Center(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxWidth: dialogSize.width,
+          maxHeight: dialogSize.height,
+          minWidth: 360,
+          minHeight: 360,
+        ),
+        child: Material(
+          borderRadius: BorderRadius.circular(16),
+          clipBehavior: Clip.antiAlias,
+          child: child,
+        ),
+      ),
+    ),
+    transitionsBuilder: (context, animation, secondaryAnimation, child) {
+      final fade = CurvedAnimation(parent: animation, curve: Curves.easeOut);
+      final scale = Tween<double>(begin: 0.98, end: 1.0).animate(fade);
+      return FadeTransition(
+        opacity: fade,
+        child: ScaleTransition(scale: scale, child: child),
+      );
+    },
+  );
+}

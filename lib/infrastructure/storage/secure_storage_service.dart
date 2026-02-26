@@ -20,6 +20,7 @@ class SecureStorageService {
 
   // 用于在“插件不可用”的环境（如 widget_test）下兜底保存密钥。
   static String? _inMemoryKeyBase64;
+  static final Map<String, String> _inMemoryKv = {};
 
   /// 获取或创建“设置项加密密钥”（Base64 编码的 32 字节随机值）。
   ///
@@ -46,6 +47,39 @@ class SecureStorageService {
       // 写入失败也使用内存兜底，避免阻塞主流程（如测试环境无插件注册）。
       _inMemoryKeyBase64 = created;
       return created;
+    }
+  }
+
+  /// 读取安全存储中的字符串值。
+  ///
+  /// 说明：
+  /// - 在测试环境或插件不可用时使用内存兜底
+  /// - 仅用于本应用内部（如设备 ID、同步令牌等）
+  Future<String?> readString(String key) async {
+    try {
+      return await _storage.read(key: key);
+    } catch (_) {
+      return _inMemoryKv[key];
+    }
+  }
+
+  /// 写入安全存储中的字符串值。
+  ///
+  /// 说明：在插件不可用时写入内存兜底，避免阻塞主流程。
+  Future<void> writeString(String key, String value) async {
+    try {
+      await _storage.write(key: key, value: value);
+    } catch (_) {
+      _inMemoryKv[key] = value;
+    }
+  }
+
+  /// 删除安全存储中的值。
+  Future<void> delete(String key) async {
+    try {
+      await _storage.delete(key: key);
+    } catch (_) {
+      _inMemoryKv.remove(key);
     }
   }
 

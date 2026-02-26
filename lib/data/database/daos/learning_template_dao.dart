@@ -81,7 +81,11 @@ class LearningTemplateDao {
   ///
   /// 参数：
   /// - [idToOrder] 模板 id -> sortOrder 映射
-  Future<void> updateSortOrders(Map<int, int> idToOrder) async {
+  Future<void> updateSortOrders(
+    Map<int, int> idToOrder, {
+    DateTime? now,
+  }) async {
+    final timestamp = now ?? DateTime.now();
     await db.transaction(() async {
       for (final entry in idToOrder.entries) {
         await (db.update(
@@ -89,7 +93,7 @@ class LearningTemplateDao {
         )..where((t) => t.id.equals(entry.key))).write(
           LearningTemplatesCompanion(
             sortOrder: Value(entry.value),
-            updatedAt: Value(DateTime.now()),
+            updatedAt: Value(timestamp),
           ),
         );
       }

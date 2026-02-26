@@ -13,14 +13,17 @@ import '../../../core/constants/app_strings.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/utils/date_utils.dart';
+import '../../../core/utils/responsive_utils.dart';
 import '../../../di/providers.dart';
 import '../../../domain/entities/app_settings.dart';
 import '../../../domain/entities/learning_topic.dart';
+import '../../../domain/entities/review_task.dart';
 import '../../widgets/glass_card.dart';
 import '../../widgets/gradient_background.dart';
 import '../../providers/home_tasks_provider.dart';
 import '../../providers/notification_permission_provider.dart';
 import '../../providers/settings_provider.dart';
+import '../../providers/sync_provider.dart';
 
 class HomePage extends ConsumerStatefulWidget {
   /// 首页（今日复习）。
@@ -46,6 +49,7 @@ class _HomePageState extends ConsumerState<HomePage> {
     final notifier = ref.read(homeTasksProvider.notifier);
     final settingsState = ref.watch(settingsProvider);
     final permissionAsync = ref.watch(notificationPermissionProvider);
+    final syncUi = ref.watch(syncControllerProvider);
 
     final permission = permissionAsync.valueOrNull;
     final shouldPromptPermission =
@@ -70,6 +74,14 @@ class _HomePageState extends ConsumerState<HomePage> {
       appBar: AppBar(
         title: const Text(AppStrings.todayReview),
         actions: [
+          IconButton(
+            tooltip: _syncTooltip(syncUi.state),
+            onPressed: () => context.push('/settings/sync'),
+            icon: Icon(
+              _syncIcon(syncUi.state),
+              color: _syncColor(context, syncUi.state),
+            ),
+          ),
           IconButton(
             tooltip: state.topicFilterId == null
                 ? '筛选：全部'
@@ -163,21 +175,14 @@ class _HomePageState extends ConsumerState<HomePage> {
                       color: AppColors.warning,
                     ),
                     const SizedBox(height: AppSpacing.sm),
-                    ...state.overduePending.map(
-                      (t) => _TaskCard(
-                        taskId: t.taskId,
-                        title: t.title,
-                        tags: t.tags,
-                        reviewRound: t.reviewRound,
-                        scheduledDate: t.scheduledDate,
-                        isOverdue: true,
-                        selectionMode: state.isSelectionMode,
-                        selected: state.selectedTaskIds.contains(t.taskId),
-                        onToggleSelected: () =>
-                            notifier.toggleSelected(t.taskId),
-                        onComplete: () => notifier.completeTask(t.taskId),
-                        onSkip: () => notifier.skipTask(t.taskId),
-                      ),
+                    _TaskGrid(
+                      tasks: state.overduePending,
+                      isOverdue: true,
+                      selectionMode: state.isSelectionMode,
+                      selectedTaskIds: state.selectedTaskIds,
+                      onToggleSelected: notifier.toggleSelected,
+                      onComplete: notifier.completeTask,
+                      onSkip: notifier.skipTask,
                     ),
                     const SizedBox(height: AppSpacing.lg),
                   ],
@@ -193,21 +198,14 @@ class _HomePageState extends ConsumerState<HomePage> {
                   else if (state.todayPending.isEmpty)
                     const _EmptySectionHint(text: AppStrings.emptyTodayTasks)
                   else
-                    ...state.todayPending.map(
-                      (t) => _TaskCard(
-                        taskId: t.taskId,
-                        title: t.title,
-                        tags: t.tags,
-                        reviewRound: t.reviewRound,
-                        scheduledDate: t.scheduledDate,
-                        isOverdue: false,
-                        selectionMode: state.isSelectionMode,
-                        selected: state.selectedTaskIds.contains(t.taskId),
-                        onToggleSelected: () =>
-                            notifier.toggleSelected(t.taskId),
-                        onComplete: () => notifier.completeTask(t.taskId),
-                        onSkip: () => notifier.skipTask(t.taskId),
-                      ),
+                    _TaskGrid(
+                      tasks: state.todayPending,
+                      isOverdue: false,
+                      selectionMode: state.isSelectionMode,
+                      selectedTaskIds: state.selectedTaskIds,
+                      onToggleSelected: notifier.toggleSelected,
+                      onComplete: notifier.completeTask,
+                      onSkip: notifier.skipTask,
                     ),
                   const SizedBox(height: 96),
                 ],
@@ -228,6 +226,53 @@ class _HomePageState extends ConsumerState<HomePage> {
             )
           : null,
     );
+  }
+
+  String _syncTooltip(SyncState state) {
+    switch (state) {
+      case SyncState.disconnected:
+        return '同步：未连接';
+      case SyncState.connecting:
+        return '同步：连接中…';
+      case SyncState.connected:
+        return '同步：已连接';
+      case SyncState.syncing:
+        return '同步：同步中…';
+      case SyncState.synced:
+        return '同步：同步完成';
+      case SyncState.error:
+        return '同步：失败（点击查看）';
+    }
+  }
+
+  IconData _syncIcon(SyncState state) {
+    switch (state) {
+      case SyncState.disconnected:
+        return Icons.cloud_off_outlined;
+      case SyncState.connecting:
+      case SyncState.syncing:
+        return Icons.sync;
+      case SyncState.connected:
+      case SyncState.synced:
+        return Icons.cloud_done_outlined;
+      case SyncState.error:
+        return Icons.error_outline;
+    }
+  }
+
+  Color? _syncColor(BuildContext context, SyncState state) {
+    switch (state) {
+      case SyncState.connected:
+      case SyncState.synced:
+        return Colors.green;
+      case SyncState.connecting:
+      case SyncState.syncing:
+        return Colors.blue;
+      case SyncState.error:
+        return Colors.red;
+      case SyncState.disconnected:
+        return Theme.of(context).colorScheme.onSurface.withAlpha(160);
+    }
   }
 
   Future<void> _showTopicFilterSheet() async {
@@ -472,6 +517,88 @@ class _SectionHeader extends StatelessWidget {
   }
 }
 
+class _TaskGrid extends StatelessWidget {
+  const _TaskGrid({
+    required this.tasks,
+    required this.isOverdue,
+    required this.selectionMode,
+    required this.selectedTaskIds,
+    required this.onToggleSelected,
+    required this.onComplete,
+    required this.onSkip,
+  });
+
+  final List<ReviewTaskViewEntity> tasks;
+  final bool isOverdue;
+  final bool selectionMode;
+  final Set<int> selectedTaskIds;
+  final void Function(int taskId) onToggleSelected;
+  final void Function(int taskId) onComplete;
+  final void Function(int taskId) onSkip;
+
+  @override
+  Widget build(BuildContext context) {
+    final columnCount = ResponsiveUtils.getColumnCount(context);
+
+    // 移动端/窄屏：保持单列 + 滑动操作。
+    if (columnCount <= 1) {
+      return Column(
+        children: tasks
+            .map(
+              (t) => Padding(
+                padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                child: _TaskCard(
+                  taskId: t.taskId,
+                  title: t.title,
+                  tags: t.tags,
+                  reviewRound: t.reviewRound,
+                  scheduledDate: t.scheduledDate,
+                  isOverdue: isOverdue,
+                  selectionMode: selectionMode,
+                  selected: selectedTaskIds.contains(t.taskId),
+                  onToggleSelected: () => onToggleSelected(t.taskId),
+                  onComplete: () => onComplete(t.taskId),
+                  onSkip: () => onSkip(t.taskId),
+                ),
+              ),
+            )
+            .toList(),
+      );
+    }
+
+    // 桌面/宽屏：多列网格，关闭滑动（桌面端用按钮/快捷键更符合预期）。
+    final itemExtent = selectionMode ? 168.0 : 156.0;
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: tasks.length,
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: columnCount,
+        mainAxisSpacing: AppSpacing.md,
+        crossAxisSpacing: AppSpacing.md,
+        mainAxisExtent: itemExtent,
+      ),
+      itemBuilder: (context, index) {
+        final t = tasks[index];
+        return _TaskCard(
+          taskId: t.taskId,
+          title: t.title,
+          tags: t.tags,
+          reviewRound: t.reviewRound,
+          scheduledDate: t.scheduledDate,
+          isOverdue: isOverdue,
+          selectionMode: selectionMode,
+          selected: selectedTaskIds.contains(t.taskId),
+          enableSwipe: false,
+          onToggleSelected: () => onToggleSelected(t.taskId),
+          onComplete: () => onComplete(t.taskId),
+          onSkip: () => onSkip(t.taskId),
+        );
+      },
+    );
+  }
+}
+
 class _TaskCard extends StatelessWidget {
   const _TaskCard({
     required this.taskId,
@@ -482,6 +609,7 @@ class _TaskCard extends StatelessWidget {
     required this.isOverdue,
     required this.selectionMode,
     required this.selected,
+    this.enableSwipe = true,
     required this.onToggleSelected,
     required this.onComplete,
     required this.onSkip,
@@ -495,6 +623,7 @@ class _TaskCard extends StatelessWidget {
   final bool isOverdue;
   final bool selectionMode;
   final bool selected;
+  final bool enableSwipe;
   final VoidCallback onToggleSelected;
   final VoidCallback onComplete;
   final VoidCallback onSkip;
@@ -608,38 +737,35 @@ class _TaskCard extends StatelessWidget {
       ),
     );
 
-    return Padding(
-      padding: const EdgeInsets.only(bottom: AppSpacing.md),
-      child: selectionMode
-          ? card
-          : Dismissible(
-              key: ValueKey('task_$taskId'),
-              direction: DismissDirection.horizontal,
-              background: _SwipeBackground(
-                alignment: Alignment.centerLeft,
-                color: AppColors.success,
-                icon: Icons.check,
-                text: '完成',
-              ),
-              secondaryBackground: _SwipeBackground(
-                alignment: Alignment.centerRight,
-                color: AppColors.error,
-                icon: Icons.not_interested,
-                text: '跳过',
-              ),
-              confirmDismiss: (direction) async {
-                // 避免误触：仅在滑动距离足够时触发（Dismissible 自带阈值），这里直接允许。
-                return true;
-              },
-              onDismissed: (direction) {
-                if (direction == DismissDirection.startToEnd) {
-                  onComplete();
-                } else if (direction == DismissDirection.endToStart) {
-                  onSkip();
-                }
-              },
-              child: card,
-            ),
+    if (selectionMode || !enableSwipe) return card;
+
+    return Dismissible(
+      key: ValueKey('task_$taskId'),
+      direction: DismissDirection.horizontal,
+      background: _SwipeBackground(
+        alignment: Alignment.centerLeft,
+        color: AppColors.success,
+        icon: Icons.check,
+        text: '完成',
+      ),
+      secondaryBackground: _SwipeBackground(
+        alignment: Alignment.centerRight,
+        color: AppColors.error,
+        icon: Icons.not_interested,
+        text: '跳过',
+      ),
+      confirmDismiss: (direction) async {
+        // 避免误触：仅在滑动距离足够时触发（Dismissible 自带阈值），这里直接允许。
+        return true;
+      },
+      onDismissed: (direction) {
+        if (direction == DismissDirection.startToEnd) {
+          onComplete();
+        } else if (direction == DismissDirection.endToStart) {
+          onSkip();
+        }
+      },
+      child: card,
     );
   }
 

@@ -4,12 +4,18 @@
 /// 最后更新：2026-02-26（接入主题模式与深色主题）
 library;
 
+import 'dart:io';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/theme/app_theme.dart';
 import 'infrastructure/router/app_router.dart';
 import 'presentation/providers/theme_provider.dart';
+import 'presentation/widgets/desktop_shortcuts.dart';
+import 'presentation/widgets/desktop_title_bar.dart';
+import 'presentation/widgets/sync_bootstrap.dart';
 
 class YiKeApp extends ConsumerWidget {
   /// App 根组件。
@@ -39,6 +45,26 @@ class YiKeApp extends ConsumerWidget {
       themeAnimationDuration: themeAnimationDuration,
       themeAnimationCurve: Curves.easeInOut,
       routerConfig: router,
+      builder: (context, child) {
+        final content = child ?? const SizedBox.shrink();
+        // 测试环境：避免启动桌面端壳层与同步服务，减少不稳定因素（端口占用/平台限制等）。
+        final bindingName = WidgetsBinding.instance.runtimeType.toString();
+        final isWidgetTest = bindingName.contains('TestWidgetsFlutterBinding');
+        if (isWidgetTest) return content;
+
+        final bootstrapped = SyncBootstrap(child: content);
+        if (kIsWeb) return content;
+
+        // v3.0（F11）：Windows 使用隐藏系统标题栏 + 自定义标题栏。
+        if (Platform.isWindows) {
+          return DesktopShortcuts(
+            child: DesktopWindowFrame(title: '忆刻', child: bootstrapped),
+          );
+        }
+
+        // 其他平台保持默认行为（避免不同桌面平台标题栏风格差异带来的适配风险）。
+        return bootstrapped;
+      },
       debugShowCheckedModeBanner: false,
     );
   }

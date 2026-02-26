@@ -64,6 +64,17 @@ class LearningTopicDao {
         );
   }
 
+  /// 根据 topicId + learningItemId 获取关联行（用于同步与调试）。
+  Future<TopicItemRelation?> getRelationByPair(
+    int topicId,
+    int learningItemId,
+  ) {
+    return (db.select(db.topicItemRelations)
+          ..where((t) => t.topicId.equals(topicId))
+          ..where((t) => t.learningItemId.equals(learningItemId)))
+        .getSingleOrNull();
+  }
+
   /// 从主题中移除学习内容。
   Future<int> removeItemFromTopic(int topicId, int learningItemId) {
     return (db.delete(db.topicItemRelations)

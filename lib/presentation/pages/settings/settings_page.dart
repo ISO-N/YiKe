@@ -17,6 +17,7 @@ import '../../../domain/entities/app_settings.dart';
 import '../../../infrastructure/notification/notification_service.dart';
 import '../../providers/notification_permission_provider.dart';
 import '../../providers/settings_provider.dart';
+import '../../providers/sync_provider.dart';
 import '../../providers/theme_provider.dart';
 import '../../widgets/glass_card.dart';
 import 'widgets/theme_mode_sheet.dart';
@@ -34,6 +35,7 @@ class SettingsPage extends ConsumerWidget {
     final notifier = ref.read(settingsProvider.notifier);
     final permissionAsync = ref.watch(notificationPermissionProvider);
     final currentThemeMode = ref.watch(themeModeProvider);
+    final syncUi = ref.watch(syncControllerProvider);
 
     Future<void> save(AppSettingsEntity next) async {
       await notifier.save(next);
@@ -329,6 +331,15 @@ class SettingsPage extends ConsumerWidget {
                       const Divider(height: 1),
                       ListTile(
                         contentPadding: EdgeInsets.zero,
+                        leading: const Icon(Icons.sync),
+                        title: const Text('局域网同步'),
+                        subtitle: Text(_syncSubtitle(syncUi.state)),
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: () => context.push('/settings/sync'),
+                      ),
+                      const Divider(height: 1),
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
                         title: const Text('备份与恢复'),
                         subtitle: const Text('规划中'),
                         trailing: const Icon(Icons.chevron_right),
@@ -360,5 +371,22 @@ class SettingsPage extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  String _syncSubtitle(SyncState state) {
+    switch (state) {
+      case SyncState.disconnected:
+        return '未连接（可配对并同步）';
+      case SyncState.connecting:
+        return '连接中…';
+      case SyncState.connected:
+        return '已连接';
+      case SyncState.syncing:
+        return '同步中…';
+      case SyncState.synced:
+        return '同步完成';
+      case SyncState.error:
+        return '同步失败（点击查看详情）';
+    }
   }
 }
