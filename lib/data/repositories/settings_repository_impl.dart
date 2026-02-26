@@ -10,6 +10,7 @@ import '../../domain/entities/review_interval_config.dart';
 import '../../domain/repositories/settings_repository.dart';
 import '../../infrastructure/storage/secure_storage_service.dart';
 import '../../infrastructure/storage/settings_crypto.dart';
+import '../sync/sync_log_writer.dart';
 import '../database/daos/settings_dao.dart';
 
 /// 应用设置仓储实现。
@@ -23,11 +24,14 @@ class SettingsRepositoryImpl implements SettingsRepository {
   SettingsRepositoryImpl({
     required this.dao,
     required this.secureStorageService,
-  }) : _crypto = SettingsCrypto(secureStorageService: secureStorageService);
+    SyncLogWriter? syncLogWriter,
+  }) : _crypto = SettingsCrypto(secureStorageService: secureStorageService),
+       _sync = syncLogWriter;
 
   final SettingsDao dao;
   final SecureStorageService secureStorageService;
   final SettingsCrypto _crypto;
+  final SyncLogWriter? _sync;
 
   // 预设设置项 Key（与 TDD 一致）。
   static const String keyReminderTime = 'reminder_time';
@@ -90,6 +94,14 @@ class SettingsRepositoryImpl implements SettingsRepository {
         keyLastNotifiedDate: await _crypto.encrypt(
           jsonEncode(settings.lastNotifiedDate),
         ),
+    });
+
+    // v3.0（F12）：记录设置变更（设置以主机为准，接收端会按本机密钥重加密写入）。
+    await _logSettingsBundle({
+      'reminder_time': settings.reminderTime,
+      'do_not_disturb_start': settings.doNotDisturbStart,
+      'do_not_disturb_end': settings.doNotDisturbEnd,
+      'notifications_enabled': settings.notificationsEnabled,
     });
   }
 
@@ -159,6 +171,9 @@ class SettingsRepositoryImpl implements SettingsRepository {
       keyReviewIntervals,
       await _crypto.encrypt(jsonEncode(normalized)),
     );
+
+    // v3.0（F12）：记录复习间隔变更。
+    await _logSettingsBundle({'review_intervals': normalized});
   }
 
   List<ReviewIntervalConfigEntity> _defaultReviewIntervals() {
@@ -190,5 +205,25 @@ class SettingsRepositoryImpl implements SettingsRepository {
     final decoded = await _getDecoded(key);
     if (decoded == null) return null;
     return decoded is bool ? decoded : null;
+  }
+
+  Future<void> _logSettingsBundle(Map<String, dynamic> payload) async {
+    final sync = _sync;
+    if (sync == null) return;
+
+    final now = DateTime.now();
+    final ts = now.millisecondsSinceEpoch;
+    final origin = await sync.resolveOriginKey(
+      entityType: 'settings_bundle',
+      localEntityId: 1,
+      appliedAtMs: ts,
+    );
+    await sync.logEvent(
+      origin: origin,
+      entityType: 'settings_bundle',
+      operation: 'update',
+      data: payload,
+      timestampMs: ts,
+    );
   }
 }

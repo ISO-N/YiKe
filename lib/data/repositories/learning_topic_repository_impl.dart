@@ -10,6 +10,7 @@ import '../../domain/entities/learning_topic_overview.dart';
 import '../../domain/repositories/learning_topic_repository.dart';
 import '../database/daos/learning_topic_dao.dart';
 import '../database/database.dart';
+import '../sync/sync_log_writer.dart';
 
 /// 学习主题仓储实现。
 class LearningTopicRepositoryImpl implements LearningTopicRepository {
@@ -18,9 +19,11 @@ class LearningTopicRepositoryImpl implements LearningTopicRepository {
   /// 参数：
   /// - [dao] 主题 DAO。
   /// 异常：无。
-  LearningTopicRepositoryImpl(this.dao);
+  LearningTopicRepositoryImpl(this.dao, {SyncLogWriter? syncLogWriter})
+    : _sync = syncLogWriter;
 
   final LearningTopicDao dao;
+  final SyncLogWriter? _sync;
 
   @override
   Future<LearningTopicEntity> create(LearningTopicEntity topic) async {
@@ -35,11 +38,41 @@ class LearningTopicRepositoryImpl implements LearningTopicRepository {
         updatedAt: Value(now),
       ),
     );
-    return topic.copyWith(id: id, updatedAt: now);
+    final saved = topic.copyWith(id: id, updatedAt: now);
+
+    final sync = _sync;
+    if (sync == null) return saved;
+
+    final ts = now.millisecondsSinceEpoch;
+    final origin = await sync.resolveOriginKey(
+      entityType: 'learning_topic',
+      localEntityId: id,
+      appliedAtMs: ts,
+    );
+    await sync.logEvent(
+      origin: origin,
+      entityType: 'learning_topic',
+      operation: 'create',
+      data: {
+        'name': saved.name,
+        'description': saved.description,
+        'created_at': saved.createdAt.toIso8601String(),
+        'updated_at': (saved.updatedAt ?? saved.createdAt).toIso8601String(),
+      },
+      timestampMs: ts,
+    );
+
+    return saved;
   }
 
   @override
   Future<void> delete(int id) async {
+    final ts = DateTime.now().millisecondsSinceEpoch;
+    await _sync?.logDelete(
+      entityType: 'learning_topic',
+      localEntityId: id,
+      timestampMs: ts,
+    );
     await dao.deleteTopic(id);
   }
 
@@ -68,6 +101,7 @@ class LearningTopicRepositoryImpl implements LearningTopicRepository {
       throw ArgumentError('更新主题时 id 不能为空');
     }
     final now = DateTime.now();
+    final ts = now.millisecondsSinceEpoch;
     final ok = await dao.updateTopic(
       LearningTopic(
         id: topic.id!,
@@ -80,12 +114,35 @@ class LearningTopicRepositoryImpl implements LearningTopicRepository {
     if (!ok) {
       throw StateError('主题更新失败（id=${topic.id}）');
     }
-    return topic.copyWith(updatedAt: now);
+    final saved = topic.copyWith(updatedAt: now);
+
+    final sync = _sync;
+    if (sync == null) return saved;
+
+    final origin = await sync.resolveOriginKey(
+      entityType: 'learning_topic',
+      localEntityId: topic.id!,
+      appliedAtMs: ts,
+    );
+    await sync.logEvent(
+      origin: origin,
+      entityType: 'learning_topic',
+      operation: 'update',
+      data: {
+        'name': saved.name,
+        'description': saved.description,
+        'created_at': saved.createdAt.toIso8601String(),
+        'updated_at': (saved.updatedAt ?? saved.createdAt).toIso8601String(),
+      },
+      timestampMs: ts,
+    );
+
+    return saved;
   }
 
   @override
   Future<void> addItemToTopic(int topicId, int learningItemId) {
-    return dao.addItemToTopic(topicId, learningItemId);
+    return _addItemToTopicAndLog(topicId, learningItemId);
   }
 
   @override
@@ -95,7 +152,20 @@ class LearningTopicRepositoryImpl implements LearningTopicRepository {
 
   @override
   Future<void> removeItemFromTopic(int topicId, int learningItemId) async {
+    final existing = await dao.getRelationByPair(topicId, learningItemId);
+    if (existing == null) return;
+
     await dao.removeItemFromTopic(topicId, learningItemId);
+
+    final sync = _sync;
+    if (sync == null) return;
+
+    final ts = DateTime.now().millisecondsSinceEpoch;
+    await sync.logDelete(
+      entityType: 'topic_item_relation',
+      localEntityId: existing.id,
+      timestampMs: ts,
+    );
   }
 
   @override
@@ -125,6 +195,46 @@ class LearningTopicRepositoryImpl implements LearningTopicRepository {
       description: row.description,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
+    );
+  }
+
+  Future<void> _addItemToTopicAndLog(int topicId, int learningItemId) async {
+    await dao.addItemToTopic(topicId, learningItemId);
+    final relation = await dao.getRelationByPair(topicId, learningItemId);
+    if (relation == null) return;
+
+    final sync = _sync;
+    if (sync == null) return;
+
+    final nowMs = DateTime.now().millisecondsSinceEpoch;
+    final origin = await sync.resolveOriginKey(
+      entityType: 'topic_item_relation',
+      localEntityId: relation.id,
+      appliedAtMs: nowMs,
+    );
+    final topicOrigin = await sync.resolveOriginKey(
+      entityType: 'learning_topic',
+      localEntityId: topicId,
+      appliedAtMs: nowMs,
+    );
+    final itemOrigin = await sync.resolveOriginKey(
+      entityType: 'learning_item',
+      localEntityId: learningItemId,
+      appliedAtMs: nowMs,
+    );
+
+    await sync.logEvent(
+      origin: origin,
+      entityType: 'topic_item_relation',
+      operation: 'create',
+      data: {
+        'topic_origin_device_id': topicOrigin.deviceId,
+        'topic_origin_entity_id': topicOrigin.entityId,
+        'item_origin_device_id': itemOrigin.deviceId,
+        'item_origin_entity_id': itemOrigin.entityId,
+        'created_at': relation.createdAt.toIso8601String(),
+      },
+      timestampMs: nowMs,
     );
   }
 }

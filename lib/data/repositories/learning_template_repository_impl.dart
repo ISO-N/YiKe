@@ -11,6 +11,7 @@ import '../../domain/entities/learning_template.dart';
 import '../../domain/repositories/learning_template_repository.dart';
 import '../database/daos/learning_template_dao.dart';
 import '../database/database.dart';
+import '../sync/sync_log_writer.dart';
 
 /// 学习模板仓储实现。
 class LearningTemplateRepositoryImpl implements LearningTemplateRepository {
@@ -19,9 +20,11 @@ class LearningTemplateRepositoryImpl implements LearningTemplateRepository {
   /// 参数：
   /// - [dao] 模板 DAO。
   /// 异常：无。
-  LearningTemplateRepositoryImpl(this.dao);
+  LearningTemplateRepositoryImpl(this.dao, {SyncLogWriter? syncLogWriter})
+    : _sync = syncLogWriter;
 
   final LearningTemplateDao dao;
+  final SyncLogWriter? _sync;
 
   @override
   Future<LearningTemplateEntity> create(LearningTemplateEntity template) async {
@@ -39,11 +42,44 @@ class LearningTemplateRepositoryImpl implements LearningTemplateRepository {
         updatedAt: Value(now),
       ),
     );
-    return template.copyWith(id: id, updatedAt: now);
+    final saved = template.copyWith(id: id, updatedAt: now);
+
+    final sync = _sync;
+    if (sync == null) return saved;
+
+    final ts = now.millisecondsSinceEpoch;
+    final origin = await sync.resolveOriginKey(
+      entityType: 'learning_template',
+      localEntityId: id,
+      appliedAtMs: ts,
+    );
+    await sync.logEvent(
+      origin: origin,
+      entityType: 'learning_template',
+      operation: 'create',
+      data: {
+        'name': saved.name,
+        'title_pattern': saved.titlePattern,
+        'note_pattern': saved.notePattern,
+        'tags': saved.tags,
+        'sort_order': saved.sortOrder,
+        'created_at': saved.createdAt.toIso8601String(),
+        'updated_at': (saved.updatedAt ?? saved.createdAt).toIso8601String(),
+      },
+      timestampMs: ts,
+    );
+
+    return saved;
   }
 
   @override
   Future<void> delete(int id) async {
+    final ts = DateTime.now().millisecondsSinceEpoch;
+    await _sync?.logDelete(
+      entityType: 'learning_template',
+      localEntityId: id,
+      timestampMs: ts,
+    );
     await dao.deleteTemplate(id);
   }
 
@@ -65,6 +101,7 @@ class LearningTemplateRepositoryImpl implements LearningTemplateRepository {
       throw ArgumentError('更新模板时 id 不能为空');
     }
     final now = DateTime.now();
+    final ts = now.millisecondsSinceEpoch;
     final ok = await dao.updateTemplate(
       LearningTemplate(
         id: template.id!,
@@ -80,7 +117,33 @@ class LearningTemplateRepositoryImpl implements LearningTemplateRepository {
     if (!ok) {
       throw StateError('模板更新失败（id=${template.id}）');
     }
-    return template.copyWith(updatedAt: now);
+    final saved = template.copyWith(updatedAt: now);
+
+    final sync = _sync;
+    if (sync == null) return saved;
+
+    final origin = await sync.resolveOriginKey(
+      entityType: 'learning_template',
+      localEntityId: template.id!,
+      appliedAtMs: ts,
+    );
+    await sync.logEvent(
+      origin: origin,
+      entityType: 'learning_template',
+      operation: 'update',
+      data: {
+        'name': saved.name,
+        'title_pattern': saved.titlePattern,
+        'note_pattern': saved.notePattern,
+        'tags': saved.tags,
+        'sort_order': saved.sortOrder,
+        'created_at': saved.createdAt.toIso8601String(),
+        'updated_at': (saved.updatedAt ?? saved.createdAt).toIso8601String(),
+      },
+      timestampMs: ts,
+    );
+
+    return saved;
   }
 
   @override
@@ -89,8 +152,29 @@ class LearningTemplateRepositoryImpl implements LearningTemplateRepository {
   }
 
   @override
-  Future<void> updateSortOrders(Map<int, int> idToOrder) {
-    return dao.updateSortOrders(idToOrder);
+  Future<void> updateSortOrders(Map<int, int> idToOrder) async {
+    final now = DateTime.now();
+    final ts = now.millisecondsSinceEpoch;
+    await dao.updateSortOrders(idToOrder, now: now);
+
+    final sync = _sync;
+    if (sync == null) return;
+
+    // 同步：排序变化属于模板更新的一部分。
+    for (final entry in idToOrder.entries) {
+      final origin = await sync.resolveOriginKey(
+        entityType: 'learning_template',
+        localEntityId: entry.key,
+        appliedAtMs: ts,
+      );
+      await sync.logEvent(
+        origin: origin,
+        entityType: 'learning_template',
+        operation: 'update',
+        data: {'sort_order': entry.value, 'updated_at': now.toIso8601String()},
+        timestampMs: ts,
+      );
+    }
   }
 
   LearningTemplateEntity _toEntity(LearningTemplate row) {

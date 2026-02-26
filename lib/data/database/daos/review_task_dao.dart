@@ -64,11 +64,13 @@ class ReviewTaskDao {
     DateTime? completedAt,
     DateTime? skippedAt,
   }) {
+    final now = DateTime.now();
     return (db.update(db.reviewTasks)..where((t) => t.id.equals(id))).write(
       ReviewTasksCompanion(
         status: Value(status),
         completedAt: Value(completedAt),
         skippedAt: Value(skippedAt),
+        updatedAt: Value(now),
       ),
     );
   }
@@ -88,10 +90,12 @@ class ReviewTaskDao {
   }) {
     if (ids.isEmpty) return Future.value(0);
 
+    final now = DateTime.now();
     final companion = ReviewTasksCompanion(
       status: Value(status),
       completedAt: Value(status == 'done' ? timestamp : null),
       skippedAt: Value(status == 'skipped' ? timestamp : null),
+      updatedAt: Value(now),
     );
 
     return (db.update(

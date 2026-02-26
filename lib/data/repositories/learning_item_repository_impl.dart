@@ -9,6 +9,7 @@ import 'package:drift/drift.dart';
 
 import '../../domain/entities/learning_item.dart';
 import '../../domain/repositories/learning_item_repository.dart';
+import '../sync/sync_log_writer.dart';
 import '../database/daos/learning_item_dao.dart';
 import '../database/database.dart';
 
@@ -19,9 +20,11 @@ class LearningItemRepositoryImpl implements LearningItemRepository {
   /// 参数：
   /// - [dao] 学习内容 DAO。
   /// 异常：无。
-  LearningItemRepositoryImpl(this.dao);
+  LearningItemRepositoryImpl(this.dao, {SyncLogWriter? syncLogWriter})
+    : _sync = syncLogWriter;
 
   final LearningItemDao dao;
+  final SyncLogWriter? _sync;
 
   @override
   Future<LearningItemEntity> create(LearningItemEntity item) async {
@@ -36,11 +39,43 @@ class LearningItemRepositoryImpl implements LearningItemRepository {
         updatedAt: Value(now),
       ),
     );
-    return item.copyWith(id: id, updatedAt: now);
+    final saved = item.copyWith(id: id, updatedAt: now);
+
+    final sync = _sync;
+    if (sync == null) return saved;
+
+    final ts = now.millisecondsSinceEpoch;
+    final origin = await sync.resolveOriginKey(
+      entityType: 'learning_item',
+      localEntityId: id,
+      appliedAtMs: ts,
+    );
+    await sync.logEvent(
+      origin: origin,
+      entityType: 'learning_item',
+      operation: 'create',
+      data: {
+        'title': saved.title,
+        'note': saved.note,
+        'tags': saved.tags,
+        'learning_date': saved.learningDate.toIso8601String(),
+        'created_at': saved.createdAt.toIso8601String(),
+        'updated_at': (saved.updatedAt ?? saved.createdAt).toIso8601String(),
+      },
+      timestampMs: ts,
+    );
+
+    return saved;
   }
 
   @override
   Future<void> delete(int id) async {
+    final ts = DateTime.now().millisecondsSinceEpoch;
+    await _sync?.logDelete(
+      entityType: 'learning_item',
+      localEntityId: id,
+      timestampMs: ts,
+    );
     await dao.deleteLearningItem(id);
   }
 
@@ -86,6 +121,7 @@ class LearningItemRepositoryImpl implements LearningItemRepository {
     }
 
     final now = DateTime.now();
+    final ts = now.millisecondsSinceEpoch;
     final ok = await dao.updateLearningItem(
       LearningItem(
         id: item.id!,
@@ -100,7 +136,32 @@ class LearningItemRepositoryImpl implements LearningItemRepository {
     if (!ok) {
       throw StateError('学习内容更新失败（id=${item.id}）');
     }
-    return item.copyWith(updatedAt: now);
+    final saved = item.copyWith(updatedAt: now);
+
+    final sync = _sync;
+    if (sync == null) return saved;
+
+    final origin = await sync.resolveOriginKey(
+      entityType: 'learning_item',
+      localEntityId: item.id!,
+      appliedAtMs: ts,
+    );
+    await sync.logEvent(
+      origin: origin,
+      entityType: 'learning_item',
+      operation: 'update',
+      data: {
+        'title': saved.title,
+        'note': saved.note,
+        'tags': saved.tags,
+        'learning_date': saved.learningDate.toIso8601String(),
+        'created_at': saved.createdAt.toIso8601String(),
+        'updated_at': (saved.updatedAt ?? saved.createdAt).toIso8601String(),
+      },
+      timestampMs: ts,
+    );
+
+    return saved;
   }
 
   LearningItemEntity _toEntity(LearningItem row) {

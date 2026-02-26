@@ -10,6 +10,9 @@ import '../data/database/daos/learning_template_dao.dart';
 import '../data/database/daos/learning_topic_dao.dart';
 import '../data/database/daos/review_task_dao.dart';
 import '../data/database/daos/settings_dao.dart';
+import '../data/database/daos/sync_device_dao.dart';
+import '../data/database/daos/sync_entity_mapping_dao.dart';
+import '../data/database/daos/sync_log_dao.dart';
 import '../data/database/database.dart';
 import '../data/repositories/learning_item_repository_impl.dart';
 import '../data/repositories/learning_template_repository_impl.dart';
@@ -17,6 +20,7 @@ import '../data/repositories/learning_topic_repository_impl.dart';
 import '../data/repositories/review_task_repository_impl.dart';
 import '../data/repositories/settings_repository_impl.dart';
 import '../data/repositories/theme_settings_repository_impl.dart';
+import '../data/sync/sync_log_writer.dart';
 import '../domain/repositories/learning_item_repository.dart';
 import '../domain/repositories/learning_template_repository.dart';
 import '../domain/repositories/learning_topic_repository.dart';
@@ -25,6 +29,7 @@ import '../domain/repositories/settings_repository.dart';
 import '../domain/repositories/theme_settings_repository.dart';
 import '../domain/services/ocr_service.dart';
 import '../infrastructure/storage/secure_storage_service.dart';
+import '../infrastructure/sync/device_identity_service.dart';
 import '../domain/usecases/complete_review_task_usecase.dart';
 import '../domain/usecases/create_learning_item_usecase.dart';
 import '../domain/usecases/export_data_usecase.dart';
@@ -42,6 +47,11 @@ import '../infrastructure/speech/speech_service.dart';
 /// 数据库 Provider（需要在启动时 override 注入真实实例）。
 final appDatabaseProvider = Provider<AppDatabase>((ref) {
   throw UnimplementedError('appDatabaseProvider 必须在启动时被 override 注入。');
+});
+
+/// 设备 ID Provider（需要在启动时生成并注入，供同步/日志使用）。
+final deviceIdProvider = Provider<String>((ref) {
+  throw UnimplementedError('deviceIdProvider 必须在启动时被 override 注入。');
 });
 
 /// DAO Providers
@@ -65,9 +75,37 @@ final learningTopicDaoProvider = Provider<LearningTopicDao>((ref) {
   return LearningTopicDao(ref.read(appDatabaseProvider));
 });
 
+final syncDeviceDaoProvider = Provider<SyncDeviceDao>((ref) {
+  return SyncDeviceDao(ref.read(appDatabaseProvider));
+});
+
+final syncLogDaoProvider = Provider<SyncLogDao>((ref) {
+  return SyncLogDao(ref.read(appDatabaseProvider));
+});
+
+final syncEntityMappingDaoProvider = Provider<SyncEntityMappingDao>((ref) {
+  return SyncEntityMappingDao(ref.read(appDatabaseProvider));
+});
+
+/// 同步日志写入器 Provider（供数据层仓储复用）。
+final syncLogWriterProvider = Provider<SyncLogWriter>((ref) {
+  return SyncLogWriter(
+    syncLogDao: ref.read(syncLogDaoProvider),
+    syncEntityMappingDao: ref.read(syncEntityMappingDaoProvider),
+    localDeviceId: ref.read(deviceIdProvider),
+  );
+});
+
 /// 基础设施 Providers
 final secureStorageServiceProvider = Provider<SecureStorageService>((ref) {
   return SecureStorageService();
+});
+
+/// 设备身份服务 Provider（用于同步/配对）。
+final deviceIdentityServiceProvider = Provider<DeviceIdentityService>((ref) {
+  return DeviceIdentityService(
+    secureStorageService: ref.read(secureStorageServiceProvider),
+  );
 });
 
 final speechServiceProvider = Provider<SpeechService>((ref) {
@@ -80,13 +118,17 @@ final ocrServiceProvider = Provider<OcrService>((ref) {
 
 /// Repository Providers
 final learningItemRepositoryProvider = Provider<LearningItemRepository>((ref) {
-  return LearningItemRepositoryImpl(ref.read(learningItemDaoProvider));
+  return LearningItemRepositoryImpl(
+    ref.read(learningItemDaoProvider),
+    syncLogWriter: ref.read(syncLogWriterProvider),
+  );
 });
 
 final learningTemplateRepositoryProvider = Provider<LearningTemplateRepository>(
   (ref) {
     return LearningTemplateRepositoryImpl(
       ref.read(learningTemplateDaoProvider),
+      syncLogWriter: ref.read(syncLogWriterProvider),
     );
   },
 );
@@ -94,17 +136,24 @@ final learningTemplateRepositoryProvider = Provider<LearningTemplateRepository>(
 final learningTopicRepositoryProvider = Provider<LearningTopicRepository>((
   ref,
 ) {
-  return LearningTopicRepositoryImpl(ref.read(learningTopicDaoProvider));
+  return LearningTopicRepositoryImpl(
+    ref.read(learningTopicDaoProvider),
+    syncLogWriter: ref.read(syncLogWriterProvider),
+  );
 });
 
 final reviewTaskRepositoryProvider = Provider<ReviewTaskRepository>((ref) {
-  return ReviewTaskRepositoryImpl(dao: ref.read(reviewTaskDaoProvider));
+  return ReviewTaskRepositoryImpl(
+    dao: ref.read(reviewTaskDaoProvider),
+    syncLogWriter: ref.read(syncLogWriterProvider),
+  );
 });
 
 final settingsRepositoryProvider = Provider<SettingsRepository>((ref) {
   return SettingsRepositoryImpl(
     dao: ref.read(settingsDaoProvider),
     secureStorageService: ref.read(secureStorageServiceProvider),
+    syncLogWriter: ref.read(syncLogWriterProvider),
   );
 });
 
@@ -117,6 +166,7 @@ final themeSettingsRepositoryProvider = Provider<ThemeSettingsRepository>((
   return ThemeSettingsRepositoryImpl(
     dao: ref.read(settingsDaoProvider),
     secureStorageService: ref.read(secureStorageServiceProvider),
+    syncLogWriter: ref.read(syncLogWriterProvider),
   );
 });
 
