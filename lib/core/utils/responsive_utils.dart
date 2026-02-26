@@ -42,12 +42,12 @@ class ResponsiveUtils {
   /// 获取任务列表建议列数。
   ///
   /// 说明：
-  /// - ≥1200：3 列（桌面更高信息密度）
+  /// - ≥1200：2 列（PRD 验收口径：双列）
   /// - ≥900：2 列
   /// - 其他：1 列
   static int getColumnCount(BuildContext context) {
     final width = MediaQuery.of(context).size.width;
-    if (width >= ResponsiveBreakpoints.desktop) return 3;
+    if (width >= ResponsiveBreakpoints.desktop) return 2;
     if (width >= ResponsiveBreakpoints.tablet) return 2;
     return 1;
   }
