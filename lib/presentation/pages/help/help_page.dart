@@ -153,57 +153,64 @@ class _HelpPageState extends State<HelpPage> {
             // 导致滚动条比例异常，从而出现拖动跳跃。
             _debugLogInitialLayoutOnce();
 
-            // 关键逻辑（Windows 体验修复）：
-            // Flutter 在桌面端会通过默认 ScrollBehavior 自动包一层 Scrollbar。
-            // 在部分 Windows 环境下，自动 Scrollbar 的拖动会出现“滑块跳跃”的交互问题。
-            // 这里显式提供 Scrollbar + controller，并关闭该子树的自动 Scrollbar，确保拖动行为稳定。
-            final listView = ListView(
+            // 关键逻辑（Windows 白屏/跳跃修复）：
+            // 诊断日志显示：拖动滚动条滑块时 maxScrollExtent 会剧烈变化（在拖动中变大/变小）。
+            // 这会导致“滑块映射比例”动态变化，从而出现用户感知的“滚动条跳跃”。
+            //
+            // 根因通常来自 SliverList 的惰性布局：在拖动到未布局区域时，框架会逐步测量子节点高度并修正
+            // scrollExtent。对于正文是超大块内容（MarkdownBody）且在桌面端拖动更频繁的场景，这种修正会更明显。
+            //
+            // 解决：用 SingleChildScrollView + Column 一次性布局出完整高度，让 scrollExtent 在首帧稳定。
+            final scrollView = SingleChildScrollView(
               controller: _scrollController,
               padding: const EdgeInsets.all(AppSpacing.lg),
-              children: [
-                KeyedSubtree(
-                  key: _headerKey,
-                  child: _HeaderCard(tocCount: data.tocItems.length),
-                ),
-                const SizedBox(height: AppSpacing.lg),
-                KeyedSubtree(
-                  key: _tocKey,
-                  child: _TocCard(
-                    items: data.tocItems,
-                    onTap: (anchorId) => _scrollToAnchor(data, anchorId),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  KeyedSubtree(
+                    key: _headerKey,
+                    child: _HeaderCard(tocCount: data.tocItems.length),
                   ),
-                ),
-                const SizedBox(height: AppSpacing.lg),
-                KeyedSubtree(
-                  key: _markdownKey,
-                  child: GlassCard(
-                    blurSigma: disableHeavyBlurOnWindows ? 0 : 14,
-                    child: Padding(
-                      padding: const EdgeInsets.all(AppSpacing.lg),
-                      child: MarkdownBody(
-                        data: data.markdown,
-                        selectable: true,
-                        builders: builders,
-                        styleSheet:
-                            MarkdownStyleSheet.fromTheme(
-                              Theme.of(context),
-                            ).copyWith(
-                              h1: Theme.of(context).textTheme.headlineMedium,
-                              h2: Theme.of(context).textTheme.titleLarge,
-                              h3: Theme.of(context).textTheme.titleMedium,
-                              p: Theme.of(
-                                context,
-                              ).textTheme.bodyMedium?.copyWith(height: 1.6),
-                              blockquotePadding: const EdgeInsets.all(12),
-                            ),
+                  const SizedBox(height: AppSpacing.lg),
+                  KeyedSubtree(
+                    key: _tocKey,
+                    child: _TocCard(
+                      items: data.tocItems,
+                      onTap: (anchorId) => _scrollToAnchor(data, anchorId),
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                  KeyedSubtree(
+                    key: _markdownKey,
+                    child: GlassCard(
+                      blurSigma: disableHeavyBlurOnWindows ? 0 : 14,
+                      child: Padding(
+                        padding: const EdgeInsets.all(AppSpacing.lg),
+                        child: MarkdownBody(
+                          data: data.markdown,
+                          selectable: true,
+                          builders: builders,
+                          styleSheet:
+                              MarkdownStyleSheet.fromTheme(
+                                Theme.of(context),
+                              ).copyWith(
+                                h1: Theme.of(context).textTheme.headlineMedium,
+                                h2: Theme.of(context).textTheme.titleLarge,
+                                h3: Theme.of(context).textTheme.titleMedium,
+                                p: Theme.of(
+                                  context,
+                                ).textTheme.bodyMedium?.copyWith(height: 1.6),
+                                blockquotePadding: const EdgeInsets.all(12),
+                              ),
+                        ),
                       ),
                     ),
                   ),
-                ),
-                const SizedBox(height: AppSpacing.lg),
-                KeyedSubtree(key: _footerKey, child: _FooterCard()),
-                const SizedBox(height: 24),
-              ],
+                  const SizedBox(height: AppSpacing.lg),
+                  KeyedSubtree(key: _footerKey, child: _FooterCard()),
+                  const SizedBox(height: 24),
+                ],
+              ),
             );
 
             return ScrollConfiguration(
@@ -217,7 +224,7 @@ class _HelpPageState extends State<HelpPage> {
                   thumbVisibility: true,
                   trackVisibility: true,
                   interactive: true,
-                  child: listView,
+                  child: scrollView,
                 ),
               ),
             );
