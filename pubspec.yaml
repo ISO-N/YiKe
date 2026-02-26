@@ -71,7 +71,8 @@ dependencies:
   # v2.1 新增：录入功能升级（批量导入 / 模板 / 语音 / OCR / 权限）
   file_picker: ^8.0.0
   csv: ^6.0.0
-  speech_to_text: ^6.0.0
+  # 说明：Flutter 3.41+ 移除了旧版 Android v1 embedding 的 Registrar 相关符号，需使用新版 speech_to_text。
+  speech_to_text: ^7.3.0
   google_mlkit_text_recognition: ^0.11.0
   image_picker: ^1.0.0
   permission_handler: ^11.0.0
