@@ -57,8 +57,20 @@ class YiKeApp extends ConsumerWidget {
 
         // v3.0（F11）：Windows 使用隐藏系统标题栏 + 自定义标题栏。
         if (Platform.isWindows) {
-          return DesktopShortcuts(
-            child: DesktopWindowFrame(title: '忆刻', child: bootstrapped),
+          // 关键逻辑（Windows 白屏修复）：
+          // 自定义标题栏位于 MaterialApp 的 builder 包裹层中，层级会在 GoRouter/Navigator 之上，
+          // 此时 Tooltip/菜单等依赖 Overlay 的组件会找不到 Overlay 祖先并触发断言，导致界面异常。
+          // 这里额外包一层“空导航器”，仅用于提供 Overlay 容器，不改变现有路由结构。
+          return Navigator(
+            onGenerateRoute: (_) => PageRouteBuilder<void>(
+              pageBuilder: (context, animation, secondaryAnimation) {
+                return DesktopShortcuts(
+                  child: DesktopWindowFrame(title: '忆刻', child: bootstrapped),
+                );
+              },
+              transitionDuration: Duration.zero,
+              reverseTransitionDuration: Duration.zero,
+            ),
           );
         }
 
