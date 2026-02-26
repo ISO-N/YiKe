@@ -186,23 +186,25 @@ class _HelpPageState extends State<HelpPage> {
                       blurSigma: disableHeavyBlurOnWindows ? 0 : 14,
                       child: Padding(
                         padding: const EdgeInsets.all(AppSpacing.lg),
-                        child: MarkdownBody(
-                          data: data.markdown,
-                          selectable: true,
-                          builders: builders,
-                          styleSheet:
-                              MarkdownStyleSheet.fromTheme(
-                                Theme.of(context),
-                              ).copyWith(
-                                h1: Theme.of(context).textTheme.headlineMedium,
-                                h2: Theme.of(context).textTheme.titleLarge,
-                                h3: Theme.of(context).textTheme.titleMedium,
-                                p: Theme.of(
-                                  context,
-                                ).textTheme.bodyMedium?.copyWith(height: 1.6),
-                                blockquotePadding: const EdgeInsets.all(12),
-                              ),
-                        ),
+                        // Windows 端稳定性兜底：部分环境下 Flutter 引擎的无障碍桥接会频繁报
+                        // “Failed to update ui::AXTree ...”，属于引擎侧语义树同步问题。
+                        // 这里对帮助页正文（Markdown）禁用语义输出，避免噪声与潜在的不稳定。
+                        //
+                        // 说明：这会影响屏幕阅读器读取帮助页正文，但不影响鼠标/键盘交互与文本选择复制。
+                        child:
+                            defaultTargetPlatform == TargetPlatform.windows
+                                ? ExcludeSemantics(
+                                  child: _buildMarkdownBody(
+                                    context: context,
+                                    data: data,
+                                    builders: builders,
+                                  ),
+                                )
+                                : _buildMarkdownBody(
+                                  context: context,
+                                  data: data,
+                                  builders: builders,
+                                ),
                       ),
                     ),
                   ),
@@ -308,6 +310,35 @@ class _HelpPageState extends State<HelpPage> {
     }());
 
     return false;
+  }
+
+  /// 构建 Markdown 正文区域。
+  ///
+  /// 参数：
+  /// - [context] 构建上下文
+  /// - [data] 帮助页 Markdown 数据
+  /// - [builders] Markdown 元素构建器（用于标题锚点）
+  /// 返回值：MarkdownBody Widget。
+  Widget _buildMarkdownBody({
+    required BuildContext context,
+    required _HelpMarkdownData data,
+    required Map<String, MarkdownElementBuilder> builders,
+  }) {
+    return MarkdownBody(
+      data: data.markdown,
+      selectable: true,
+      builders: builders,
+      styleSheet:
+          MarkdownStyleSheet.fromTheme(
+            Theme.of(context),
+          ).copyWith(
+            h1: Theme.of(context).textTheme.headlineMedium,
+            h2: Theme.of(context).textTheme.titleLarge,
+            h3: Theme.of(context).textTheme.titleMedium,
+            p: Theme.of(context).textTheme.bodyMedium?.copyWith(height: 1.6),
+            blockquotePadding: const EdgeInsets.all(12),
+          ),
+    );
   }
 }
 
