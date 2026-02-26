@@ -140,7 +140,11 @@ class _HelpPageState extends State<HelpPage> {
             builders['h2'] = headerAnchors;
             builders['h3'] = headerAnchors;
 
-            return ListView(
+            // 关键逻辑（Windows 体验修复）：
+            // Flutter 在桌面端会通过默认 ScrollBehavior 自动包一层 Scrollbar。
+            // 在部分 Windows 环境下，自动 Scrollbar 的拖动会出现“滑块跳跃”的交互问题。
+            // 这里显式提供 Scrollbar + controller，并关闭该子树的自动 Scrollbar，确保拖动行为稳定。
+            final listView = ListView(
               controller: _scrollController,
               padding: const EdgeInsets.all(AppSpacing.lg),
               children: [
@@ -178,6 +182,19 @@ class _HelpPageState extends State<HelpPage> {
                 _FooterCard(),
                 const SizedBox(height: 24),
               ],
+            );
+
+            return ScrollConfiguration(
+              behavior: ScrollConfiguration.of(context).copyWith(
+                scrollbars: false,
+              ),
+              child: Scrollbar(
+                controller: _scrollController,
+                thumbVisibility: true,
+                trackVisibility: true,
+                interactive: true,
+                child: listView,
+              ),
             );
           },
         ),
