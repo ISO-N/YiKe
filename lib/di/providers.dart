@@ -16,11 +16,13 @@ import '../data/repositories/learning_template_repository_impl.dart';
 import '../data/repositories/learning_topic_repository_impl.dart';
 import '../data/repositories/review_task_repository_impl.dart';
 import '../data/repositories/settings_repository_impl.dart';
+import '../data/repositories/theme_settings_repository_impl.dart';
 import '../domain/repositories/learning_item_repository.dart';
 import '../domain/repositories/learning_template_repository.dart';
 import '../domain/repositories/learning_topic_repository.dart';
 import '../domain/repositories/review_task_repository.dart';
 import '../domain/repositories/settings_repository.dart';
+import '../domain/repositories/theme_settings_repository.dart';
 import '../domain/services/ocr_service.dart';
 import '../infrastructure/storage/secure_storage_service.dart';
 import '../domain/usecases/complete_review_task_usecase.dart';
@@ -97,6 +99,16 @@ final reviewTaskRepositoryProvider = Provider<ReviewTaskRepository>((ref) {
 
 final settingsRepositoryProvider = Provider<SettingsRepository>((ref) {
   return SettingsRepositoryImpl(
+    dao: ref.read(settingsDaoProvider),
+    secureStorageService: ref.read(secureStorageServiceProvider),
+  );
+});
+
+/// 主题设置仓储 Provider。
+///
+/// 说明：使用与 SettingsRepository 相同的加密存储策略（SettingsCrypto）。
+final themeSettingsRepositoryProvider = Provider<ThemeSettingsRepository>((ref) {
+  return ThemeSettingsRepositoryImpl(
     dao: ref.read(settingsDaoProvider),
     secureStorageService: ref.read(secureStorageServiceProvider),
   );
