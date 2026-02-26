@@ -284,6 +284,14 @@ class SettingsPage extends ConsumerWidget {
                       const Divider(height: 1),
                       ListTile(
                         contentPadding: EdgeInsets.zero,
+                        title: const Text('主题管理'),
+                        subtitle: const Text('管理主题与内容关联（v2.1）'),
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: () => context.push('/topics'),
+                      ),
+                      const Divider(height: 1),
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
                         title: const Text('备份与恢复'),
                         subtitle: const Text('规划中'),
                         trailing: const Icon(Icons.chevron_right),

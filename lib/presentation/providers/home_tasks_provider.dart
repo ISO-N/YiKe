@@ -20,6 +20,7 @@ class HomeTasksState {
     required this.totalCount,
     required this.isSelectionMode,
     required this.selectedTaskIds,
+    required this.topicFilterId,
     this.errorMessage,
   });
 
@@ -30,6 +31,11 @@ class HomeTasksState {
   final int totalCount;
   final bool isSelectionMode;
   final Set<int> selectedTaskIds;
+
+  /// 主题筛选（可选，F1.6）。
+  ///
+  /// 说明：当不为空时，仅展示属于该主题的任务。
+  final int? topicFilterId;
   final String? errorMessage;
 
   factory HomeTasksState.initial() => const HomeTasksState(
@@ -40,6 +46,7 @@ class HomeTasksState {
     totalCount: 0,
     isSelectionMode: false,
     selectedTaskIds: {},
+    topicFilterId: null,
   );
 
   HomeTasksState copyWith({
@@ -50,6 +57,7 @@ class HomeTasksState {
     int? totalCount,
     bool? isSelectionMode,
     Set<int>? selectedTaskIds,
+    int? topicFilterId,
     String? errorMessage,
   }) {
     return HomeTasksState(
@@ -60,6 +68,7 @@ class HomeTasksState {
       totalCount: totalCount ?? this.totalCount,
       isSelectionMode: isSelectionMode ?? this.isSelectionMode,
       selectedTaskIds: selectedTaskIds ?? this.selectedTaskIds,
+      topicFilterId: topicFilterId ?? this.topicFilterId,
       errorMessage: errorMessage,
     );
   }
@@ -81,13 +90,47 @@ class HomeTasksNotifier extends StateNotifier<HomeTasksState> {
     try {
       final useCase = _ref.read(getHomeTasksUseCaseProvider);
       final result = await useCase.execute();
-      state = state.copyWith(
-        isLoading: false,
-        todayPending: result.todayPending,
-        overduePending: result.overduePending,
-        completedCount: result.completedCount,
-        totalCount: result.totalCount,
-      );
+
+      final topicId = state.topicFilterId;
+      if (topicId == null) {
+        state = state.copyWith(
+          isLoading: false,
+          todayPending: result.todayPending,
+          overduePending: result.overduePending,
+          completedCount: result.completedCount,
+          totalCount: result.totalCount,
+        );
+      } else {
+        // v2.1：按主题筛选任务。
+        final topicRepo = _ref.read(learningTopicRepositoryProvider);
+        final itemIds = (await topicRepo.getItemIdsByTopicId(topicId)).toSet();
+
+        final today = result.todayPending
+            .where((t) => itemIds.contains(t.learningItemId))
+            .toList();
+        final overdue = result.overduePending
+            .where((t) => itemIds.contains(t.learningItemId))
+            .toList();
+
+        // 进度统计：重新按主题口径统计今日完成率（done/(done+pending)）。
+        final repo = _ref.read(reviewTaskRepositoryProvider);
+        final all = await repo.getTasksByDate(DateTime.now());
+        final filtered = all.where((t) => itemIds.contains(t.learningItemId));
+        final completed = filtered
+            .where((t) => t.status == ReviewTaskStatus.done)
+            .length;
+        final total = filtered
+            .where((t) => t.status != ReviewTaskStatus.skipped)
+            .length;
+
+        state = state.copyWith(
+          isLoading: false,
+          todayPending: today,
+          overduePending: overdue,
+          completedCount: completed,
+          totalCount: total,
+        );
+      }
 
       // 同步桌面小组件数据（v1.0 Android 展示）。
       await _syncWidget();
@@ -103,6 +146,12 @@ class HomeTasksNotifier extends StateNotifier<HomeTasksState> {
     } else {
       state = state.copyWith(isSelectionMode: true, selectedTaskIds: <int>{});
     }
+  }
+
+  /// 设置主题筛选（null 表示全部）。
+  Future<void> setTopicFilter(int? topicId) async {
+    state = state.copyWith(topicFilterId: topicId);
+    await load();
   }
 
   /// 切换某任务的选中状态。
