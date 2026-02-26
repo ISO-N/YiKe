@@ -106,7 +106,8 @@ class DiscoveryService {
         InternetAddress.anyIPv4,
         discoveryPort,
         reuseAddress: true,
-        reusePort: true,
+        // Windows 平台不支持 reusePort（会触发底层断言并输出错误日志）。
+        reusePort: !Platform.isWindows,
       );
       _socket!.broadcastEnabled = true;
 

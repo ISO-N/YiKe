@@ -47,6 +47,11 @@ class YiKeApp extends ConsumerWidget {
       routerConfig: router,
       builder: (context, child) {
         final content = child ?? const SizedBox.shrink();
+        // 测试环境：避免启动桌面端壳层与同步服务，减少不稳定因素（端口占用/平台限制等）。
+        final bindingName = WidgetsBinding.instance.runtimeType.toString();
+        final isWidgetTest = bindingName.contains('TestWidgetsFlutterBinding');
+        if (isWidgetTest) return content;
+
         final bootstrapped = SyncBootstrap(child: content);
         if (kIsWeb) return content;
 

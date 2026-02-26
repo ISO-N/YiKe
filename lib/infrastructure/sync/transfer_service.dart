@@ -46,8 +46,14 @@ class TransferService {
   Future<void> startServer() async {
     if (_server != null) return;
 
-    _server = await HttpServer.bind(InternetAddress.anyIPv4, transferPort);
-    _server!.listen(_handleRequest);
+    try {
+      _server = await HttpServer.bind(InternetAddress.anyIPv4, transferPort);
+      _server!.listen(_handleRequest);
+    } catch (e) {
+      // 端口被占用/权限不足时不应导致应用崩溃，降级为“仅客户端发起”能力。
+      debugPrint('TransferService startServer failed: $e');
+      _server = null;
+    }
   }
 
   Future<void> _handleRequest(HttpRequest request) async {

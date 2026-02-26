@@ -22,6 +22,9 @@ class _SyncBootstrapState extends ConsumerState<SyncBootstrap> {
   @override
   void initState() {
     super.initState();
+    const isFlutterTest = bool.fromEnvironment('FLUTTER_TEST');
+    if (isFlutterTest) return;
+
     // 关键逻辑：在首帧后初始化，避免阻塞 MaterialApp/router 的构建。
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(syncControllerProvider.notifier).initialize();

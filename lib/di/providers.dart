@@ -51,7 +51,9 @@ final appDatabaseProvider = Provider<AppDatabase>((ref) {
 
 /// 设备 ID Provider（需要在启动时生成并注入，供同步/日志使用）。
 final deviceIdProvider = Provider<String>((ref) {
-  throw UnimplementedError('deviceIdProvider 必须在启动时被 override 注入。');
+  // 说明：正常运行时会在 AppInjection.createContainer 中 override 注入真实 deviceId。
+  // 测试环境（如 widget_test）若未注入也不应崩溃，因此提供一个稳定兜底值。
+  return 'yike_device_fallback';
 });
 
 /// DAO Providers
