@@ -63,7 +63,7 @@ class AppDatabase extends _$AppDatabase {
   }
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -90,6 +90,12 @@ class AppDatabase extends _$AppDatabase {
         await customStatement(
           'UPDATE review_tasks SET updated_at = created_at WHERE updated_at IS NULL',
         );
+      }
+
+      // v3.1：新增 isMockData 字段（用于 Debug 模拟数据隔离）。
+      if (from < 4) {
+        await migrator.addColumn(learningItems, learningItems.isMockData);
+        await migrator.addColumn(reviewTasks, reviewTasks.isMockData);
       }
     },
     beforeOpen: (details) async {

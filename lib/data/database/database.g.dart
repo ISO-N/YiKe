@@ -88,6 +88,21 @@ class $LearningItemsTable extends LearningItems
     type: DriftSqlType.dateTime,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _isMockDataMeta = const VerificationMeta(
+    'isMockData',
+  );
+  @override
+  late final GeneratedColumn<bool> isMockData = GeneratedColumn<bool>(
+    'is_mock_data',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_mock_data" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -97,6 +112,7 @@ class $LearningItemsTable extends LearningItems
     learningDate,
     createdAt,
     updatedAt,
+    isMockData,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -156,6 +172,15 @@ class $LearningItemsTable extends LearningItems
         updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
       );
     }
+    if (data.containsKey('is_mock_data')) {
+      context.handle(
+        _isMockDataMeta,
+        isMockData.isAcceptableOrUnknown(
+          data['is_mock_data']!,
+          _isMockDataMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -193,6 +218,10 @@ class $LearningItemsTable extends LearningItems
         DriftSqlType.dateTime,
         data['${effectivePrefix}updated_at'],
       ),
+      isMockData: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_mock_data'],
+      )!,
     );
   }
 
@@ -223,6 +252,9 @@ class LearningItem extends DataClass implements Insertable<LearningItem> {
 
   /// 更新时间（可空）。
   final DateTime? updatedAt;
+
+  /// 是否为模拟数据（v3.1：用于 Debug 模式生成/清理、同步/导出隔离）。
+  final bool isMockData;
   const LearningItem({
     required this.id,
     required this.title,
@@ -231,6 +263,7 @@ class LearningItem extends DataClass implements Insertable<LearningItem> {
     required this.learningDate,
     required this.createdAt,
     this.updatedAt,
+    required this.isMockData,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -246,6 +279,7 @@ class LearningItem extends DataClass implements Insertable<LearningItem> {
     if (!nullToAbsent || updatedAt != null) {
       map['updated_at'] = Variable<DateTime>(updatedAt);
     }
+    map['is_mock_data'] = Variable<bool>(isMockData);
     return map;
   }
 
@@ -260,6 +294,7 @@ class LearningItem extends DataClass implements Insertable<LearningItem> {
       updatedAt: updatedAt == null && nullToAbsent
           ? const Value.absent()
           : Value(updatedAt),
+      isMockData: Value(isMockData),
     );
   }
 
@@ -276,6 +311,7 @@ class LearningItem extends DataClass implements Insertable<LearningItem> {
       learningDate: serializer.fromJson<DateTime>(json['learningDate']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime?>(json['updatedAt']),
+      isMockData: serializer.fromJson<bool>(json['isMockData']),
     );
   }
   @override
@@ -289,6 +325,7 @@ class LearningItem extends DataClass implements Insertable<LearningItem> {
       'learningDate': serializer.toJson<DateTime>(learningDate),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime?>(updatedAt),
+      'isMockData': serializer.toJson<bool>(isMockData),
     };
   }
 
@@ -300,6 +337,7 @@ class LearningItem extends DataClass implements Insertable<LearningItem> {
     DateTime? learningDate,
     DateTime? createdAt,
     Value<DateTime?> updatedAt = const Value.absent(),
+    bool? isMockData,
   }) => LearningItem(
     id: id ?? this.id,
     title: title ?? this.title,
@@ -308,6 +346,7 @@ class LearningItem extends DataClass implements Insertable<LearningItem> {
     learningDate: learningDate ?? this.learningDate,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt.present ? updatedAt.value : this.updatedAt,
+    isMockData: isMockData ?? this.isMockData,
   );
   LearningItem copyWithCompanion(LearningItemsCompanion data) {
     return LearningItem(
@@ -320,6 +359,9 @@ class LearningItem extends DataClass implements Insertable<LearningItem> {
           : this.learningDate,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      isMockData: data.isMockData.present
+          ? data.isMockData.value
+          : this.isMockData,
     );
   }
 
@@ -332,14 +374,23 @@ class LearningItem extends DataClass implements Insertable<LearningItem> {
           ..write('tags: $tags, ')
           ..write('learningDate: $learningDate, ')
           ..write('createdAt: $createdAt, ')
-          ..write('updatedAt: $updatedAt')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('isMockData: $isMockData')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode =>
-      Object.hash(id, title, note, tags, learningDate, createdAt, updatedAt);
+  int get hashCode => Object.hash(
+    id,
+    title,
+    note,
+    tags,
+    learningDate,
+    createdAt,
+    updatedAt,
+    isMockData,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -350,7 +401,8 @@ class LearningItem extends DataClass implements Insertable<LearningItem> {
           other.tags == this.tags &&
           other.learningDate == this.learningDate &&
           other.createdAt == this.createdAt &&
-          other.updatedAt == this.updatedAt);
+          other.updatedAt == this.updatedAt &&
+          other.isMockData == this.isMockData);
 }
 
 class LearningItemsCompanion extends UpdateCompanion<LearningItem> {
@@ -361,6 +413,7 @@ class LearningItemsCompanion extends UpdateCompanion<LearningItem> {
   final Value<DateTime> learningDate;
   final Value<DateTime> createdAt;
   final Value<DateTime?> updatedAt;
+  final Value<bool> isMockData;
   const LearningItemsCompanion({
     this.id = const Value.absent(),
     this.title = const Value.absent(),
@@ -369,6 +422,7 @@ class LearningItemsCompanion extends UpdateCompanion<LearningItem> {
     this.learningDate = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
+    this.isMockData = const Value.absent(),
   });
   LearningItemsCompanion.insert({
     this.id = const Value.absent(),
@@ -378,6 +432,7 @@ class LearningItemsCompanion extends UpdateCompanion<LearningItem> {
     required DateTime learningDate,
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
+    this.isMockData = const Value.absent(),
   }) : title = Value(title),
        learningDate = Value(learningDate);
   static Insertable<LearningItem> custom({
@@ -388,6 +443,7 @@ class LearningItemsCompanion extends UpdateCompanion<LearningItem> {
     Expression<DateTime>? learningDate,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
+    Expression<bool>? isMockData,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -397,6 +453,7 @@ class LearningItemsCompanion extends UpdateCompanion<LearningItem> {
       if (learningDate != null) 'learning_date': learningDate,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
+      if (isMockData != null) 'is_mock_data': isMockData,
     });
   }
 
@@ -408,6 +465,7 @@ class LearningItemsCompanion extends UpdateCompanion<LearningItem> {
     Value<DateTime>? learningDate,
     Value<DateTime>? createdAt,
     Value<DateTime?>? updatedAt,
+    Value<bool>? isMockData,
   }) {
     return LearningItemsCompanion(
       id: id ?? this.id,
@@ -417,6 +475,7 @@ class LearningItemsCompanion extends UpdateCompanion<LearningItem> {
       learningDate: learningDate ?? this.learningDate,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      isMockData: isMockData ?? this.isMockData,
     );
   }
 
@@ -444,6 +503,9 @@ class LearningItemsCompanion extends UpdateCompanion<LearningItem> {
     if (updatedAt.present) {
       map['updated_at'] = Variable<DateTime>(updatedAt.value);
     }
+    if (isMockData.present) {
+      map['is_mock_data'] = Variable<bool>(isMockData.value);
+    }
     return map;
   }
 
@@ -456,7 +518,8 @@ class LearningItemsCompanion extends UpdateCompanion<LearningItem> {
           ..write('tags: $tags, ')
           ..write('learningDate: $learningDate, ')
           ..write('createdAt: $createdAt, ')
-          ..write('updatedAt: $updatedAt')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('isMockData: $isMockData')
           ..write(')'))
         .toString();
   }
@@ -573,6 +636,21 @@ class $ReviewTasksTable extends ReviewTasks
     type: DriftSqlType.dateTime,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _isMockDataMeta = const VerificationMeta(
+    'isMockData',
+  );
+  @override
+  late final GeneratedColumn<bool> isMockData = GeneratedColumn<bool>(
+    'is_mock_data',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_mock_data" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -584,6 +662,7 @@ class $ReviewTasksTable extends ReviewTasks
     skippedAt,
     createdAt,
     updatedAt,
+    isMockData,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -666,6 +745,15 @@ class $ReviewTasksTable extends ReviewTasks
         updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
       );
     }
+    if (data.containsKey('is_mock_data')) {
+      context.handle(
+        _isMockDataMeta,
+        isMockData.isAcceptableOrUnknown(
+          data['is_mock_data']!,
+          _isMockDataMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -711,6 +799,10 @@ class $ReviewTasksTable extends ReviewTasks
         DriftSqlType.dateTime,
         data['${effectivePrefix}updated_at'],
       ),
+      isMockData: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_mock_data'],
+      )!,
     );
   }
 
@@ -747,6 +839,9 @@ class ReviewTask extends DataClass implements Insertable<ReviewTask> {
 
   /// 更新时间（用于同步冲突解决，v3.0 新增）。
   final DateTime? updatedAt;
+
+  /// 是否为模拟数据（v3.1：用于 Debug 模式生成/清理、同步/导出隔离）。
+  final bool isMockData;
   const ReviewTask({
     required this.id,
     required this.learningItemId,
@@ -757,6 +852,7 @@ class ReviewTask extends DataClass implements Insertable<ReviewTask> {
     this.skippedAt,
     required this.createdAt,
     this.updatedAt,
+    required this.isMockData,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -776,6 +872,7 @@ class ReviewTask extends DataClass implements Insertable<ReviewTask> {
     if (!nullToAbsent || updatedAt != null) {
       map['updated_at'] = Variable<DateTime>(updatedAt);
     }
+    map['is_mock_data'] = Variable<bool>(isMockData);
     return map;
   }
 
@@ -796,6 +893,7 @@ class ReviewTask extends DataClass implements Insertable<ReviewTask> {
       updatedAt: updatedAt == null && nullToAbsent
           ? const Value.absent()
           : Value(updatedAt),
+      isMockData: Value(isMockData),
     );
   }
 
@@ -814,6 +912,7 @@ class ReviewTask extends DataClass implements Insertable<ReviewTask> {
       skippedAt: serializer.fromJson<DateTime?>(json['skippedAt']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime?>(json['updatedAt']),
+      isMockData: serializer.fromJson<bool>(json['isMockData']),
     );
   }
   @override
@@ -829,6 +928,7 @@ class ReviewTask extends DataClass implements Insertable<ReviewTask> {
       'skippedAt': serializer.toJson<DateTime?>(skippedAt),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime?>(updatedAt),
+      'isMockData': serializer.toJson<bool>(isMockData),
     };
   }
 
@@ -842,6 +942,7 @@ class ReviewTask extends DataClass implements Insertable<ReviewTask> {
     Value<DateTime?> skippedAt = const Value.absent(),
     DateTime? createdAt,
     Value<DateTime?> updatedAt = const Value.absent(),
+    bool? isMockData,
   }) => ReviewTask(
     id: id ?? this.id,
     learningItemId: learningItemId ?? this.learningItemId,
@@ -852,6 +953,7 @@ class ReviewTask extends DataClass implements Insertable<ReviewTask> {
     skippedAt: skippedAt.present ? skippedAt.value : this.skippedAt,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt.present ? updatedAt.value : this.updatedAt,
+    isMockData: isMockData ?? this.isMockData,
   );
   ReviewTask copyWithCompanion(ReviewTasksCompanion data) {
     return ReviewTask(
@@ -872,6 +974,9 @@ class ReviewTask extends DataClass implements Insertable<ReviewTask> {
       skippedAt: data.skippedAt.present ? data.skippedAt.value : this.skippedAt,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      isMockData: data.isMockData.present
+          ? data.isMockData.value
+          : this.isMockData,
     );
   }
 
@@ -886,7 +991,8 @@ class ReviewTask extends DataClass implements Insertable<ReviewTask> {
           ..write('completedAt: $completedAt, ')
           ..write('skippedAt: $skippedAt, ')
           ..write('createdAt: $createdAt, ')
-          ..write('updatedAt: $updatedAt')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('isMockData: $isMockData')
           ..write(')'))
         .toString();
   }
@@ -902,6 +1008,7 @@ class ReviewTask extends DataClass implements Insertable<ReviewTask> {
     skippedAt,
     createdAt,
     updatedAt,
+    isMockData,
   );
   @override
   bool operator ==(Object other) =>
@@ -915,7 +1022,8 @@ class ReviewTask extends DataClass implements Insertable<ReviewTask> {
           other.completedAt == this.completedAt &&
           other.skippedAt == this.skippedAt &&
           other.createdAt == this.createdAt &&
-          other.updatedAt == this.updatedAt);
+          other.updatedAt == this.updatedAt &&
+          other.isMockData == this.isMockData);
 }
 
 class ReviewTasksCompanion extends UpdateCompanion<ReviewTask> {
@@ -928,6 +1036,7 @@ class ReviewTasksCompanion extends UpdateCompanion<ReviewTask> {
   final Value<DateTime?> skippedAt;
   final Value<DateTime> createdAt;
   final Value<DateTime?> updatedAt;
+  final Value<bool> isMockData;
   const ReviewTasksCompanion({
     this.id = const Value.absent(),
     this.learningItemId = const Value.absent(),
@@ -938,6 +1047,7 @@ class ReviewTasksCompanion extends UpdateCompanion<ReviewTask> {
     this.skippedAt = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
+    this.isMockData = const Value.absent(),
   });
   ReviewTasksCompanion.insert({
     this.id = const Value.absent(),
@@ -949,6 +1059,7 @@ class ReviewTasksCompanion extends UpdateCompanion<ReviewTask> {
     this.skippedAt = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
+    this.isMockData = const Value.absent(),
   }) : learningItemId = Value(learningItemId),
        reviewRound = Value(reviewRound),
        scheduledDate = Value(scheduledDate);
@@ -962,6 +1073,7 @@ class ReviewTasksCompanion extends UpdateCompanion<ReviewTask> {
     Expression<DateTime>? skippedAt,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
+    Expression<bool>? isMockData,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -973,6 +1085,7 @@ class ReviewTasksCompanion extends UpdateCompanion<ReviewTask> {
       if (skippedAt != null) 'skipped_at': skippedAt,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
+      if (isMockData != null) 'is_mock_data': isMockData,
     });
   }
 
@@ -986,6 +1099,7 @@ class ReviewTasksCompanion extends UpdateCompanion<ReviewTask> {
     Value<DateTime?>? skippedAt,
     Value<DateTime>? createdAt,
     Value<DateTime?>? updatedAt,
+    Value<bool>? isMockData,
   }) {
     return ReviewTasksCompanion(
       id: id ?? this.id,
@@ -997,6 +1111,7 @@ class ReviewTasksCompanion extends UpdateCompanion<ReviewTask> {
       skippedAt: skippedAt ?? this.skippedAt,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      isMockData: isMockData ?? this.isMockData,
     );
   }
 
@@ -1030,6 +1145,9 @@ class ReviewTasksCompanion extends UpdateCompanion<ReviewTask> {
     if (updatedAt.present) {
       map['updated_at'] = Variable<DateTime>(updatedAt.value);
     }
+    if (isMockData.present) {
+      map['is_mock_data'] = Variable<bool>(isMockData.value);
+    }
     return map;
   }
 
@@ -1044,7 +1162,8 @@ class ReviewTasksCompanion extends UpdateCompanion<ReviewTask> {
           ..write('completedAt: $completedAt, ')
           ..write('skippedAt: $skippedAt, ')
           ..write('createdAt: $createdAt, ')
-          ..write('updatedAt: $updatedAt')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('isMockData: $isMockData')
           ..write(')'))
         .toString();
   }
@@ -4431,6 +4550,7 @@ typedef $$LearningItemsTableCreateCompanionBuilder =
       required DateTime learningDate,
       Value<DateTime> createdAt,
       Value<DateTime?> updatedAt,
+      Value<bool> isMockData,
     });
 typedef $$LearningItemsTableUpdateCompanionBuilder =
     LearningItemsCompanion Function({
@@ -4441,6 +4561,7 @@ typedef $$LearningItemsTableUpdateCompanionBuilder =
       Value<DateTime> learningDate,
       Value<DateTime> createdAt,
       Value<DateTime?> updatedAt,
+      Value<bool> isMockData,
     });
 
 final class $$LearningItemsTableReferences
@@ -4541,6 +4662,11 @@ class $$LearningItemsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<bool> get isMockData => $composableBuilder(
+    column: $table.isMockData,
+    builder: (column) => ColumnFilters(column),
+  );
+
   Expression<bool> reviewTasksRefs(
     Expression<bool> Function($$ReviewTasksTableFilterComposer f) f,
   ) {
@@ -4635,6 +4761,11 @@ class $$LearningItemsTableOrderingComposer
     column: $table.updatedAt,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<bool> get isMockData => $composableBuilder(
+    column: $table.isMockData,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$LearningItemsTableAnnotationComposer
@@ -4668,6 +4799,11 @@ class $$LearningItemsTableAnnotationComposer
 
   GeneratedColumn<DateTime> get updatedAt =>
       $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  GeneratedColumn<bool> get isMockData => $composableBuilder(
+    column: $table.isMockData,
+    builder: (column) => column,
+  );
 
   Expression<T> reviewTasksRefs<T extends Object>(
     Expression<T> Function($$ReviewTasksTableAnnotationComposer a) f,
@@ -4759,6 +4895,7 @@ class $$LearningItemsTableTableManager
                 Value<DateTime> learningDate = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime?> updatedAt = const Value.absent(),
+                Value<bool> isMockData = const Value.absent(),
               }) => LearningItemsCompanion(
                 id: id,
                 title: title,
@@ -4767,6 +4904,7 @@ class $$LearningItemsTableTableManager
                 learningDate: learningDate,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
+                isMockData: isMockData,
               ),
           createCompanionCallback:
               ({
@@ -4777,6 +4915,7 @@ class $$LearningItemsTableTableManager
                 required DateTime learningDate,
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime?> updatedAt = const Value.absent(),
+                Value<bool> isMockData = const Value.absent(),
               }) => LearningItemsCompanion.insert(
                 id: id,
                 title: title,
@@ -4785,6 +4924,7 @@ class $$LearningItemsTableTableManager
                 learningDate: learningDate,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
+                isMockData: isMockData,
               ),
           withReferenceMapper: (p0) => p0
               .map(
@@ -4883,6 +5023,7 @@ typedef $$ReviewTasksTableCreateCompanionBuilder =
       Value<DateTime?> skippedAt,
       Value<DateTime> createdAt,
       Value<DateTime?> updatedAt,
+      Value<bool> isMockData,
     });
 typedef $$ReviewTasksTableUpdateCompanionBuilder =
     ReviewTasksCompanion Function({
@@ -4895,6 +5036,7 @@ typedef $$ReviewTasksTableUpdateCompanionBuilder =
       Value<DateTime?> skippedAt,
       Value<DateTime> createdAt,
       Value<DateTime?> updatedAt,
+      Value<bool> isMockData,
     });
 
 final class $$ReviewTasksTableReferences
@@ -4973,6 +5115,11 @@ class $$ReviewTasksTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<bool> get isMockData => $composableBuilder(
+    column: $table.isMockData,
+    builder: (column) => ColumnFilters(column),
+  );
+
   $$LearningItemsTableFilterComposer get learningItemId {
     final $$LearningItemsTableFilterComposer composer = $composerBuilder(
       composer: this,
@@ -5046,6 +5193,11 @@ class $$ReviewTasksTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<bool> get isMockData => $composableBuilder(
+    column: $table.isMockData,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$LearningItemsTableOrderingComposer get learningItemId {
     final $$LearningItemsTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -5109,6 +5261,11 @@ class $$ReviewTasksTableAnnotationComposer
   GeneratedColumn<DateTime> get updatedAt =>
       $composableBuilder(column: $table.updatedAt, builder: (column) => column);
 
+  GeneratedColumn<bool> get isMockData => $composableBuilder(
+    column: $table.isMockData,
+    builder: (column) => column,
+  );
+
   $$LearningItemsTableAnnotationComposer get learningItemId {
     final $$LearningItemsTableAnnotationComposer composer = $composerBuilder(
       composer: this,
@@ -5170,6 +5327,7 @@ class $$ReviewTasksTableTableManager
                 Value<DateTime?> skippedAt = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime?> updatedAt = const Value.absent(),
+                Value<bool> isMockData = const Value.absent(),
               }) => ReviewTasksCompanion(
                 id: id,
                 learningItemId: learningItemId,
@@ -5180,6 +5338,7 @@ class $$ReviewTasksTableTableManager
                 skippedAt: skippedAt,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
+                isMockData: isMockData,
               ),
           createCompanionCallback:
               ({
@@ -5192,6 +5351,7 @@ class $$ReviewTasksTableTableManager
                 Value<DateTime?> skippedAt = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime?> updatedAt = const Value.absent(),
+                Value<bool> isMockData = const Value.absent(),
               }) => ReviewTasksCompanion.insert(
                 id: id,
                 learningItemId: learningItemId,
@@ -5202,6 +5362,7 @@ class $$ReviewTasksTableTableManager
                 skippedAt: skippedAt,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
+                isMockData: isMockData,
               ),
           withReferenceMapper: (p0) => p0
               .map(

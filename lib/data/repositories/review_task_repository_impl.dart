@@ -183,6 +183,7 @@ class ReviewTaskRepositoryImpl implements ReviewTaskRepository {
             completedAt: row.completedAt,
             skippedAt: row.skippedAt,
             createdAt: row.createdAt,
+            isMockData: row.isMockData,
           ),
         )
         .toList();
@@ -228,6 +229,9 @@ class ReviewTaskRepositoryImpl implements ReviewTaskRepository {
 
     final row = await dao.getReviewTaskById(id);
     if (row == null) return;
+
+    // v3.1：Mock 数据不参与同步，因此不写入 update 日志。
+    if (row.isMockData) return;
 
     final ts = DateTime.now().millisecondsSinceEpoch;
     final origin = await sync.resolveOriginKey(

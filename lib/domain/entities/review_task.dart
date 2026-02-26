@@ -64,6 +64,7 @@ class ReviewTaskEntity {
     this.completedAt,
     this.skippedAt,
     required this.createdAt,
+    this.isMockData = false,
   });
 
   final int? id;
@@ -75,6 +76,9 @@ class ReviewTaskEntity {
   final DateTime? skippedAt;
   final DateTime createdAt;
 
+  /// 是否为模拟数据（v3.1：用于 Debug 模拟数据隔离）。
+  final bool isMockData;
+
   ReviewTaskEntity copyWith({
     int? id,
     int? learningItemId,
@@ -84,6 +88,7 @@ class ReviewTaskEntity {
     DateTime? completedAt,
     DateTime? skippedAt,
     DateTime? createdAt,
+    bool? isMockData,
   }) {
     return ReviewTaskEntity(
       id: id ?? this.id,
@@ -94,6 +99,7 @@ class ReviewTaskEntity {
       completedAt: completedAt ?? this.completedAt,
       skippedAt: skippedAt ?? this.skippedAt,
       createdAt: createdAt ?? this.createdAt,
+      isMockData: isMockData ?? this.isMockData,
     );
   }
 }

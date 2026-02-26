@@ -684,6 +684,9 @@ class SyncService {
   Future<void> _snapshotLearningItems() async {
     final rows = await db.select(db.learningItems).get();
     for (final row in rows) {
+      // v3.1：Mock 数据不参与同步。
+      if (row.isMockData) continue;
+
       final mapping = await syncEntityMappingDao.getByLocalEntityId(
         entityType: entityLearningItem,
         localEntityId: row.id,
@@ -729,6 +732,9 @@ class SyncService {
   Future<void> _snapshotReviewTasks() async {
     final rows = await db.select(db.reviewTasks).get();
     for (final row in rows) {
+      // v3.1：Mock 数据不参与同步。
+      if (row.isMockData) continue;
+
       final mapping = await syncEntityMappingDao.getByLocalEntityId(
         entityType: entityReviewTask,
         localEntityId: row.id,
