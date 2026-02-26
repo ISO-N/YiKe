@@ -25,6 +25,7 @@ import '../../providers/notification_permission_provider.dart';
 import '../../providers/search_provider.dart';
 import '../../providers/settings_provider.dart';
 import '../../providers/sync_provider.dart';
+import '../../widgets/review_progress.dart';
 import '../../widgets/search_bar.dart';
 
 class HomePage extends ConsumerStatefulWidget {
@@ -143,10 +144,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                 const SizedBox(height: AppSpacing.lg),
                 const _DateHeader(),
                 const SizedBox(height: AppSpacing.lg),
-                _ProgressCard(
-                  completed: state.completedCount,
-                  total: state.totalCount,
-                ),
+                const ReviewProgressWidget(),
                 const SizedBox(height: AppSpacing.lg),
                 if (state.errorMessage != null) ...[
                   GlassCard(
@@ -402,56 +400,6 @@ Future<void> _showNotificationPermissionDialog({
       );
     },
   );
-}
-
-/// 今日进度卡片（v1.0 起：首页基础信息展示）。
-class _ProgressCard extends StatelessWidget {
-  const _ProgressCard({required this.completed, required this.total});
-
-  final int completed;
-  final int total;
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final progressTrackColor = isDark ? AppColors.darkDivider : Colors.white;
-
-    final progress = total == 0 ? 0.0 : (completed / total).clamp(0.0, 1.0);
-    return GlassCard(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.lg),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('今日进度', style: AppTypography.h2(context)),
-            const SizedBox(height: AppSpacing.sm),
-            Row(
-              children: [
-                Expanded(
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(999),
-                    child: LinearProgressIndicator(
-                      value: progress,
-                      minHeight: 10,
-                      backgroundColor: progressTrackColor,
-                      valueColor: const AlwaysStoppedAnimation<Color>(
-                        AppColors.success,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.md),
-                Text(
-                  '$completed/$total',
-                  style: const TextStyle(fontWeight: FontWeight.w700),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }
 
 /// 搜索结果卡片（v3.1 F14.1）。
