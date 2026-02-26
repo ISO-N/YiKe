@@ -225,10 +225,7 @@ class _DetailRows extends StatelessWidget {
 
     return Column(
       children: [
-        _Row(
-          title: '今日',
-          value: _ratioText(completed, total),
-        ),
+        _Row(title: '今日', value: _ratioText(completed, total)),
         const SizedBox(height: 8),
         _Row(
           title: '本周',
@@ -240,10 +237,7 @@ class _DetailRows extends StatelessWidget {
           value: isLoading ? '加载中…' : _ratioText(monthCompleted, monthTotal),
         ),
         const SizedBox(height: 8),
-        _Row(
-          title: '连续学习',
-          value: isLoading ? '加载中…' : '$streak 天',
-        ),
+        _Row(title: '连续学习', value: isLoading ? '加载中…' : '$streak 天'),
       ],
     );
   }
@@ -270,10 +264,11 @@ class _Row extends StatelessWidget {
         ),
         Text(
           value,
-          style: AppTypography.body(context).copyWith(fontWeight: FontWeight.w700),
+          style: AppTypography.body(
+            context,
+          ).copyWith(fontWeight: FontWeight.w700),
         ),
       ],
     );
   }
 }
-

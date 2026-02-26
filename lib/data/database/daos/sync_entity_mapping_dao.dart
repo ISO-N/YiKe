@@ -65,22 +65,24 @@ class SyncEntityMappingDao {
     // 说明：sync_entity_mappings 的唯一约束为 (entityType, originDeviceId, originEntityId)，
     // Drift 的 insertOnConflictUpdate 默认只按主键（id）处理冲突，无法覆盖 UNIQUE 约束冲突，
     // 进而在重复写入同一 origin key 时触发 SQLite 2067。
-    return db.into(db.syncEntityMappings).insert(
-      companion,
-      onConflict: DoUpdate(
-        (old) => SyncEntityMappingsCompanion(
-          // 仅更新会随同步推进而变化的字段。
-          localEntityId: companion.localEntityId,
-          lastAppliedAtMs: companion.lastAppliedAtMs,
-          isDeleted: companion.isDeleted,
-        ),
-        target: [
-          db.syncEntityMappings.entityType,
-          db.syncEntityMappings.originDeviceId,
-          db.syncEntityMappings.originEntityId,
-        ],
-      ),
-    );
+    return db
+        .into(db.syncEntityMappings)
+        .insert(
+          companion,
+          onConflict: DoUpdate(
+            (old) => SyncEntityMappingsCompanion(
+              // 仅更新会随同步推进而变化的字段。
+              localEntityId: companion.localEntityId,
+              lastAppliedAtMs: companion.lastAppliedAtMs,
+              isDeleted: companion.isDeleted,
+            ),
+            target: [
+              db.syncEntityMappings.entityType,
+              db.syncEntityMappings.originDeviceId,
+              db.syncEntityMappings.originEntityId,
+            ],
+          ),
+        );
   }
 
   /// 标记映射为已删除（tombstone）。

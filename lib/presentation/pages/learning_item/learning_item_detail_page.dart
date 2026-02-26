@@ -69,9 +69,9 @@ class LearningItemDetailPage extends ConsumerWidget {
                             const SizedBox(height: AppSpacing.sm),
                             Text(
                               item.title,
-                              style: AppTypography.body(context).copyWith(
-                                fontWeight: FontWeight.w700,
-                              ),
+                              style: AppTypography.body(
+                                context,
+                              ).copyWith(fontWeight: FontWeight.w700),
                             ),
                             const SizedBox(height: AppSpacing.lg),
                             Text('备注', style: AppTypography.h2(context)),
@@ -138,7 +138,9 @@ class LearningItemDetailPage extends ConsumerWidget {
                                     .map(
                                       (t) => Chip(
                                         label: Text(t),
-                                        labelStyle: const TextStyle(fontSize: 12),
+                                        labelStyle: const TextStyle(
+                                          fontSize: 12,
+                                        ),
                                       ),
                                     )
                                     .toList(),
@@ -173,19 +175,10 @@ class _InfoRow extends StatelessWidget {
       children: [
         SizedBox(
           width: 84,
-          child: Text(
-            label,
-            style: AppTypography.bodySecondary(context),
-          ),
+          child: Text(label, style: AppTypography.bodySecondary(context)),
         ),
-        Expanded(
-          child: Text(
-            value,
-            style: AppTypography.body(context),
-          ),
-        ),
+        Expanded(child: Text(value, style: AppTypography.body(context))),
       ],
     );
   }
 }
-

@@ -25,4 +25,3 @@ class SyncDeviceEntity {
   final bool isMaster;
   final int? lastSyncMs;
 }
-

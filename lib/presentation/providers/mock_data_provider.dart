@@ -82,7 +82,11 @@ class MockDataNotifier extends StateNotifier<MockDataUiState> {
   final Ref _ref;
 
   void setContentCount(int v) {
-    state = state.copyWith(contentCount: v, clearMessage: true, clearError: true);
+    state = state.copyWith(
+      contentCount: v,
+      clearMessage: true,
+      clearError: true,
+    );
   }
 
   void setTaskCount(int v) {
@@ -98,18 +102,27 @@ class MockDataNotifier extends StateNotifier<MockDataUiState> {
   }
 
   void setCustomPrefix(String v) {
-    state = state.copyWith(customPrefix: v, clearMessage: true, clearError: true);
+    state = state.copyWith(
+      customPrefix: v,
+      clearMessage: true,
+      clearError: true,
+    );
   }
 
   /// 生成模拟数据。
   Future<void> generate() async {
-    state = state.copyWith(isRunning: true, clearMessage: true, clearError: true);
+    state = state.copyWith(
+      isRunning: true,
+      clearMessage: true,
+      clearError: true,
+    );
     try {
       final service = _ref.read(mockDataServiceProvider);
       final result = await service.generate(state.toConfig());
       state = state.copyWith(
         isRunning: false,
-        message: '已生成：学习内容 ${result.insertedItemCount} 条，复习任务 ${result.insertedTaskCount} 条',
+        message:
+            '已生成：学习内容 ${result.insertedItemCount} 条，复习任务 ${result.insertedTaskCount} 条',
       );
 
       // 生成后刷新核心页面状态。
@@ -121,7 +134,11 @@ class MockDataNotifier extends StateNotifier<MockDataUiState> {
 
   /// 清理模拟数据（按 isMockData=true）。
   Future<void> clearMockData() async {
-    state = state.copyWith(isRunning: true, clearMessage: true, clearError: true);
+    state = state.copyWith(
+      isRunning: true,
+      clearMessage: true,
+      clearError: true,
+    );
     try {
       final service = _ref.read(mockDataServiceProvider);
       final (deletedItems, deletedTasks) = await service.clearMockData();
@@ -137,7 +154,11 @@ class MockDataNotifier extends StateNotifier<MockDataUiState> {
 
   /// 清空全部数据（危险操作）。
   Future<void> clearAllData() async {
-    state = state.copyWith(isRunning: true, clearMessage: true, clearError: true);
+    state = state.copyWith(
+      isRunning: true,
+      clearMessage: true,
+      clearError: true,
+    );
     try {
       final service = _ref.read(mockDataServiceProvider);
       await service.clearAllData();
@@ -168,7 +189,7 @@ final mockDataServiceProvider = Provider<MockDataService>((ref) {
 });
 
 /// 模拟数据生成器 Provider。
-final mockDataProvider = StateNotifierProvider<MockDataNotifier, MockDataUiState>(
-  (ref) => MockDataNotifier(ref),
-);
-
+final mockDataProvider =
+    StateNotifierProvider<MockDataNotifier, MockDataUiState>(
+      (ref) => MockDataNotifier(ref),
+    );

@@ -108,8 +108,12 @@ class _Chip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bg = selected ? selectedColor.withAlpha(28) : Colors.transparent;
-    final border = selected ? selectedColor.withAlpha(110) : Theme.of(context).dividerColor;
-    final textColor = selected ? selectedColor : (Theme.of(context).textTheme.bodyMedium?.color ?? Colors.black);
+    final border = selected
+        ? selectedColor.withAlpha(110)
+        : Theme.of(context).dividerColor;
+    final textColor = selected
+        ? selectedColor
+        : (Theme.of(context).textTheme.bodyMedium?.color ?? Colors.black);
 
     return InkWell(
       onTap: onTap,
@@ -140,4 +144,3 @@ class _Chip extends StatelessWidget {
     );
   }
 }
-

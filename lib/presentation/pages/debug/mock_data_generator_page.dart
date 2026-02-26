@@ -40,7 +40,9 @@ class _MockDataGeneratorPageState extends ConsumerState<MockDataGeneratorPage> {
     _contentCountController = TextEditingController(
       text: state.contentCount.toString(),
     );
-    _taskCountController = TextEditingController(text: state.taskCount.toString());
+    _taskCountController = TextEditingController(
+      text: state.taskCount.toString(),
+    );
     _customPrefixController = TextEditingController(text: state.customPrefix);
   }
 
@@ -70,9 +72,7 @@ class _MockDataGeneratorPageState extends ConsumerState<MockDataGeneratorPage> {
     final isRunning = state.isRunning;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('模拟数据生成器'),
-      ),
+      appBar: AppBar(title: const Text('模拟数据生成器')),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.all(AppSpacing.lg),
@@ -151,7 +151,9 @@ class _MockDataGeneratorPageState extends ConsumerState<MockDataGeneratorPage> {
                             ? const SizedBox(
                                 width: 20,
                                 height: 20,
-                                child: CircularProgressIndicator(strokeWidth: 2),
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
                               )
                             : const Text('生成数据'),
                       ),
@@ -161,11 +163,12 @@ class _MockDataGeneratorPageState extends ConsumerState<MockDataGeneratorPage> {
                       width: double.infinity,
                       height: 48,
                       child: OutlinedButton(
-                        onPressed:
-                            isRunning ? null : () async => _confirmClearMock(
-                              context: context,
-                              onConfirmed: () => notifier.clearMockData(),
-                            ),
+                        onPressed: isRunning
+                            ? null
+                            : () async => _confirmClearMock(
+                                context: context,
+                                onConfirmed: () => notifier.clearMockData(),
+                              ),
                         child: const Text('清理模拟数据（按 Mock 标记）'),
                       ),
                     ),
@@ -177,9 +180,9 @@ class _MockDataGeneratorPageState extends ConsumerState<MockDataGeneratorPage> {
                         onPressed: isRunning
                             ? null
                             : () async => _confirmClearAll(
-                              context: context,
-                              onConfirmed: () => notifier.clearAllData(),
-                            ),
+                                context: context,
+                                onConfirmed: () => notifier.clearAllData(),
+                              ),
                         style: FilledButton.styleFrom(
                           backgroundColor: AppColors.error,
                         ),
@@ -356,10 +359,7 @@ class _TemplateField extends StatelessWidget {
         border: OutlineInputBorder(),
       ),
       items: const [
-        DropdownMenuItem(
-          value: MockDataTemplate.random,
-          child: Text('随机'),
-        ),
+        DropdownMenuItem(value: MockDataTemplate.random, child: Text('随机')),
         DropdownMenuItem(
           value: MockDataTemplate.englishWords,
           child: Text('英语单词'),
@@ -368,10 +368,7 @@ class _TemplateField extends StatelessWidget {
           value: MockDataTemplate.historyEvents,
           child: Text('历史事件'),
         ),
-        DropdownMenuItem(
-          value: MockDataTemplate.custom,
-          child: Text('自定义'),
-        ),
+        DropdownMenuItem(value: MockDataTemplate.custom, child: Text('自定义')),
       ],
       onChanged: enabled ? (v) => v == null ? null : onChanged(v) : null,
     );

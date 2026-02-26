@@ -56,7 +56,9 @@ final selectedDayTaskCountsProvider = Provider<TaskStatusCounts>((ref) {
 });
 
 /// 过滤后的当日任务列表 Provider。
-final filteredSelectedDayTasksProvider = Provider<List<ReviewTaskViewEntity>>((ref) {
+final filteredSelectedDayTasksProvider = Provider<List<ReviewTaskViewEntity>>((
+  ref,
+) {
   final tasks = ref.watch(calendarProvider).selectedDayTasks;
   final filter = ref.watch(reviewTaskFilterProvider);
 

@@ -25,4 +25,3 @@ final todayProgressProvider =
       final repo = ref.read(reviewTaskRepositoryProvider);
       return repo.getTaskStats(DateTime.now());
     });
-

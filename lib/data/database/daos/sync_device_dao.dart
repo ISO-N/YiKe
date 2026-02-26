@@ -36,23 +36,25 @@ class SyncDeviceDao {
     // 说明：sync_devices 的唯一约束在 deviceId，而 Drift 的 insertOnConflictUpdate
     // 默认只按主键（id）处理冲突，无法覆盖 UNIQUE(device_id) 的场景。
     // 因此这里显式指定冲突目标为 deviceId，实现“按 deviceId upsert”。
-    return db.into(db.syncDevices).insert(
-      companion,
-      onConflict: DoUpdate(
-        (old) => SyncDevicesCompanion(
-          // 仅更新可变字段，避免误改 deviceId。
-          deviceName: companion.deviceName,
-          deviceType: companion.deviceType,
-          ipAddress: companion.ipAddress,
-          authToken: companion.authToken,
-          isMaster: companion.isMaster,
-          lastSyncMs: companion.lastSyncMs,
-          lastOutgoingMs: companion.lastOutgoingMs,
-          lastIncomingMs: companion.lastIncomingMs,
-        ),
-        target: [db.syncDevices.deviceId],
-      ),
-    );
+    return db
+        .into(db.syncDevices)
+        .insert(
+          companion,
+          onConflict: DoUpdate(
+            (old) => SyncDevicesCompanion(
+              // 仅更新可变字段，避免误改 deviceId。
+              deviceName: companion.deviceName,
+              deviceType: companion.deviceType,
+              ipAddress: companion.ipAddress,
+              authToken: companion.authToken,
+              isMaster: companion.isMaster,
+              lastSyncMs: companion.lastSyncMs,
+              lastOutgoingMs: companion.lastOutgoingMs,
+              lastIncomingMs: companion.lastIncomingMs,
+            ),
+            target: [db.syncDevices.deviceId],
+          ),
+        );
   }
 
   /// 更新设备 IP。

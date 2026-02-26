@@ -74,90 +74,97 @@ void main() {
     expect(logs.where((e) => e.entityType == 'learning_item').length, 3);
   });
 
-  test('LearningTemplateRepositoryImpl：create/update/updateSortOrders/delete 会写入同步日志', () async {
-    final repo = LearningTemplateRepositoryImpl(
-      LearningTemplateDao(db),
-      syncLogWriter: writer,
-    );
+  test(
+    'LearningTemplateRepositoryImpl：create/update/updateSortOrders/delete 会写入同步日志',
+    () async {
+      final repo = LearningTemplateRepositoryImpl(
+        LearningTemplateDao(db),
+        syncLogWriter: writer,
+      );
 
-    final t1 = await repo.create(
-      LearningTemplateEntity(
-        id: null,
-        name: 'T1',
-        titlePattern: '{date} - T1',
-        notePattern: null,
-        tags: const ['x'],
-        sortOrder: 1,
-        createdAt: DateTime(2026, 2, 26),
-        updatedAt: null,
-      ),
-    );
-    final t2 = await repo.create(
-      LearningTemplateEntity(
-        id: null,
-        name: 'T2',
-        titlePattern: '{date} - T2',
-        notePattern: 'note',
-        tags: const [],
-        sortOrder: 2,
-        createdAt: DateTime(2026, 2, 26),
-        updatedAt: null,
-      ),
-    );
+      final t1 = await repo.create(
+        LearningTemplateEntity(
+          id: null,
+          name: 'T1',
+          titlePattern: '{date} - T1',
+          notePattern: null,
+          tags: const ['x'],
+          sortOrder: 1,
+          createdAt: DateTime(2026, 2, 26),
+          updatedAt: null,
+        ),
+      );
+      final t2 = await repo.create(
+        LearningTemplateEntity(
+          id: null,
+          name: 'T2',
+          titlePattern: '{date} - T2',
+          notePattern: 'note',
+          tags: const [],
+          sortOrder: 2,
+          createdAt: DateTime(2026, 2, 26),
+          updatedAt: null,
+        ),
+      );
 
-    await repo.update(t1.copyWith(name: 'T1b'));
-    await repo.updateSortOrders({t1.id!: 10, t2.id!: 20});
-    await repo.delete(t2.id!);
+      await repo.update(t1.copyWith(name: 'T1b'));
+      await repo.updateSortOrders({t1.id!: 10, t2.id!: 20});
+      await repo.delete(t2.id!);
 
-    final logs = await logDao.getLogsSince(0);
-    final templateLogs =
-        logs.where((e) => e.entityType == 'learning_template').toList();
-    // 2 次 create + 1 次 update + 2 次 sortOrder update + 1 次 delete
-    expect(templateLogs.length, 6);
-  });
+      final logs = await logDao.getLogsSince(0);
+      final templateLogs = logs
+          .where((e) => e.entityType == 'learning_template')
+          .toList();
+      // 2 次 create + 1 次 update + 2 次 sortOrder update + 1 次 delete
+      expect(templateLogs.length, 6);
+    },
+  );
 
-  test('LearningTopicRepositoryImpl：create/update/add/remove/delete 会写入同步日志', () async {
-    final itemRepo = LearningItemRepositoryImpl(
-      LearningItemDao(db),
-      syncLogWriter: writer,
-    );
-    final topicRepo = LearningTopicRepositoryImpl(
-      LearningTopicDao(db),
-      syncLogWriter: writer,
-    );
+  test(
+    'LearningTopicRepositoryImpl：create/update/add/remove/delete 会写入同步日志',
+    () async {
+      final itemRepo = LearningItemRepositoryImpl(
+        LearningItemDao(db),
+        syncLogWriter: writer,
+      );
+      final topicRepo = LearningTopicRepositoryImpl(
+        LearningTopicDao(db),
+        syncLogWriter: writer,
+      );
 
-    final item = await itemRepo.create(
-      LearningItemEntity(
-        id: null,
-        title: 'item',
-        note: null,
-        tags: const [],
-        learningDate: DateTime(2026, 2, 26),
-        createdAt: DateTime(2026, 2, 26),
-        updatedAt: null,
-      ),
-    );
+      final item = await itemRepo.create(
+        LearningItemEntity(
+          id: null,
+          title: 'item',
+          note: null,
+          tags: const [],
+          learningDate: DateTime(2026, 2, 26),
+          createdAt: DateTime(2026, 2, 26),
+          updatedAt: null,
+        ),
+      );
 
-    final topic = await topicRepo.create(
-      LearningTopicEntity(
-        id: null,
-        name: 'topic',
-        description: 'desc',
-        itemIds: const [],
-        createdAt: DateTime(2026, 2, 26),
-        updatedAt: null,
-      ),
-    );
+      final topic = await topicRepo.create(
+        LearningTopicEntity(
+          id: null,
+          name: 'topic',
+          description: 'desc',
+          itemIds: const [],
+          createdAt: DateTime(2026, 2, 26),
+          updatedAt: null,
+        ),
+      );
 
-    await topicRepo.update(topic.copyWith(name: 'topic2'));
-    await topicRepo.addItemToTopic(topic.id!, item.id!);
-    await topicRepo.removeItemFromTopic(topic.id!, item.id!);
-    await topicRepo.delete(topic.id!);
+      await topicRepo.update(topic.copyWith(name: 'topic2'));
+      await topicRepo.addItemToTopic(topic.id!, item.id!);
+      await topicRepo.removeItemFromTopic(topic.id!, item.id!);
+      await topicRepo.delete(topic.id!);
 
-    final logs = await logDao.getLogsSince(0);
-    expect(logs.any((e) => e.entityType == 'learning_topic'), isTrue);
-    expect(logs.any((e) => e.entityType == 'topic_item_relation'), isTrue);
-  });
+      final logs = await logDao.getLogsSince(0);
+      expect(logs.any((e) => e.entityType == 'learning_topic'), isTrue);
+      expect(logs.any((e) => e.entityType == 'topic_item_relation'), isTrue);
+    },
+  );
 
   test('ReviewTaskRepositoryImpl：create/complete/skip/批量 会写入同步日志', () async {
     final itemRepo = LearningItemRepositoryImpl(
@@ -239,8 +246,9 @@ void main() {
     expect((await repo.getThemeSettings()).mode, 'light');
 
     final logs = await logDao.getLogsSince(0);
-    final settingsLogs =
-        logs.where((e) => e.entityType == 'settings_bundle').toList();
+    final settingsLogs = logs
+        .where((e) => e.entityType == 'settings_bundle')
+        .toList();
     expect(settingsLogs.isNotEmpty, isTrue);
     expect(settingsLogs.last.operation, 'update');
     final decoded = jsonDecode(settingsLogs.last.data) as Map<String, dynamic>;

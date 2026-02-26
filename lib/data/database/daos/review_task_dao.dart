@@ -407,8 +407,9 @@ class ReviewTaskDao {
   /// 返回值：删除行数。
   /// 异常：数据库删除失败时可能抛出异常。
   Future<int> deleteMockReviewTasks() {
-    return (db.delete(db.reviewTasks)..where((t) => t.isMockData.equals(true)))
-        .go();
+    return (db.delete(
+      db.reviewTasks,
+    )..where((t) => t.isMockData.equals(true))).go();
   }
 
   Future<List<ReviewTaskWithItemModel>> _getTasksWithItem({

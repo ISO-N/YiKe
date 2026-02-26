@@ -50,4 +50,3 @@ final learningSearchResultsProvider =
           )
           .toList();
     });
-

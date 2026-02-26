@@ -146,4 +146,3 @@ void main() {
     expect(rows.single.timestampMs, 200);
   });
 }
-

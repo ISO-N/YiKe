@@ -424,13 +424,12 @@ class _SearchResultsCard extends StatelessWidget {
         ? AppColors.primaryLight.withValues(alpha: 0.22)
         : AppColors.primary.withValues(alpha: 0.18);
 
-    final highlightStyle = AppTypography.body(context).copyWith(
-      backgroundColor: highlightBg,
-      fontWeight: FontWeight.w800,
-    );
-    final normalTitle = AppTypography.body(context).copyWith(
-      fontWeight: FontWeight.w700,
-    );
+    final highlightStyle = AppTypography.body(
+      context,
+    ).copyWith(backgroundColor: highlightBg, fontWeight: FontWeight.w800);
+    final normalTitle = AppTypography.body(
+      context,
+    ).copyWith(fontWeight: FontWeight.w700);
     final normalNote = AppTypography.bodySecondary(context);
 
     return GlassCard(
@@ -443,10 +442,8 @@ class _SearchResultsCard extends StatelessWidget {
               child: CircularProgressIndicator(),
             ),
           ),
-          error: (e, _) => Text(
-            '搜索失败：$e',
-            style: const TextStyle(color: AppColors.error),
-          ),
+          error: (e, _) =>
+              Text('搜索失败：$e', style: const TextStyle(color: AppColors.error)),
           data: (list) {
             if (list.isEmpty) {
               return Text(

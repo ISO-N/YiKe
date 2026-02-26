@@ -375,7 +375,8 @@ class SettingsPage extends ConsumerWidget {
                           title: const Text('模拟数据生成器'),
                           subtitle: const Text('一键生成/清理 Mock 学习内容与复习任务'),
                           trailing: const Icon(Icons.chevron_right),
-                          onTap: () => context.push('/settings/debug/mock-data'),
+                          onTap: () =>
+                              context.push('/settings/debug/mock-data'),
                         ),
                       ],
                     ),

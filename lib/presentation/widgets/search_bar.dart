@@ -53,7 +53,9 @@ class _LearningSearchBarState extends State<LearningSearchBar> {
     super.didUpdateWidget(oldWidget);
     if (widget.query != _controller.text) {
       _controller.text = widget.query;
-      _controller.selection = TextSelection.collapsed(offset: _controller.text.length);
+      _controller.selection = TextSelection.collapsed(
+        offset: _controller.text.length,
+      );
     }
   }
 
@@ -138,7 +140,9 @@ TextSpan buildHighlightedTextSpan({
       break;
     }
     if (index > start) {
-      spans.add(TextSpan(text: text.substring(start, index), style: normalStyle));
+      spans.add(
+        TextSpan(text: text.substring(start, index), style: normalStyle),
+      );
     }
     spans.add(
       TextSpan(

@@ -83,13 +83,7 @@ class MockDataService {
   final ReviewTaskDao _reviewTaskDao;
   final Random _random;
 
-  static const _intervalByRound = <int, int>{
-    1: 1,
-    2: 2,
-    3: 4,
-    4: 7,
-    5: 15,
-  };
+  static const _intervalByRound = <int, int>{1: 1, 2: 2, 3: 4, 4: 7, 5: 15};
 
   /// 生成模拟数据（学习内容 + 复习任务）。
   ///
@@ -107,15 +101,19 @@ class MockDataService {
     final todayStart = DateTime(now.year, now.month, now.day);
 
     // 复习日期范围：最近 N 天（包含今天）。
-    final scheduledStart = todayStart.subtract(Duration(days: config.daysRange - 1));
+    final scheduledStart = todayStart.subtract(
+      Duration(days: config.daysRange - 1),
+    );
     final scheduledEndExclusive = todayStart.add(const Duration(days: 1));
 
     // 为了让 scheduledDate = learningDate + interval 仍能落在范围内，
     // learningDate 的随机范围需要向前扩展 maxInterval（15 天）。
-    final earliestLearningDay =
-        scheduledStart.subtract(const Duration(days: 15));
-    final latestLearningDay =
-        scheduledEndExclusive.subtract(const Duration(days: 1));
+    final earliestLearningDay = scheduledStart.subtract(
+      const Duration(days: 15),
+    );
+    final latestLearningDay = scheduledEndExclusive.subtract(
+      const Duration(days: 1),
+    );
 
     final items = <({int id, DateTime learningDay})>[];
 
@@ -147,9 +145,11 @@ class MockDataService {
       final companions = <ReviewTasksCompanion>[];
       final maxAttempts = config.taskCount * 25;
 
-      for (var attempt = 0;
-          attempt < maxAttempts && companions.length < config.taskCount;
-          attempt++) {
+      for (
+        var attempt = 0;
+        attempt < maxAttempts && companions.length < config.taskCount;
+        attempt++
+      ) {
         final item = items[_random.nextInt(items.length)];
         final round = _pickRoundByWeight();
         final intervalDays = _intervalByRound[round]!;
@@ -168,10 +168,7 @@ class MockDataService {
         }
 
         final scheduledAt = _withRandomTime(scheduledDay);
-        final status = _pickStatus(
-          scheduledAt: scheduledAt,
-          now: now,
-        );
+        final status = _pickStatus(scheduledAt: scheduledAt, now: now);
 
         final (completedAt, skippedAt) = _statusTimestamps(
           status: status,
@@ -203,8 +200,10 @@ class MockDataService {
         );
         final scheduledAt = _withRandomTime(scheduledDay);
         final status = _pickStatus(scheduledAt: scheduledAt, now: now);
-        final (completedAt, skippedAt) =
-            _statusTimestamps(status: status, scheduledAt: scheduledAt);
+        final (completedAt, skippedAt) = _statusTimestamps(
+          status: status,
+          scheduledAt: scheduledAt,
+        );
 
         companions.add(
           ReviewTasksCompanion.insert(
@@ -328,9 +327,16 @@ class MockDataService {
     }
   }
 
-  DateTime _randomDay({required DateTime start, required DateTime endInclusive}) {
+  DateTime _randomDay({
+    required DateTime start,
+    required DateTime endInclusive,
+  }) {
     final startDay = DateTime(start.year, start.month, start.day);
-    final endDay = DateTime(endInclusive.year, endInclusive.month, endInclusive.day);
+    final endDay = DateTime(
+      endInclusive.year,
+      endInclusive.month,
+      endInclusive.day,
+    );
     final days = endDay.difference(startDay).inDays;
     final offset = days <= 0 ? 0 : _random.nextInt(days + 1);
     return startDay.add(Duration(days: offset));
@@ -347,7 +353,8 @@ class MockDataService {
     final raw = switch (template) {
       MockDataTemplate.englishWords => _englishWordTitle(index),
       MockDataTemplate.historyEvents => _historyEventTitle(index),
-      MockDataTemplate.custom => '${config.customPrefix.trim().isEmpty ? '自定义' : config.customPrefix.trim()} #${index + 1}',
+      MockDataTemplate.custom =>
+        '${config.customPrefix.trim().isEmpty ? '自定义' : config.customPrefix.trim()} #${index + 1}',
       MockDataTemplate.random => _englishWordTitle(index),
     };
     // ≤50 字：过长时截断（避免触发表约束）。
@@ -474,4 +481,3 @@ class MockDataService {
     return 'Mock 数据：用于调试与体验优化验证（生成于 ${now.toIso8601String()}，学习日 $y-$m-$d）。';
   }
 }
-
