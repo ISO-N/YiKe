@@ -64,6 +64,10 @@ dependencies:
   flutter_markdown: ^0.6.22
   markdown: ^7.2.2
 
+  # v3.0 新增：Windows 桌面端窗口管理（F11）
+  window_manager: ^0.4.2
+  tray_manager: ^0.2.3
+
   # 跳转系统设置（用于通知权限引导闭环）
   app_settings: ^5.2.0
 
@@ -112,6 +116,7 @@ flutter:
   # v3.0：学习指南 Markdown 资源（单一事实源来自 docs/prd/忆刻学习指南.md）。
   assets:
     - assets/markdown/
+    - assets/icons/
 
   # To add assets to your application, add an assets section, like this:
   # assets:
