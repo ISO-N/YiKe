@@ -60,6 +60,10 @@ dependencies:
   # 工具库
   intl: ^0.19.0
 
+  # v3.0 新增：学习指南 Markdown 渲染（F10）
+  flutter_markdown: ^0.6.22
+  markdown: ^7.2.2
+
   # 跳转系统设置（用于通知权限引导闭环）
   app_settings: ^5.2.0
 
@@ -104,6 +108,10 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+
+  # v3.0：学习指南 Markdown 资源（单一事实源来自 docs/prd/忆刻学习指南.md）。
+  assets:
+    - assets/markdown/
 
   # To add assets to your application, add an assets section, like this:
   # assets:

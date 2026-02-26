@@ -9,6 +9,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../presentation/pages/home/home_page.dart';
 import '../../presentation/pages/calendar/calendar_page.dart';
+import '../../presentation/pages/help/help_page.dart';
 import '../../presentation/pages/input/input_page.dart';
 import '../../presentation/pages/input/import_preview_page.dart';
 import '../../presentation/pages/input/templates_page.dart';
@@ -43,6 +44,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             path: '/statistics',
             pageBuilder: (context, state) =>
                 const NoTransitionPage(child: StatisticsPage()),
+          ),
+          GoRoute(
+            path: '/help',
+            pageBuilder: (context, state) =>
+                const NoTransitionPage(child: HelpPage()),
           ),
           GoRoute(
             path: '/settings',
