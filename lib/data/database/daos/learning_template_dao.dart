@@ -41,7 +41,9 @@ class LearningTemplateDao {
   /// 返回值：删除行数。
   /// 异常：数据库删除失败时可能抛出异常。
   Future<int> deleteTemplate(int id) {
-    return (db.delete(db.learningTemplates)..where((t) => t.id.equals(id))).go();
+    return (db.delete(
+      db.learningTemplates,
+    )..where((t) => t.id.equals(id))).go();
   }
 
   /// 根据 ID 获取模板。
@@ -53,11 +55,10 @@ class LearningTemplateDao {
 
   /// 获取全部模板（按 sortOrder、createdAt 排序）。
   Future<List<LearningTemplate>> getAll() {
-    return (db.select(db.learningTemplates)
-          ..orderBy([
-            (t) => OrderingTerm.asc(t.sortOrder),
-            (t) => OrderingTerm.desc(t.createdAt),
-          ]))
+    return (db.select(db.learningTemplates)..orderBy([
+          (t) => OrderingTerm.asc(t.sortOrder),
+          (t) => OrderingTerm.desc(t.createdAt),
+        ]))
         .get();
   }
 
@@ -83,16 +84,15 @@ class LearningTemplateDao {
   Future<void> updateSortOrders(Map<int, int> idToOrder) async {
     await db.transaction(() async {
       for (final entry in idToOrder.entries) {
-        await (db.update(db.learningTemplates)
-              ..where((t) => t.id.equals(entry.key)))
-            .write(
-              LearningTemplatesCompanion(
-                sortOrder: Value(entry.value),
-                updatedAt: Value(DateTime.now()),
-              ),
-            );
+        await (db.update(
+          db.learningTemplates,
+        )..where((t) => t.id.equals(entry.key))).write(
+          LearningTemplatesCompanion(
+            sortOrder: Value(entry.value),
+            updatedAt: Value(DateTime.now()),
+          ),
+        );
       }
     });
   }
 }
-

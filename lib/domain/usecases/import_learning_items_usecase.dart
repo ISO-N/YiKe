@@ -64,7 +64,10 @@ class ImportLearningItemsUseCase {
       }
     }
 
-    return ImportResult(successCount: success, failedCount: failed, errors: errors);
+    return ImportResult(
+      successCount: success,
+      failedCount: failed,
+      errors: errors,
+    );
   }
 }
-

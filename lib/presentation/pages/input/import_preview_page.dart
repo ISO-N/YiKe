@@ -72,8 +72,9 @@ class _ImportPreviewPageState extends ConsumerState<ImportPreviewPage> {
       setState(() {
         _loading = false;
         _filePath = path;
-        _items =
-            parsed.map((e) => _PreviewItem(item: e, selected: e.isValid)).toList();
+        _items = parsed
+            .map((e) => _PreviewItem(item: e, selected: e.isValid))
+            .toList();
       });
     } catch (e) {
       setState(() {
@@ -87,7 +88,9 @@ class _ImportPreviewPageState extends ConsumerState<ImportPreviewPage> {
     final current = _items[index];
     final titleController = TextEditingController(text: current.item.title);
     final noteController = TextEditingController(text: current.item.note ?? '');
-    final tagsController = TextEditingController(text: current.item.tags.join(', '));
+    final tagsController = TextEditingController(
+      text: current.item.tags.join(', '),
+    );
 
     final ok = await showDialog<bool>(
       context: context,
@@ -112,9 +115,7 @@ class _ImportPreviewPageState extends ConsumerState<ImportPreviewPage> {
                 const SizedBox(height: AppSpacing.md),
                 TextField(
                   controller: tagsController,
-                  decoration: const InputDecoration(
-                    labelText: '标签（选填，用逗号分隔）',
-                  ),
+                  decoration: const InputDecoration(labelText: '标签（选填，用逗号分隔）'),
                 ),
               ],
             ),
@@ -164,11 +165,14 @@ class _ImportPreviewPageState extends ConsumerState<ImportPreviewPage> {
   }
 
   Future<void> _confirmImport() async {
-    final selected = _items.where((e) => e.selected).map((e) => e.item).toList();
+    final selected = _items
+        .where((e) => e.selected)
+        .map((e) => e.item)
+        .toList();
     if (selected.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('请至少选择一条有效内容')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('请至少选择一条有效内容')));
       return;
     }
 
@@ -296,9 +300,9 @@ class _ImportPreviewPageState extends ConsumerState<ImportPreviewPage> {
                         const SizedBox(height: AppSpacing.sm),
                         Text(
                           _error!,
-                          style: AppTypography.bodySecondary(context).copyWith(
-                            color: AppColors.error,
-                          ),
+                          style: AppTypography.bodySecondary(
+                            context,
+                          ).copyWith(color: AppColors.error),
                         ),
                       ],
                       const SizedBox(height: AppSpacing.sm),
@@ -315,96 +319,94 @@ class _ImportPreviewPageState extends ConsumerState<ImportPreviewPage> {
                 child: _loading
                     ? const Center(child: CircularProgressIndicator())
                     : _items.isEmpty
-                        ? const _EmptyHint()
-                        : ListView.separated(
-                            itemCount: _items.length,
-                            separatorBuilder: (context, index) =>
-                                const SizedBox(height: AppSpacing.md),
-                            itemBuilder: (context, index) {
-                              final it = _items[index];
-                              final hasError = it.item.errorMessage != null;
-                              final isDark =
-                                  Theme.of(context).brightness == Brightness.dark;
-                              final normalBorderColor = isDark
-                                  ? AppColors.darkGlassBorder
-                                  : AppColors.glassBorder;
-                              final borderColor = hasError
-                                  ? AppColors.error
-                                  : normalBorderColor;
-                              return GlassCard(
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    border: Border.all(color: borderColor),
-                                    borderRadius: BorderRadius.circular(16),
-                                  ),
-                                  child: ListTile(
-                                    leading: Checkbox(
-                                      value: it.selected,
-                                      onChanged: hasError
-                                          ? null
-                                          : (v) => setState(
-                                                () => _items = [
-                                                  ..._items.take(index),
-                                                  it.copyWith(
-                                                    selected: v ?? false,
-                                                  ),
-                                                  ..._items.skip(index + 1),
-                                                ],
-                                              ),
-                                    ),
-                                    title: Text(
-                                      it.item.title.trim().isEmpty
-                                          ? '（无标题）'
-                                          : it.item.title,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                    subtitle: hasError
-                                        ? Text(
-                                            it.item.errorMessage!,
-                                            style: const TextStyle(
-                                              color: AppColors.error,
-                                            ),
-                                          )
-                                        : (it.item.note == null ||
-                                              it.item.note!.trim().isEmpty)
-                                            ? Text(
-                                                '无备注',
-                                                style: AppTypography.bodySecondary(
-                                                  context,
-                                                ),
-                                              )
-                                            : Text(
-                                                it.item.note!,
-                                                maxLines: 2,
-                                                overflow: TextOverflow.ellipsis,
-                                              ),
-                                    trailing: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        IconButton(
-                                          tooltip: '编辑',
-                                          onPressed: () => _editItem(index),
-                                          icon: const Icon(Icons.edit),
+                    ? const _EmptyHint()
+                    : ListView.separated(
+                        itemCount: _items.length,
+                        separatorBuilder: (context, index) =>
+                            const SizedBox(height: AppSpacing.md),
+                        itemBuilder: (context, index) {
+                          final it = _items[index];
+                          final hasError = it.item.errorMessage != null;
+                          final isDark =
+                              Theme.of(context).brightness == Brightness.dark;
+                          final normalBorderColor = isDark
+                              ? AppColors.darkGlassBorder
+                              : AppColors.glassBorder;
+                          final borderColor = hasError
+                              ? AppColors.error
+                              : normalBorderColor;
+                          return GlassCard(
+                            child: Container(
+                              decoration: BoxDecoration(
+                                border: Border.all(color: borderColor),
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              child: ListTile(
+                                leading: Checkbox(
+                                  value: it.selected,
+                                  onChanged: hasError
+                                      ? null
+                                      : (v) => setState(
+                                          () => _items = [
+                                            ..._items.take(index),
+                                            it.copyWith(selected: v ?? false),
+                                            ..._items.skip(index + 1),
+                                          ],
                                         ),
-                                        IconButton(
-                                          tooltip: '删除',
-                                          onPressed: () => setState(() {
-                                            _items = [
-                                              ..._items.take(index),
-                                              ..._items.skip(index + 1),
-                                            ];
-                                          }),
-                                          icon: const Icon(Icons.delete),
-                                        ),
-                                      ],
-                                    ),
-                                    onTap: () => _editItem(index),
-                                  ),
                                 ),
-                              );
-                            },
-                          ),
+                                title: Text(
+                                  it.item.title.trim().isEmpty
+                                      ? '（无标题）'
+                                      : it.item.title,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                subtitle: hasError
+                                    ? Text(
+                                        it.item.errorMessage!,
+                                        style: const TextStyle(
+                                          color: AppColors.error,
+                                        ),
+                                      )
+                                    : (it.item.note == null ||
+                                          it.item.note!.trim().isEmpty)
+                                    ? Text(
+                                        '无备注',
+                                        style: AppTypography.bodySecondary(
+                                          context,
+                                        ),
+                                      )
+                                    : Text(
+                                        it.item.note!,
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                trailing: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    IconButton(
+                                      tooltip: '编辑',
+                                      onPressed: () => _editItem(index),
+                                      icon: const Icon(Icons.edit),
+                                    ),
+                                    IconButton(
+                                      tooltip: '删除',
+                                      onPressed: () => setState(() {
+                                        _items = [
+                                          ..._items.take(index),
+                                          ..._items.skip(index + 1),
+                                        ];
+                                      }),
+                                      icon: const Icon(Icons.delete),
+                                    ),
+                                  ],
+                                ),
+                                onTap: () => _editItem(index),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
               ),
             ],
           ),

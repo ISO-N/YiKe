@@ -244,7 +244,9 @@ class _TagPieChart extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final secondaryText = isDark ? AppColors.darkTextSecondary : AppColors.textSecondary;
+    final secondaryText = isDark
+        ? AppColors.darkTextSecondary
+        : AppColors.textSecondary;
 
     final entries =
         distribution.entries
@@ -305,8 +307,9 @@ class _PieWithLegendState extends State<_PieWithLegend> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final tooltipBackground = isDark ? const Color(0xFF1E293B) : Colors.white;
-    final tooltipTextColor =
-        isDark ? AppColors.darkTextPrimary : AppColors.textPrimary;
+    final tooltipTextColor = isDark
+        ? AppColors.darkTextPrimary
+        : AppColors.textPrimary;
 
     final entries = widget.entries;
     final total = entries.fold<int>(0, (sum, e) => sum + e.value);
@@ -326,7 +329,8 @@ class _PieWithLegendState extends State<_PieWithLegend> {
           showTitle: false,
           badgeWidget: isTouched
               ? _PieTooltip(
-                  text: '${entries[i].key} · ${entries[i].value}（${percent.toStringAsFixed(1)}%）',
+                  text:
+                      '${entries[i].key} · ${entries[i].value}（${percent.toStringAsFixed(1)}%）',
                   backgroundColor: tooltipBackground,
                   textColor: tooltipTextColor,
                 )

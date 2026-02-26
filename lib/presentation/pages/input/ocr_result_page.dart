@@ -95,7 +95,10 @@ class _OcrResultPageState extends ConsumerState<OcrResultPage> {
         .split(RegExp(r'\r?\n'))
         .map((e) => e.trimRight())
         .toList();
-    final first = lines.firstWhere((e) => e.trim().isNotEmpty, orElse: () => '');
+    final first = lines.firstWhere(
+      (e) => e.trim().isNotEmpty,
+      orElse: () => '',
+    );
     final idx = lines.indexOf(first);
     final note = (idx < 0 || idx + 1 >= lines.length)
         ? ''
@@ -125,9 +128,9 @@ class _OcrResultPageState extends ConsumerState<OcrResultPage> {
 
   Future<void> _confirmAdd() async {
     if (_drafts.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('没有可添加的内容')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('没有可添加的内容')));
       return;
     }
 
@@ -180,99 +183,99 @@ class _OcrResultPageState extends ConsumerState<OcrResultPage> {
           child: _loading
               ? const Center(child: CircularProgressIndicator())
               : (_error != null)
-                  ? GlassCard(
+              ? GlassCard(
+                  child: Padding(
+                    padding: const EdgeInsets.all(AppSpacing.lg),
+                    child: Text(
+                      '识别失败：$_error',
+                      style: const TextStyle(color: AppColors.error),
+                    ),
+                  ),
+                )
+              : ListView.separated(
+                  itemCount: _drafts.length,
+                  separatorBuilder: (context, index) =>
+                      const SizedBox(height: AppSpacing.lg),
+                  itemBuilder: (context, index) {
+                    final d = _drafts[index];
+                    return GlassCard(
                       child: Padding(
                         padding: const EdgeInsets.all(AppSpacing.lg),
-                        child: Text(
-                          '识别失败：$_error',
-                          style: const TextStyle(color: AppColors.error),
-                        ),
-                      ),
-                    )
-                  : ListView.separated(
-                      itemCount: _drafts.length,
-                      separatorBuilder: (context, index) =>
-                          const SizedBox(height: AppSpacing.lg),
-                      itemBuilder: (context, index) {
-                        final d = _drafts[index];
-                        return GlassCard(
-                          child: Padding(
-                            padding: const EdgeInsets.all(AppSpacing.lg),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
                               children: [
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: Text(
-                                        multi ? '图片 ${index + 1}' : '图片预览',
-                                        style: AppTypography.h2(context),
-                                      ),
-                                    ),
-                                    IconButton(
-                                      tooltip: '移除',
-                                      onPressed: _drafts.length <= 1
-                                          ? null
-                                          : () => _removeAt(index),
-                                      icon: const Icon(Icons.delete_outline),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: AppSpacing.sm),
-                                ClipRRect(
-                                  borderRadius: BorderRadius.circular(12),
-                                  child: AspectRatio(
-                                    aspectRatio: 16 / 9,
-                                    child: Image.file(
-                                      File(d.imagePath),
-                                      fit: BoxFit.cover,
-                                    ),
+                                Expanded(
+                                  child: Text(
+                                    multi ? '图片 ${index + 1}' : '图片预览',
+                                    style: AppTypography.h2(context),
                                   ),
                                 ),
-                                const SizedBox(height: AppSpacing.md),
-                                Text(
-                                  '识别结果（可编辑）',
-                                  style: AppTypography.bodySecondary(context),
-                                ),
-                                const SizedBox(height: AppSpacing.sm),
-                                TextField(
-                                  controller: d.title,
-                                  decoration: const InputDecoration(
-                                    labelText: '标题（必填）',
-                                  ),
-                                ),
-                                const SizedBox(height: AppSpacing.md),
-                                TextField(
-                                  controller: d.note,
-                                  minLines: 3,
-                                  maxLines: 8,
-                                  decoration: const InputDecoration(
-                                    labelText: '备注（选填）',
-                                  ),
-                                ),
-                                const SizedBox(height: AppSpacing.md),
-                                TextField(
-                                  controller: d.tags,
-                                  decoration: const InputDecoration(
-                                    labelText: '标签（选填，用逗号分隔）',
-                                  ),
-                                ),
-                                const SizedBox(height: AppSpacing.sm),
-                                Text(
-                                  '置信度：${(d.confidence * 100).toStringAsFixed(0)}%',
-                                  style: AppTypography.bodySecondary(context),
-                                ),
-                                const SizedBox(height: AppSpacing.sm),
-                                FilledButton(
-                                  onPressed: _confirmAdd,
-                                  child: Text(multi ? '全部添加到录入' : '+ 添加到录入'),
+                                IconButton(
+                                  tooltip: '移除',
+                                  onPressed: _drafts.length <= 1
+                                      ? null
+                                      : () => _removeAt(index),
+                                  icon: const Icon(Icons.delete_outline),
                                 ),
                               ],
                             ),
-                          ),
-                        );
-                      },
-                    ),
+                            const SizedBox(height: AppSpacing.sm),
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(12),
+                              child: AspectRatio(
+                                aspectRatio: 16 / 9,
+                                child: Image.file(
+                                  File(d.imagePath),
+                                  fit: BoxFit.cover,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: AppSpacing.md),
+                            Text(
+                              '识别结果（可编辑）',
+                              style: AppTypography.bodySecondary(context),
+                            ),
+                            const SizedBox(height: AppSpacing.sm),
+                            TextField(
+                              controller: d.title,
+                              decoration: const InputDecoration(
+                                labelText: '标题（必填）',
+                              ),
+                            ),
+                            const SizedBox(height: AppSpacing.md),
+                            TextField(
+                              controller: d.note,
+                              minLines: 3,
+                              maxLines: 8,
+                              decoration: const InputDecoration(
+                                labelText: '备注（选填）',
+                              ),
+                            ),
+                            const SizedBox(height: AppSpacing.md),
+                            TextField(
+                              controller: d.tags,
+                              decoration: const InputDecoration(
+                                labelText: '标签（选填，用逗号分隔）',
+                              ),
+                            ),
+                            const SizedBox(height: AppSpacing.sm),
+                            Text(
+                              '置信度：${(d.confidence * 100).toStringAsFixed(0)}%',
+                              style: AppTypography.bodySecondary(context),
+                            ),
+                            const SizedBox(height: AppSpacing.sm),
+                            FilledButton(
+                              onPressed: _confirmAdd,
+                              child: Text(multi ? '全部添加到录入' : '+ 添加到录入'),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
         ),
       ),
     );

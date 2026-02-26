@@ -17,10 +17,9 @@ class ThemeModeSheet extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final currentMode = ref.watch(themeModeProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final handleColor =
-        isDark
-            ? Colors.white.withValues(alpha: 0.22)
-            : Colors.black.withValues(alpha: 0.12);
+    final handleColor = isDark
+        ? Colors.white.withValues(alpha: 0.22)
+        : Colors.black.withValues(alpha: 0.12);
 
     return SafeArea(
       child: RadioGroup<AppThemeMode>(
@@ -49,9 +48,9 @@ class ThemeModeSheet extends ConsumerWidget {
               const SizedBox(height: 16),
               Text(
                 '选择主题模式',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: 8),
               ...AppThemeMode.values.map(

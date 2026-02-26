@@ -40,7 +40,9 @@ class _TemplateEditPageState extends ConsumerState<TemplateEditPage> {
     _nameController = TextEditingController(text: t?.name ?? '');
     _titleController = TextEditingController(text: t?.titlePattern ?? '');
     _noteController = TextEditingController(text: t?.notePattern ?? '');
-    _tagsController = TextEditingController(text: (t?.tags ?? const []).join(', '));
+    _tagsController = TextEditingController(
+      text: (t?.tags ?? const []).join(', '),
+    );
   }
 
   @override
@@ -106,7 +108,8 @@ class _TemplateEditPageState extends ConsumerState<TemplateEditPage> {
                 child: const Text('重命名'),
               ),
               FilledButton(
-                onPressed: () => Navigator.of(context).pop(_DupAction.overwrite),
+                onPressed: () =>
+                    Navigator.of(context).pop(_DupAction.overwrite),
                 child: const Text('覆盖'),
               ),
             ],
@@ -124,15 +127,15 @@ class _TemplateEditPageState extends ConsumerState<TemplateEditPage> {
             if (mounted) Navigator.of(context).pop();
           } catch (e2) {
             if (!mounted) return;
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('覆盖失败：$e2')),
-            );
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text('覆盖失败：$e2')));
           }
         }
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('保存失败：$e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('保存失败：$e')));
       }
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -145,7 +148,9 @@ class _TemplateEditPageState extends ConsumerState<TemplateEditPage> {
     final preview = useCase.applyTemplate(
       LearningTemplateEntity(
         id: widget.template?.id,
-        name: _nameController.text.trim().isEmpty ? '预览' : _nameController.text.trim(),
+        name: _nameController.text.trim().isEmpty
+            ? '预览'
+            : _nameController.text.trim(),
         titlePattern: _titleController.text,
         notePattern: _noteController.text,
         tags: _parseTags(_tagsController.text),
@@ -229,7 +234,9 @@ class _TemplateEditPageState extends ConsumerState<TemplateEditPage> {
                 controller: _noteController,
                 minLines: 2,
                 maxLines: 6,
-                decoration: const InputDecoration(hintText: '可选，例如：今日复习第 {weekday}'),
+                decoration: const InputDecoration(
+                  hintText: '可选，例如：今日复习第 {weekday}',
+                ),
               ),
               const SizedBox(height: AppSpacing.lg),
               Text('默认标签', style: AppTypography.bodySecondary(context)),

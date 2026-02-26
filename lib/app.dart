@@ -24,11 +24,13 @@ class YiKeApp extends ConsumerWidget {
     final themeMode = ref.watch(themeModeProvider);
 
     // 关键逻辑：尊重系统“减少动态效果”设置；若系统要求关闭动画则禁用主题切换动画。
-    final features = WidgetsBinding.instance.platformDispatcher.accessibilityFeatures;
+    final features =
+        WidgetsBinding.instance.platformDispatcher.accessibilityFeatures;
     final disableAnimations =
         features.disableAnimations || features.accessibleNavigation;
-    final themeAnimationDuration =
-        disableAnimations ? Duration.zero : const Duration(milliseconds: 300);
+    final themeAnimationDuration = disableAnimations
+        ? Duration.zero
+        : const Duration(milliseconds: 300);
     return MaterialApp.router(
       title: '忆刻',
       theme: AppTheme.light(),

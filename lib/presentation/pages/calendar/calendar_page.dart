@@ -54,9 +54,9 @@ class CalendarPage extends ConsumerWidget {
               GlassCard(
                 child: Padding(
                   padding: const EdgeInsets.all(AppSpacing.lg),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                       Text('日历视图', style: AppTypography.h2(context)),
                       const SizedBox(height: AppSpacing.sm),
                       Text(
@@ -133,10 +133,7 @@ class _LegendCard extends StatelessWidget {
               children: [
                 const _LegendItem(color: AppColors.warning, text: '有逾期任务'),
                 _LegendItem(color: primary, text: '有待复习任务'),
-                const _LegendItem(
-                  color: AppColors.success,
-                  text: '已处理（完成/跳过）',
-                ),
+                const _LegendItem(color: AppColors.success, text: '已处理（完成/跳过）'),
               ],
             ),
           ],

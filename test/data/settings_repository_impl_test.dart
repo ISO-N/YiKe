@@ -106,10 +106,16 @@ void main() {
     await dao.upsertValue(SettingsRepositoryImpl.keyReminderTime, '123');
 
     // notifications_enabled：存储为字符串，_getBool 应返回 null 并回退默认值。
-    await dao.upsertValue(SettingsRepositoryImpl.keyNotificationsEnabled, '"true"');
+    await dao.upsertValue(
+      SettingsRepositoryImpl.keyNotificationsEnabled,
+      '"true"',
+    );
 
     final out = await repo.getSettings();
     expect(out.reminderTime, '123');
-    expect(out.notificationsEnabled, AppSettingsEntity.defaults.notificationsEnabled);
+    expect(
+      out.notificationsEnabled,
+      AppSettingsEntity.defaults.notificationsEnabled,
+    );
   });
 }

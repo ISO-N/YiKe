@@ -104,10 +104,7 @@ class AppTheme {
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
-          side: const BorderSide(
-            color: AppColors.darkGlassBorder,
-            width: 1,
-          ),
+          side: const BorderSide(color: AppColors.darkGlassBorder, width: 1),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
@@ -182,9 +179,7 @@ class AppTheme {
       /// 对话框主题。
       dialogTheme: DialogThemeData(
         backgroundColor: AppColors.darkSurface,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       ),
       snackBarTheme: SnackBarThemeData(
         backgroundColor: AppColors.darkSurface,

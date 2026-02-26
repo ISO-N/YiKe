@@ -26,4 +26,3 @@ void main() {
     expect(next.itemIds, [3]);
   });
 }
-

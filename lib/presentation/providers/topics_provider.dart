@@ -22,10 +22,8 @@ class TopicsState {
   final List<LearningTopicOverviewEntity> overviews;
   final String? errorMessage;
 
-  factory TopicsState.initial() => const TopicsState(
-    isLoading: true,
-    overviews: [],
-  );
+  factory TopicsState.initial() =>
+      const TopicsState(isLoading: true, overviews: []);
 
   TopicsState copyWith({
     bool? isLoading,
@@ -107,11 +105,11 @@ class TopicsNotifier extends StateNotifier<TopicsState> {
 }
 
 /// 主题 Provider。
-final topicsProvider =
-    StateNotifierProvider<TopicsNotifier, TopicsState>((ref) {
-      final useCase = ref.read(manageTopicUseCaseProvider);
-      final notifier = TopicsNotifier(useCase);
-      notifier.load();
-      return notifier;
-    });
-
+final topicsProvider = StateNotifierProvider<TopicsNotifier, TopicsState>((
+  ref,
+) {
+  final useCase = ref.read(manageTopicUseCaseProvider);
+  final notifier = TopicsNotifier(useCase);
+  notifier.load();
+  return notifier;
+});

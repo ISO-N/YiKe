@@ -27,4 +27,3 @@ abstract class OcrService {
   /// 异常：识别失败时可能抛出异常。
   Future<OcrResult> recognizeText(String imagePath);
 }
-

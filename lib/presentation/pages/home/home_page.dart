@@ -397,17 +397,13 @@ class _DateHeader extends StatelessWidget {
     final text = '${YikeDateUtils.formatYmd(now)}  $weekday';
     return Row(
       children: [
-        Icon(
-          Icons.calendar_today_outlined,
-          size: 18,
-          color: secondaryText,
-        ),
+        Icon(Icons.calendar_today_outlined, size: 18, color: secondaryText),
         const SizedBox(width: AppSpacing.sm),
         Text(
           text,
-          style: AppTypography.body(context).copyWith(
-            fontWeight: FontWeight.w500,
-          ),
+          style: AppTypography.body(
+            context,
+          ).copyWith(fontWeight: FontWeight.w500),
         ),
       ],
     );
@@ -506,7 +502,9 @@ class _TaskCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final normalBorderColor = isDark ? AppColors.darkGlassBorder : AppColors.glassBorder;
+    final normalBorderColor = isDark
+        ? AppColors.darkGlassBorder
+        : AppColors.glassBorder;
     final secondaryText =
         Theme.of(context).textTheme.bodySmall?.color ?? AppColors.textSecondary;
     final primary = isDark ? AppColors.primaryLight : AppColors.primary;
@@ -536,9 +534,7 @@ class _TaskCard extends StatelessWidget {
               else
                 Icon(
                   isOverdue ? Icons.error_outline : Icons.circle_outlined,
-                  color: isOverdue
-                      ? AppColors.warning
-                      : secondaryText,
+                  color: isOverdue ? AppColors.warning : secondaryText,
                   size: 22,
                 ),
               const SizedBox(width: AppSpacing.md),
@@ -548,9 +544,9 @@ class _TaskCard extends StatelessWidget {
                   children: [
                     Text(
                       '$title（第$reviewRound次）',
-                      style: AppTypography.body(context).copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
+                      style: AppTypography.body(
+                        context,
+                      ).copyWith(fontWeight: FontWeight.w700),
                     ),
                     const SizedBox(height: AppSpacing.xs),
                     Text(dueText, style: AppTypography.bodySecondary(context)),
@@ -576,11 +572,9 @@ class _TaskCard extends StatelessWidget {
                                 ),
                                 child: Text(
                                   t,
-                                  style: AppTypography
-                                      .bodySecondary(context)
-                                      .copyWith(
-                                    fontSize: 12,
-                                  ),
+                                  style: AppTypography.bodySecondary(
+                                    context,
+                                  ).copyWith(fontSize: 12),
                                 ),
                               ),
                             )

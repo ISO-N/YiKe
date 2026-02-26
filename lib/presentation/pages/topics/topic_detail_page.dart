@@ -62,7 +62,9 @@ class _TopicDetailPageState extends ConsumerState<TopicDetailPage> {
       final allTasks = await taskRepo.getAllTasks();
 
       final itemIds = topic.itemIds.toSet();
-      final items = allItems.where((e) => e.id != null && itemIds.contains(e.id)).toList();
+      final items = allItems
+          .where((e) => e.id != null && itemIds.contains(e.id))
+          .toList();
 
       final taskMap = <int, List<ReviewTaskEntity>>{};
       for (final t in allTasks) {
@@ -71,13 +73,18 @@ class _TopicDetailPageState extends ConsumerState<TopicDetailPage> {
 
       final views = items.map((it) {
         final tasks = (taskMap[it.id!] ?? const <ReviewTaskEntity>[]);
-        final total = tasks.where((e) => e.status != ReviewTaskStatus.skipped).length;
-        final done = tasks.where((e) => e.status == ReviewTaskStatus.done).length;
-        final pendingRounds = tasks
-            .where((e) => e.status == ReviewTaskStatus.pending)
-            .map((e) => e.reviewRound)
-            .toList()
-          ..sort();
+        final total = tasks
+            .where((e) => e.status != ReviewTaskStatus.skipped)
+            .length;
+        final done = tasks
+            .where((e) => e.status == ReviewTaskStatus.done)
+            .length;
+        final pendingRounds =
+            tasks
+                .where((e) => e.status == ReviewTaskStatus.pending)
+                .map((e) => e.reviewRound)
+                .toList()
+              ..sort();
         final nextRound = pendingRounds.isEmpty ? null : pendingRounds.first;
         return _TopicItemView(
           item: it,
@@ -85,8 +92,7 @@ class _TopicDetailPageState extends ConsumerState<TopicDetailPage> {
           done: done,
           nextRound: nextRound,
         );
-      }).toList()
-        ..sort((a, b) => a.item.createdAt.compareTo(b.item.createdAt));
+      }).toList()..sort((a, b) => a.item.createdAt.compareTo(b.item.createdAt));
 
       setState(() {
         _topic = topic;
@@ -109,7 +115,9 @@ class _TopicDetailPageState extends ConsumerState<TopicDetailPage> {
     final allItems = await itemRepo.getAll();
     if (!mounted) return;
     final existing = topic.itemIds.toSet();
-    final candidates = allItems.where((e) => e.id != null && !existing.contains(e.id)).toList();
+    final candidates = allItems
+        .where((e) => e.id != null && !existing.contains(e.id))
+        .toList();
 
     final selected = <int>{};
     final searchController = TextEditingController();
@@ -156,7 +164,11 @@ class _TopicDetailPageState extends ConsumerState<TopicDetailPage> {
                                 selected.remove(id);
                               }
                             }),
-                            title: Text(it.title, maxLines: 1, overflow: TextOverflow.ellipsis),
+                            title: Text(
+                              it.title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           );
                         },
                       ),
@@ -170,7 +182,9 @@ class _TopicDetailPageState extends ConsumerState<TopicDetailPage> {
                   child: const Text('取消'),
                 ),
                 FilledButton(
-                  onPressed: selected.isEmpty ? null : () => Navigator.of(context).pop(true),
+                  onPressed: selected.isEmpty
+                      ? null
+                      : () => Navigator.of(context).pop(true),
                   child: const Text('添加'),
                 ),
               ],
@@ -193,9 +207,9 @@ class _TopicDetailPageState extends ConsumerState<TopicDetailPage> {
       await _load();
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('添加失败：$e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('添加失败：$e')));
     }
   }
 
@@ -229,9 +243,9 @@ class _TopicDetailPageState extends ConsumerState<TopicDetailPage> {
       await _load();
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('移除失败：$e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('移除失败：$e')));
     }
   }
 
@@ -239,8 +253,10 @@ class _TopicDetailPageState extends ConsumerState<TopicDetailPage> {
   Widget build(BuildContext context) {
     final topic = _topic;
     final overviews = ref.watch(topicsProvider).overviews;
-    final overview =
-        overviews.where((e) => e.topic.id == widget.topicId).toList().firstOrNull;
+    final overview = overviews
+        .where((e) => e.topic.id == widget.topicId)
+        .toList()
+        .firstOrNull;
 
     final completed = overview?.completedCount ?? 0;
     final total = overview?.totalCount ?? 0;
@@ -263,131 +279,129 @@ class _TopicDetailPageState extends ConsumerState<TopicDetailPage> {
           child: _loading
               ? const Center(child: CircularProgressIndicator())
               : (_error != null)
-                  ? GlassCard(
+              ? GlassCard(
+                  child: Padding(
+                    padding: const EdgeInsets.all(AppSpacing.lg),
+                    child: Text(
+                      '加载失败：$_error',
+                      style: const TextStyle(color: AppColors.error),
+                    ),
+                  ),
+                )
+              : Column(
+                  children: [
+                    GlassCard(
                       child: Padding(
                         padding: const EdgeInsets.all(AppSpacing.lg),
-                        child: Text(
-                          '加载失败：$_error',
-                          style: const TextStyle(color: AppColors.error),
-                        ),
-                      ),
-                    )
-                  : Column(
-                      children: [
-                        GlassCard(
-                          child: Padding(
-                            padding: const EdgeInsets.all(AppSpacing.lg),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  topic!.name,
-                                  style: AppTypography.h2(context),
-                                ),
-                                if ((topic.description ?? '').trim().isNotEmpty) ...[
-                                  const SizedBox(height: AppSpacing.sm),
-                                  Text(
-                                    topic.description!,
-                                    style: AppTypography.bodySecondary(context),
-                                  ),
-                                ],
-                                const SizedBox(height: AppSpacing.sm),
-                                Text(
-                                  '${topic.itemIds.length} 条内容   $completed/$total 完成',
-                                  style: AppTypography.bodySecondary(context),
-                                ),
-                                const SizedBox(height: AppSpacing.sm),
-                                ClipRRect(
-                                  borderRadius: BorderRadius.circular(8),
-                                  child: LinearProgressIndicator(
-                                    value: progress,
-                                    minHeight: 8,
-                                    backgroundColor:
-                                        Theme.of(context).brightness ==
-                                                Brightness.dark
-                                            ? AppColors.darkGlassBorder
-                                            : AppColors.glassBorder,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: AppSpacing.lg),
-                        Row(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Expanded(
-                              child: Text(
-                                '关联内容',
-                                style: AppTypography.h2(context),
+                            Text(topic!.name, style: AppTypography.h2(context)),
+                            if ((topic.description ?? '')
+                                .trim()
+                                .isNotEmpty) ...[
+                              const SizedBox(height: AppSpacing.sm),
+                              Text(
+                                topic.description!,
+                                style: AppTypography.bodySecondary(context),
                               ),
+                            ],
+                            const SizedBox(height: AppSpacing.sm),
+                            Text(
+                              '${topic.itemIds.length} 条内容   $completed/$total 完成',
+                              style: AppTypography.bodySecondary(context),
                             ),
-                            FilledButton(
-                              onPressed: _addRelations,
-                              child: const Text('+ 添加关联内容'),
+                            const SizedBox(height: AppSpacing.sm),
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: LinearProgressIndicator(
+                                value: progress,
+                                minHeight: 8,
+                                backgroundColor:
+                                    Theme.of(context).brightness ==
+                                        Brightness.dark
+                                    ? AppColors.darkGlassBorder
+                                    : AppColors.glassBorder,
+                              ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: AppSpacing.md),
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+                    Row(
+                      children: [
                         Expanded(
-                          child: _items.isEmpty
-                              ? Center(
-                                  child: Text(
-                                    '暂无内容，点击上方按钮添加',
-                                    style: AppTypography.bodySecondary(context),
-                                  ),
-                                )
-                              : ListView.separated(
-                                  itemCount: _items.length,
-                                  separatorBuilder: (context, index) =>
-                                      const SizedBox(height: AppSpacing.md),
-                                  itemBuilder: (context, index) {
-                                    final v = _items[index];
-                                    final done = v.done;
-                                    final total = v.total;
-                                    final checked = total > 0 && done >= total;
-                                    final subtitle = v.nextRound == null
-                                        ? '已完成'
-                                        : '待复习：第${v.nextRound}次';
-                                    return Dismissible(
-                                      key: ValueKey(v.item.id),
-                                      direction: DismissDirection.endToStart,
-                                      background: const SizedBox.shrink(),
-                                      secondaryBackground: Container(
-                                        alignment: Alignment.centerRight,
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: AppSpacing.lg,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: AppColors.error.withAlpha(30),
-                                          borderRadius: BorderRadius.circular(16),
-                                        ),
-                                        child: const Icon(
-                                          Icons.delete_outline,
-                                          color: AppColors.error,
-                                        ),
-                                      ),
-                                      confirmDismiss: (_) async {
-                                        await _removeRelation(v.item.id!);
-                                        return false;
-                                      },
-                                      child: GlassCard(
-                                        child: CheckboxListTile(
-                                          value: checked,
-                                          onChanged: null,
-                                          title: Text(v.item.title),
-                                          subtitle: Text(
-                                            '$subtitle  （$done/$total）',
-                                            style: AppTypography.bodySecondary(context),
-                                          ),
-                                        ),
-                                      ),
-                                    );
-                                  },
-                                ),
+                          child: Text('关联内容', style: AppTypography.h2(context)),
+                        ),
+                        FilledButton(
+                          onPressed: _addRelations,
+                          child: const Text('+ 添加关联内容'),
                         ),
                       ],
                     ),
+                    const SizedBox(height: AppSpacing.md),
+                    Expanded(
+                      child: _items.isEmpty
+                          ? Center(
+                              child: Text(
+                                '暂无内容，点击上方按钮添加',
+                                style: AppTypography.bodySecondary(context),
+                              ),
+                            )
+                          : ListView.separated(
+                              itemCount: _items.length,
+                              separatorBuilder: (context, index) =>
+                                  const SizedBox(height: AppSpacing.md),
+                              itemBuilder: (context, index) {
+                                final v = _items[index];
+                                final done = v.done;
+                                final total = v.total;
+                                final checked = total > 0 && done >= total;
+                                final subtitle = v.nextRound == null
+                                    ? '已完成'
+                                    : '待复习：第${v.nextRound}次';
+                                return Dismissible(
+                                  key: ValueKey(v.item.id),
+                                  direction: DismissDirection.endToStart,
+                                  background: const SizedBox.shrink(),
+                                  secondaryBackground: Container(
+                                    alignment: Alignment.centerRight,
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: AppSpacing.lg,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.error.withAlpha(30),
+                                      borderRadius: BorderRadius.circular(16),
+                                    ),
+                                    child: const Icon(
+                                      Icons.delete_outline,
+                                      color: AppColors.error,
+                                    ),
+                                  ),
+                                  confirmDismiss: (_) async {
+                                    await _removeRelation(v.item.id!);
+                                    return false;
+                                  },
+                                  child: GlassCard(
+                                    child: CheckboxListTile(
+                                      value: checked,
+                                      onChanged: null,
+                                      title: Text(v.item.title),
+                                      subtitle: Text(
+                                        '$subtitle  （$done/$total）',
+                                        style: AppTypography.bodySecondary(
+                                          context,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                    ),
+                  ],
+                ),
         ),
       ),
     );

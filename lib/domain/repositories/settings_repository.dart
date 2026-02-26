@@ -18,5 +18,7 @@ abstract class SettingsRepository {
   Future<List<ReviewIntervalConfigEntity>> getReviewIntervalConfigs();
 
   /// 保存复习间隔配置（整体覆盖）。
-  Future<void> saveReviewIntervalConfigs(List<ReviewIntervalConfigEntity> configs);
+  Future<void> saveReviewIntervalConfigs(
+    List<ReviewIntervalConfigEntity> configs,
+  );
 }

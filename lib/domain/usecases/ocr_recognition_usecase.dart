@@ -18,4 +18,3 @@ class OcrRecognitionUseCase {
     return _ocrService.recognizeText(imagePath);
   }
 }
-

@@ -28,4 +28,3 @@ abstract class LearningTemplateRepository {
   /// 批量更新排序字段。
   Future<void> updateSortOrders(Map<int, int> idToOrder);
 }
-

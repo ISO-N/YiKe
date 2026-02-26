@@ -33,4 +33,3 @@ class TopicItemRelations extends Table {
     {topicId, learningItemId},
   ];
 }
-

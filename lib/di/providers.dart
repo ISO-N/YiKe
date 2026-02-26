@@ -83,13 +83,17 @@ final learningItemRepositoryProvider = Provider<LearningItemRepository>((ref) {
   return LearningItemRepositoryImpl(ref.read(learningItemDaoProvider));
 });
 
-final learningTemplateRepositoryProvider = Provider<LearningTemplateRepository>((
+final learningTemplateRepositoryProvider = Provider<LearningTemplateRepository>(
+  (ref) {
+    return LearningTemplateRepositoryImpl(
+      ref.read(learningTemplateDaoProvider),
+    );
+  },
+);
+
+final learningTopicRepositoryProvider = Provider<LearningTopicRepository>((
   ref,
 ) {
-  return LearningTemplateRepositoryImpl(ref.read(learningTemplateDaoProvider));
-});
-
-final learningTopicRepositoryProvider = Provider<LearningTopicRepository>((ref) {
   return LearningTopicRepositoryImpl(ref.read(learningTopicDaoProvider));
 });
 
@@ -107,7 +111,9 @@ final settingsRepositoryProvider = Provider<SettingsRepository>((ref) {
 /// 主题设置仓储 Provider。
 ///
 /// 说明：使用与 SettingsRepository 相同的加密存储策略（SettingsCrypto）。
-final themeSettingsRepositoryProvider = Provider<ThemeSettingsRepository>((ref) {
+final themeSettingsRepositoryProvider = Provider<ThemeSettingsRepository>((
+  ref,
+) {
   return ThemeSettingsRepositoryImpl(
     dao: ref.read(settingsDaoProvider),
     secureStorageService: ref.read(secureStorageServiceProvider),
@@ -124,11 +130,13 @@ final createLearningItemUseCaseProvider = Provider<CreateLearningItemUseCase>((
   );
 });
 
-final importLearningItemsUseCaseProvider = Provider<ImportLearningItemsUseCase>((
-  ref,
-) {
-  return ImportLearningItemsUseCase(create: ref.read(createLearningItemUseCaseProvider));
-});
+final importLearningItemsUseCaseProvider = Provider<ImportLearningItemsUseCase>(
+  (ref) {
+    return ImportLearningItemsUseCase(
+      create: ref.read(createLearningItemUseCaseProvider),
+    );
+  },
+);
 
 final manageTemplateUseCaseProvider = Provider<ManageTemplateUseCase>((ref) {
   return ManageTemplateUseCase(
@@ -137,7 +145,9 @@ final manageTemplateUseCaseProvider = Provider<ManageTemplateUseCase>((ref) {
 });
 
 final manageTopicUseCaseProvider = Provider<ManageTopicUseCase>((ref) {
-  return ManageTopicUseCase(repository: ref.read(learningTopicRepositoryProvider));
+  return ManageTopicUseCase(
+    repository: ref.read(learningTopicRepositoryProvider),
+  );
 });
 
 final ocrRecognitionUseCaseProvider = Provider<OcrRecognitionUseCase>((ref) {

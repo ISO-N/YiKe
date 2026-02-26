@@ -24,4 +24,3 @@ class LearningTopicOverviewEntity {
   final int completedCount;
   final int totalCount;
 }
-

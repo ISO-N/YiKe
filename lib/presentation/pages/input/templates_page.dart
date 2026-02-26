@@ -89,56 +89,56 @@ class TemplatesPage extends ConsumerWidget {
                 child: state.isLoading
                     ? const Center(child: CircularProgressIndicator())
                     : state.templates.isEmpty
-                        ? const _EmptyHint()
-                        : GridView.builder(
-                            gridDelegate:
-                                const SliverGridDelegateWithFixedCrossAxisCount(
-                                  crossAxisCount: 2,
-                                  mainAxisSpacing: AppSpacing.md,
-                                  crossAxisSpacing: AppSpacing.md,
-                                  childAspectRatio: 1.05,
-                                ),
-                            itemCount: state.templates.length,
-                            itemBuilder: (context, index) {
-                              final t = state.templates[index];
-                              return _TemplateCard(
-                                name: t.name,
-                                preview: t.titlePattern,
-                                tagCount: t.tags.length,
-                                onEdit: () => openEdit(templateId: t.id),
-                                onDelete: () async {
-                                  final ok = await showDialog<bool>(
-                                    context: context,
-                                    builder: (context) => AlertDialog(
-                                      title: const Text('删除模板'),
-                                      content: Text('确定删除「${t.name}」吗？'),
-                                      actions: [
-                                        TextButton(
-                                          onPressed: () =>
-                                              Navigator.of(context).pop(false),
-                                          child: const Text('取消'),
-                                        ),
-                                        FilledButton(
-                                          onPressed: () =>
-                                              Navigator.of(context).pop(true),
-                                          child: const Text('删除'),
-                                        ),
-                                      ],
+                    ? const _EmptyHint()
+                    : GridView.builder(
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 2,
+                              mainAxisSpacing: AppSpacing.md,
+                              crossAxisSpacing: AppSpacing.md,
+                              childAspectRatio: 1.05,
+                            ),
+                        itemCount: state.templates.length,
+                        itemBuilder: (context, index) {
+                          final t = state.templates[index];
+                          return _TemplateCard(
+                            name: t.name,
+                            preview: t.titlePattern,
+                            tagCount: t.tags.length,
+                            onEdit: () => openEdit(templateId: t.id),
+                            onDelete: () async {
+                              final ok = await showDialog<bool>(
+                                context: context,
+                                builder: (context) => AlertDialog(
+                                  title: const Text('删除模板'),
+                                  content: Text('确定删除「${t.name}」吗？'),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () =>
+                                          Navigator.of(context).pop(false),
+                                      child: const Text('取消'),
                                     ),
-                                  );
-                                  if (ok != true) return;
-                                  try {
-                                    await notifier.delete(t.id!);
-                                  } catch (e) {
-                                    if (!context.mounted) return;
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(content: Text('删除失败：$e')),
-                                    );
-                                  }
-                                },
+                                    FilledButton(
+                                      onPressed: () =>
+                                          Navigator.of(context).pop(true),
+                                      child: const Text('删除'),
+                                    ),
+                                  ],
+                                ),
                               );
+                              if (ok != true) return;
+                              try {
+                                await notifier.delete(t.id!);
+                              } catch (e) {
+                                if (!context.mounted) return;
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text('删除失败：$e')),
+                                );
+                              }
                             },
-                          ),
+                          );
+                        },
+                      ),
               ),
             ],
           ),
@@ -226,4 +226,3 @@ class _EmptyHint extends StatelessWidget {
     );
   }
 }
-

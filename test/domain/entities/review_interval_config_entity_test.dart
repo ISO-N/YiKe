@@ -8,15 +8,18 @@ import 'package:yike/domain/entities/review_interval_config.dart';
 void main() {
   test('构造函数会校验 round 与 intervalDays 边界', () {
     expect(
-      () => ReviewIntervalConfigEntity(round: 0, intervalDays: 1, enabled: true),
+      () =>
+          ReviewIntervalConfigEntity(round: 0, intervalDays: 1, enabled: true),
       throwsArgumentError,
     );
     expect(
-      () => ReviewIntervalConfigEntity(round: 6, intervalDays: 1, enabled: true),
+      () =>
+          ReviewIntervalConfigEntity(round: 6, intervalDays: 1, enabled: true),
       throwsArgumentError,
     );
     expect(
-      () => ReviewIntervalConfigEntity(round: 1, intervalDays: 0, enabled: true),
+      () =>
+          ReviewIntervalConfigEntity(round: 1, intervalDays: 0, enabled: true),
       throwsArgumentError,
     );
 
@@ -42,4 +45,3 @@ void main() {
     expect(next.enabled, isFalse);
   });
 }
-

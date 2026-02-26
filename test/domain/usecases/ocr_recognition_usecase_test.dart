@@ -27,4 +27,3 @@ class _FakeOcrService implements OcrService {
     return const OcrResult(text: 'hello', confidence: 0.9);
   }
 }
-

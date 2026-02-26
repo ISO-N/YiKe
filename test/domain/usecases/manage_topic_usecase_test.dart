@@ -11,9 +11,16 @@ import 'package:yike/domain/usecases/manage_topic_usecase.dart';
 void main() {
   test('create/update: name 为空会抛 ArgumentError', () async {
     final usecase = ManageTopicUseCase(repository: _InMemoryTopicRepo());
-    expect(() => usecase.create(const TopicParams(name: ' ')), throwsArgumentError);
     expect(
-      () => usecase.update(1, const TopicParams(name: ' '), createdAt: DateTime(2026, 2, 26)),
+      () => usecase.create(const TopicParams(name: ' ')),
+      throwsArgumentError,
+    );
+    expect(
+      () => usecase.update(
+        1,
+        const TopicParams(name: ' '),
+        createdAt: DateTime(2026, 2, 26),
+      ),
       throwsArgumentError,
     );
   });
@@ -29,11 +36,19 @@ void main() {
     );
 
     // update 自己不算重复。
-    await usecase.update(a.id!, const TopicParams(name: 'A'), createdAt: a.createdAt);
+    await usecase.update(
+      a.id!,
+      const TopicParams(name: 'A'),
+      createdAt: a.createdAt,
+    );
 
     final b = await usecase.create(const TopicParams(name: 'B'));
     expect(
-      () => usecase.update(a.id!, const TopicParams(name: 'B'), createdAt: a.createdAt),
+      () => usecase.update(
+        a.id!,
+        const TopicParams(name: 'B'),
+        createdAt: a.createdAt,
+      ),
       throwsStateError,
     );
 
@@ -163,4 +178,3 @@ class _InMemoryTopicRepo implements LearningTopicRepository {
     );
   }
 }
-

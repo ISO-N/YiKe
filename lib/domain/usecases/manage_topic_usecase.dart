@@ -92,4 +92,3 @@ class ManageTopicUseCase {
   Future<void> removeItemFromTopic(int topicId, int learningItemId) =>
       _repository.removeItemFromTopic(topicId, learningItemId);
 }
-

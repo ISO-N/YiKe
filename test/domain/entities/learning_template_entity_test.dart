@@ -30,4 +30,3 @@ void main() {
     expect(next.updatedAt, DateTime(2026, 2, 26, 11));
   });
 }
-

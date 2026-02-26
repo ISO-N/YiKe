@@ -39,9 +39,9 @@ class _TemplateSortPageState extends ConsumerState<TemplateSortPage> {
       if (mounted) Navigator.of(context).pop();
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('保存排序失败：$e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('保存排序失败：$e')));
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -89,4 +89,3 @@ class _TemplateSortPageState extends ConsumerState<TemplateSortPage> {
     );
   }
 }
-

@@ -295,10 +295,7 @@ class _PreviewTile extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title,
-            style: AppTypography.bodySecondary(context),
-          ),
+          Text(title, style: AppTypography.bodySecondary(context)),
           const SizedBox(height: 6),
           Text(
             '$value',

@@ -120,7 +120,8 @@ class ManageTemplateUseCase {
     final y = date.year;
     final m = date.month;
     final d = date.day;
-    final dateText = '${y.toString().padLeft(4, '0')}-'
+    final dateText =
+        '${y.toString().padLeft(4, '0')}-'
         '${m.toString().padLeft(2, '0')}-'
         '${d.toString().padLeft(2, '0')}';
     final dayText = '$y-$m-$d';
@@ -134,7 +135,9 @@ class ManageTemplateUseCase {
     }
 
     final title = replace(template.titlePattern);
-    final note = template.notePattern == null ? '' : replace(template.notePattern!);
+    final note = template.notePattern == null
+        ? ''
+        : replace(template.notePattern!);
     return {'title': title, 'note': note};
   }
 
@@ -159,4 +162,3 @@ class ManageTemplateUseCase {
     }
   }
 }
-

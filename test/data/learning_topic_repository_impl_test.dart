@@ -27,15 +27,17 @@ void main() {
   });
 
   Future<int> insertItem(String title) {
-    return db.into(db.learningItems).insert(
-      LearningItemsCompanion.insert(
-        title: title,
-        note: const drift.Value.absent(),
-        tags: drift.Value(jsonEncode(<String>[])),
-        learningDate: DateTime(2026, 2, 26),
-        createdAt: drift.Value(DateTime(2026, 2, 26, 10)),
-      ),
-    );
+    return db
+        .into(db.learningItems)
+        .insert(
+          LearningItemsCompanion.insert(
+            title: title,
+            note: const drift.Value.absent(),
+            tags: drift.Value(jsonEncode(<String>[])),
+            learningDate: DateTime(2026, 2, 26),
+            createdAt: drift.Value(DateTime(2026, 2, 26, 10)),
+          ),
+        );
   }
 
   test('create 会写入并回写 id/updatedAt', () async {
@@ -54,10 +56,7 @@ void main() {
 
   test('getById / getAll 会附带 itemIds（按关联表 id 升序）', () async {
     final topic = await repo.create(
-      LearningTopicEntity(
-        name: 'T',
-        createdAt: DateTime(2026, 2, 26, 10),
-      ),
+      LearningTopicEntity(name: 'T', createdAt: DateTime(2026, 2, 26, 10)),
     );
 
     final item1 = await insertItem('I1');
@@ -149,30 +148,36 @@ void main() {
     await repo.addItemToTopic(topic.id!, item);
 
     // done + pending 两类会影响 total；skipped 不计入。
-    await db.into(db.reviewTasks).insert(
-      ReviewTasksCompanion.insert(
-        learningItemId: item,
-        reviewRound: 1,
-        scheduledDate: DateTime(2026, 2, 26),
-        status: const drift.Value('done'),
-      ),
-    );
-    await db.into(db.reviewTasks).insert(
-      ReviewTasksCompanion.insert(
-        learningItemId: item,
-        reviewRound: 2,
-        scheduledDate: DateTime(2026, 2, 26),
-        status: const drift.Value('pending'),
-      ),
-    );
-    await db.into(db.reviewTasks).insert(
-      ReviewTasksCompanion.insert(
-        learningItemId: item,
-        reviewRound: 3,
-        scheduledDate: DateTime(2026, 2, 26),
-        status: const drift.Value('skipped'),
-      ),
-    );
+    await db
+        .into(db.reviewTasks)
+        .insert(
+          ReviewTasksCompanion.insert(
+            learningItemId: item,
+            reviewRound: 1,
+            scheduledDate: DateTime(2026, 2, 26),
+            status: const drift.Value('done'),
+          ),
+        );
+    await db
+        .into(db.reviewTasks)
+        .insert(
+          ReviewTasksCompanion.insert(
+            learningItemId: item,
+            reviewRound: 2,
+            scheduledDate: DateTime(2026, 2, 26),
+            status: const drift.Value('pending'),
+          ),
+        );
+    await db
+        .into(db.reviewTasks)
+        .insert(
+          ReviewTasksCompanion.insert(
+            learningItemId: item,
+            reviewRound: 3,
+            scheduledDate: DateTime(2026, 2, 26),
+            status: const drift.Value('skipped'),
+          ),
+        );
 
     final overviews = await repo.getOverviews();
     expect(overviews.length, 1);
@@ -183,4 +188,3 @@ void main() {
     expect(o.totalCount, 2);
   });
 }
-

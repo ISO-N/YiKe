@@ -86,10 +86,20 @@ void main() {
     final usecase = ManageTemplateUseCase(repository: repo);
 
     final a = await usecase.create(
-      const TemplateParams(name: 'A', titlePattern: 'a', tags: [], sortOrder: 2),
+      const TemplateParams(
+        name: 'A',
+        titlePattern: 'a',
+        tags: [],
+        sortOrder: 2,
+      ),
     );
     final b = await usecase.create(
-      const TemplateParams(name: 'B', titlePattern: 'b', tags: [], sortOrder: 1),
+      const TemplateParams(
+        name: 'B',
+        titlePattern: 'b',
+        tags: [],
+        sortOrder: 1,
+      ),
     );
 
     final all1 = await usecase.getAll();

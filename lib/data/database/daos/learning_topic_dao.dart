@@ -45,21 +45,23 @@ class LearningTopicDao {
 
   /// 获取全部主题（按创建时间倒序）。
   Future<List<LearningTopic>> getAllTopics() {
-    return (db.select(db.learningTopics)
-          ..orderBy([(t) => OrderingTerm.desc(t.createdAt)]))
-        .get();
+    return (db.select(
+      db.learningTopics,
+    )..orderBy([(t) => OrderingTerm.desc(t.createdAt)])).get();
   }
 
   /// 添加学习内容到主题（重复关联会被唯一索引拦截并抛出异常）。
   Future<void> addItemToTopic(int topicId, int learningItemId) async {
-    await db.into(db.topicItemRelations).insert(
-      TopicItemRelationsCompanion.insert(
-        topicId: topicId,
-        learningItemId: learningItemId,
-        createdAt: Value(DateTime.now()),
-      ),
-      mode: InsertMode.insertOrIgnore,
-    );
+    await db
+        .into(db.topicItemRelations)
+        .insert(
+          TopicItemRelationsCompanion.insert(
+            topicId: topicId,
+            learningItemId: learningItemId,
+            createdAt: Value(DateTime.now()),
+          ),
+          mode: InsertMode.insertOrIgnore,
+        );
   }
 
   /// 从主题中移除学习内容。
@@ -160,4 +162,3 @@ class _TopicAgg {
   int completed = 0;
   int total = 0;
 }
-

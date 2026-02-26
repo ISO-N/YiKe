@@ -102,7 +102,9 @@ class _FakeReviewTaskRepository implements ReviewTaskRepository {
   int _nextId = 1;
 
   @override
-  Future<List<ReviewTaskEntity>> createBatch(List<ReviewTaskEntity> tasks) async {
+  Future<List<ReviewTaskEntity>> createBatch(
+    List<ReviewTaskEntity> tasks,
+  ) async {
     return tasks.map((t) => t.copyWith(id: _nextId++)).toList();
   }
 
@@ -139,15 +141,16 @@ class _FakeReviewTaskRepository implements ReviewTaskRepository {
       throw UnimplementedError();
 
   @override
-  Future<Map<DateTime, TaskDayStats>> getMonthlyTaskStats(int year, int month) =>
-      throw UnimplementedError();
+  Future<Map<DateTime, TaskDayStats>> getMonthlyTaskStats(
+    int year,
+    int month,
+  ) => throw UnimplementedError();
 
   @override
   Future<List<ReviewTaskViewEntity>> getTasksInRange(
     DateTime start,
     DateTime end,
-  ) =>
-      throw UnimplementedError();
+  ) => throw UnimplementedError();
 
   @override
   Future<int> getConsecutiveCompletedDays({DateTime? today}) =>

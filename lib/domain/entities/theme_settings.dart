@@ -27,4 +27,3 @@ class ThemeSettingsEntity {
   /// 序列化为 JSON。
   Map<String, dynamic> toJson() => {'mode': mode};
 }
-

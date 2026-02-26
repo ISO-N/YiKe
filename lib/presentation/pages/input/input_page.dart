@@ -65,7 +65,10 @@ class _InputPageState extends ConsumerState<InputPage> {
       final topics = await useCase.getAll();
       if (!mounted) return;
       setState(() {
-        _topicCache = {for (final t in topics) if (t.id != null) t.id!: t};
+        _topicCache = {
+          for (final t in topics)
+            if (t.id != null) t.id!: t,
+        };
       });
     } catch (_) {
       // 主题列表加载失败不影响录入主流程。
@@ -132,9 +135,9 @@ class _InputPageState extends ConsumerState<InputPage> {
       if (!mounted) return;
 
       if (failed == 0) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('保存成功：$success 条')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('保存成功：$success 条')));
         Navigator.of(context).pop();
         return;
       }
@@ -284,8 +287,8 @@ class _InputPageState extends ConsumerState<InputPage> {
                   onPressed: _saving
                       ? null
                       : () async {
-                          final drafts =
-                              await Navigator.of(context).push<List<DraftLearningItem>>(
+                          final drafts = await Navigator.of(context)
+                              .push<List<DraftLearningItem>>(
                                 MaterialPageRoute(
                                   builder: (_) => const ImportPreviewPage(),
                                   fullscreenDialog: true,
@@ -350,109 +353,116 @@ class _InputPageState extends ConsumerState<InputPage> {
                     child: GestureDetector(
                       onTap: () => setState(() => _activeIndex = index),
                       child: GlassCard(
-                      child: Padding(
-                        padding: const EdgeInsets.all(AppSpacing.lg),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Text(
-                                  '条目 ${index + 1}',
-                                  style: AppTypography.h2(context),
-                                ),
-                                if (_activeIndex == index) ...[
-                                  const SizedBox(width: AppSpacing.sm),
+                        child: Padding(
+                          padding: const EdgeInsets.all(AppSpacing.lg),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
                                   Text(
-                                    '当前',
-                                    style: AppTypography.bodySecondary(context),
+                                    '条目 ${index + 1}',
+                                    style: AppTypography.h2(context),
+                                  ),
+                                  if (_activeIndex == index) ...[
+                                    const SizedBox(width: AppSpacing.sm),
+                                    Text(
+                                      '当前',
+                                      style: AppTypography.bodySecondary(
+                                        context,
+                                      ),
+                                    ),
+                                  ],
+                                  const Spacer(),
+                                  IconButton(
+                                    tooltip: '删除条目',
+                                    onPressed: _saving
+                                        ? null
+                                        : () => _removeItem(index),
+                                    icon: const Icon(Icons.delete_outline),
+                                    color: _items.length <= 1
+                                        ? secondaryText
+                                        : AppColors.error,
                                   ),
                                 ],
-                                const Spacer(),
-                                IconButton(
-                                  tooltip: '删除条目',
-                                  onPressed: _saving
-                                      ? null
-                                      : () => _removeItem(index),
-                                  icon: const Icon(Icons.delete_outline),
-                                  color: _items.length <= 1
-                                      ? secondaryText
-                                      : AppColors.error,
+                              ),
+                              const SizedBox(height: AppSpacing.md),
+                              SpeechInputField(
+                                controller: controllers.title,
+                                labelText: '标题（必填）',
+                                hintText: '例如：Java 集合框架',
+                                maxLength: 50,
+                                enabled: !_saving,
+                                validator: (v) {
+                                  final value = v?.trim() ?? '';
+                                  if (value.isEmpty) return '请输入标题';
+                                  if (value.length > 50) return '标题最多 50 字';
+                                  return null;
+                                },
+                              ),
+                              const SizedBox(height: AppSpacing.md),
+                              SpeechInputField(
+                                controller: controllers.note,
+                                labelText: '备注（选填）',
+                                hintText: '补充重点、易错点等',
+                                minLines: 2,
+                                maxLines: 6,
+                                enabled: !_saving,
+                              ),
+                              const SizedBox(height: AppSpacing.md),
+                              TextFormField(
+                                controller: controllers.tags,
+                                decoration: const InputDecoration(
+                                  labelText: '标签（选填，用逗号分隔）',
+                                  hintText: '例如：Java, 面试',
                                 ),
-                              ],
-                            ),
-                            const SizedBox(height: AppSpacing.md),
-                            SpeechInputField(
-                              controller: controllers.title,
-                              labelText: '标题（必填）',
-                              hintText: '例如：Java 集合框架',
-                              maxLength: 50,
-                              enabled: !_saving,
-                              validator: (v) {
-                                final value = v?.trim() ?? '';
-                                if (value.isEmpty) return '请输入标题';
-                                if (value.length > 50) return '标题最多 50 字';
-                                return null;
-                              },
-                            ),
-                            const SizedBox(height: AppSpacing.md),
-                            SpeechInputField(
-                              controller: controllers.note,
-                              labelText: '备注（选填）',
-                              hintText: '补充重点、易错点等',
-                              minLines: 2,
-                              maxLines: 6,
-                              enabled: !_saving,
-                            ),
-                            const SizedBox(height: AppSpacing.md),
-                            TextFormField(
-                              controller: controllers.tags,
-                              decoration: const InputDecoration(
-                                labelText: '标签（选填，用逗号分隔）',
-                                hintText: '例如：Java, 面试',
                               ),
-                            ),
-                            const SizedBox(height: AppSpacing.sm),
-                            ListTile(
-                              contentPadding: EdgeInsets.zero,
-                              title: const Text('添加到主题'),
-                              subtitle: Text(
-                                _topicName(controllers.topicId) ?? '不选择主题',
-                                style: AppTypography.bodySecondary(context),
+                              const SizedBox(height: AppSpacing.sm),
+                              ListTile(
+                                contentPadding: EdgeInsets.zero,
+                                title: const Text('添加到主题'),
+                                subtitle: Text(
+                                  _topicName(controllers.topicId) ?? '不选择主题',
+                                  style: AppTypography.bodySecondary(context),
+                                ),
+                                trailing: const Icon(Icons.chevron_right),
+                                onTap: _saving ? null : () => _pickTopic(index),
                               ),
-                              trailing: const Icon(Icons.chevron_right),
-                              onTap: _saving ? null : () => _pickTopic(index),
-                            ),
-                            const SizedBox(height: AppSpacing.sm),
-                            FutureBuilder<List<String>>(
-                              future: _availableTagsFuture,
-                              builder: (context, snapshot) {
-                                final tags = snapshot.data ?? const <String>[];
-                                if (tags.isEmpty) {
-                                  return Text(
-                                    '还没有标签，创建一个吧',
-                                    style: AppTypography.bodySecondary(context),
-                                  );
-                                }
-                                return Wrap(
-                                  spacing: 6,
-                                  runSpacing: 6,
-                                  children: tags.take(12).map((t) {
-                                    return ActionChip(
-                                      label: Text(t),
-                                      onPressed: _saving
-                                          ? null
-                                          : () =>
-                                                _appendTag(controllers.tags, t),
+                              const SizedBox(height: AppSpacing.sm),
+                              FutureBuilder<List<String>>(
+                                future: _availableTagsFuture,
+                                builder: (context, snapshot) {
+                                  final tags =
+                                      snapshot.data ?? const <String>[];
+                                  if (tags.isEmpty) {
+                                    return Text(
+                                      '还没有标签，创建一个吧',
+                                      style: AppTypography.bodySecondary(
+                                        context,
+                                      ),
                                     );
-                                  }).toList(),
-                                );
-                              },
-                            ),
-                          ],
+                                  }
+                                  return Wrap(
+                                    spacing: 6,
+                                    runSpacing: 6,
+                                    children: tags.take(12).map((t) {
+                                      return ActionChip(
+                                        label: Text(t),
+                                        onPressed: _saving
+                                            ? null
+                                            : () => _appendTag(
+                                                controllers.tags,
+                                                t,
+                                              ),
+                                      );
+                                    }).toList(),
+                                  );
+                                },
+                              ),
+                            ],
+                          ),
                         ),
                       ),
-                    ),
                     ),
                   );
                 }),
@@ -505,7 +515,10 @@ class _InputPageState extends ConsumerState<InputPage> {
       topics = await useCase.getAll();
       if (!mounted) return;
       setState(() {
-        _topicCache = {for (final t in topics) if (t.id != null) t.id!: t};
+        _topicCache = {
+          for (final t in topics)
+            if (t.id != null) t.id!: t,
+        };
       });
     } catch (_) {}
 
@@ -565,9 +578,9 @@ class _InputPageState extends ConsumerState<InputPage> {
                   final desc = descController.text.trim();
                   if (name.isEmpty) {
                     if (!context.mounted) return;
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('主题名称不能为空')),
-                    );
+                    ScaffoldMessenger.of(
+                      context,
+                    ).showSnackBar(const SnackBar(content: Text('主题名称不能为空')));
                     return;
                   }
 
@@ -582,9 +595,9 @@ class _InputPageState extends ConsumerState<InputPage> {
                     Navigator.of(context).pop(created.id);
                   } catch (e) {
                     if (!context.mounted) return;
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('创建失败：$e')),
-                    );
+                    ScaffoldMessenger.of(
+                      context,
+                    ).showSnackBar(SnackBar(content: Text('创建失败：$e')));
                   }
                 },
               ),
@@ -614,7 +627,9 @@ class _InputPageState extends ConsumerState<InputPage> {
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
-                    trailing: currentId == t.id ? const Icon(Icons.check) : null,
+                    trailing: currentId == t.id
+                        ? const Icon(Icons.check)
+                        : null,
                     onTap: () => Navigator.of(context).pop(t.id),
                   );
                 }),
@@ -677,7 +692,10 @@ class _InputPageState extends ConsumerState<InputPage> {
                             return InkWell(
                               onTap: () {
                                 final applied = useCase.applyTemplate(t);
-                                final idx = _activeIndex.clamp(0, _items.length - 1);
+                                final idx = _activeIndex.clamp(
+                                  0,
+                                  _items.length - 1,
+                                );
                                 final c = _items[idx];
                                 c.title.text = applied['title'] ?? '';
                                 c.note.text = applied['note'] ?? '';
@@ -688,20 +706,23 @@ class _InputPageState extends ConsumerState<InputPage> {
                                 child: Padding(
                                   padding: const EdgeInsets.all(AppSpacing.md),
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         t.name,
-                                        style: AppTypography
-                                            .h2(context)
-                                            .copyWith(fontSize: 16),
+                                        style: AppTypography.h2(
+                                          context,
+                                        ).copyWith(fontSize: 16),
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
                                       ),
                                       const SizedBox(height: AppSpacing.xs),
                                       Text(
                                         t.titlePattern,
-                                        style: AppTypography.bodySecondary(context),
+                                        style: AppTypography.bodySecondary(
+                                          context,
+                                        ),
                                         maxLines: 2,
                                         overflow: TextOverflow.ellipsis,
                                       ),
@@ -763,9 +784,9 @@ class _InputPageState extends ConsumerState<InputPage> {
     final tags = _parseTags(c.tags.text);
 
     if (title.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('当前条目标题为空，无法保存为模板')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('当前条目标题为空，无法保存为模板')));
       return;
     }
 
@@ -795,9 +816,9 @@ class _InputPageState extends ConsumerState<InputPage> {
 
     final name = nameController.text.trim();
     if (name.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('模板名称不能为空')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('模板名称不能为空')));
       return;
     }
 
@@ -813,16 +834,16 @@ class _InputPageState extends ConsumerState<InputPage> {
     try {
       await notifier.create(params);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('模板已保存')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('模板已保存')));
     } catch (e) {
       if (!mounted) return;
       final msg = e.toString();
       if (!msg.contains('模板名称已存在')) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('保存模板失败：$e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('保存模板失败：$e')));
         return;
       }
 
@@ -851,14 +872,14 @@ class _InputPageState extends ConsumerState<InputPage> {
       try {
         await notifier.update(target, params);
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('模板已覆盖保存')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('模板已覆盖保存')));
       } catch (e2) {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('覆盖失败：$e2')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('覆盖失败：$e2')));
       }
     }
   }
@@ -930,20 +951,19 @@ class _InputPageState extends ConsumerState<InputPage> {
       }
 
       if (!mounted) return;
-      final drafts =
-          await Navigator.of(context).push<List<DraftLearningItem>>(
-            MaterialPageRoute(
-              builder: (_) => OcrResultPage(imagePaths: paths),
-              fullscreenDialog: true,
-            ),
-          );
+      final drafts = await Navigator.of(context).push<List<DraftLearningItem>>(
+        MaterialPageRoute(
+          builder: (_) => OcrResultPage(imagePaths: paths),
+          fullscreenDialog: true,
+        ),
+      );
       if (drafts == null || drafts.isEmpty) return;
       _addDrafts(drafts);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('OCR 识别失败：$e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('OCR 识别失败：$e')));
     }
   }
 }

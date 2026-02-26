@@ -35,4 +35,3 @@ class LearningTemplates extends Table {
   /// 更新时间（可空）。
   DateTimeColumn get updatedAt => dateTime().nullable()();
 }
-

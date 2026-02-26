@@ -155,11 +155,7 @@ class FileParser {
       }
 
       items.add(
-        ParsedItem(
-          title: title,
-          note: note.isEmpty ? null : note,
-          tags: tags,
-        ),
+        ParsedItem(title: title, note: note.isEmpty ? null : note, tags: tags),
       );
     }
     return items;

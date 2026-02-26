@@ -71,9 +71,9 @@ class TopicsPage extends ConsumerWidget {
       final name = nameController.text.trim();
       final desc = descController.text.trim();
       if (name.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('主题名称不能为空')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('主题名称不能为空')));
         return;
       }
 
@@ -90,9 +90,9 @@ class TopicsPage extends ConsumerWidget {
         }
       } catch (e) {
         if (!context.mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('保存失败：$e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('保存失败：$e')));
       }
     }
 
@@ -133,107 +133,122 @@ class TopicsPage extends ConsumerWidget {
                 child: state.isLoading
                     ? const Center(child: CircularProgressIndicator())
                     : state.overviews.isEmpty
-                        ? const _EmptyHint()
-                        : ListView.separated(
-                            itemCount: state.overviews.length,
-                            separatorBuilder: (context, index) =>
-                                const SizedBox(height: AppSpacing.md),
-                            itemBuilder: (context, index) {
-                              final overview = state.overviews[index];
-                              final topic = overview.topic;
-                              final total = overview.totalCount;
-                              final completed = overview.completedCount;
-                              final progress = total == 0 ? 0.0 : completed / total;
-                              return GlassCard(
-                                child: Padding(
-                                  padding: const EdgeInsets.all(AppSpacing.lg),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                    ? const _EmptyHint()
+                    : ListView.separated(
+                        itemCount: state.overviews.length,
+                        separatorBuilder: (context, index) =>
+                            const SizedBox(height: AppSpacing.md),
+                        itemBuilder: (context, index) {
+                          final overview = state.overviews[index];
+                          final topic = overview.topic;
+                          final total = overview.totalCount;
+                          final completed = overview.completedCount;
+                          final progress = total == 0 ? 0.0 : completed / total;
+                          return GlassCard(
+                            child: Padding(
+                              padding: const EdgeInsets.all(AppSpacing.lg),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
                                     children: [
-                                      Row(
-                                        children: [
-                                          const Icon(Icons.folder_outlined, size: 20),
-                                          const SizedBox(width: AppSpacing.sm),
-                                          Expanded(
-                                            child: Text(
-                                              topic.name,
-                                              style: AppTypography.h2(context),
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                          ),
-                                        ],
+                                      const Icon(
+                                        Icons.folder_outlined,
+                                        size: 20,
                                       ),
-                                      const SizedBox(height: AppSpacing.sm),
-                                      Text(
-                                        '${overview.itemCount} 条内容   $completed/$total 完成',
-                                        style: AppTypography.bodySecondary(context),
-                                      ),
-                                      const SizedBox(height: AppSpacing.sm),
-                                      ClipRRect(
-                                        borderRadius: BorderRadius.circular(8),
-                                        child: LinearProgressIndicator(
-                                          value: progress,
-                                          minHeight: 8,
-                                          backgroundColor:
-                                              Theme.of(context).brightness ==
-                                                      Brightness.dark
-                                                  ? AppColors.darkGlassBorder
-                                                  : AppColors.glassBorder,
+                                      const SizedBox(width: AppSpacing.sm),
+                                      Expanded(
+                                        child: Text(
+                                          topic.name,
+                                          style: AppTypography.h2(context),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
                                         ),
-                                      ),
-                                      const SizedBox(height: AppSpacing.md),
-                                      Row(
-                                        children: [
-                                          FilledButton(
-                                            onPressed: () => context.push('/topics/${topic.id}'),
-                                            child: const Text('查看'),
-                                          ),
-                                          const SizedBox(width: AppSpacing.sm),
-                                          OutlinedButton(
-                                            onPressed: () => createOrEdit(topicId: topic.id),
-                                            child: const Text('编辑'),
-                                          ),
-                                          const SizedBox(width: AppSpacing.sm),
-                                          TextButton(
-                                            onPressed: () async {
-                                              final ok = await showDialog<bool>(
-                                                context: context,
-                                                builder: (context) => AlertDialog(
-                                                  title: const Text('删除主题'),
-                                                  content: Text('确定删除「${topic.name}」吗？删除后仅解除关联，不删除学习内容。'),
-                                                  actions: [
-                                                    TextButton(
-                                                      onPressed: () => Navigator.of(context).pop(false),
-                                                      child: const Text('取消'),
-                                                    ),
-                                                    FilledButton(
-                                                      onPressed: () => Navigator.of(context).pop(true),
-                                                      child: const Text('删除'),
-                                                    ),
-                                                  ],
-                                                ),
-                                              );
-                                              if (ok != true) return;
-                                              try {
-                                                await notifier.delete(topic.id!);
-                                              } catch (e) {
-                                                if (!context.mounted) return;
-                                                ScaffoldMessenger.of(context).showSnackBar(
-                                                  SnackBar(content: Text('删除失败：$e')),
-                                                );
-                                              }
-                                            },
-                                            child: const Text('删除'),
-                                          ),
-                                        ],
                                       ),
                                     ],
                                   ),
-                                ),
-                              );
-                            },
-                          ),
+                                  const SizedBox(height: AppSpacing.sm),
+                                  Text(
+                                    '${overview.itemCount} 条内容   $completed/$total 完成',
+                                    style: AppTypography.bodySecondary(context),
+                                  ),
+                                  const SizedBox(height: AppSpacing.sm),
+                                  ClipRRect(
+                                    borderRadius: BorderRadius.circular(8),
+                                    child: LinearProgressIndicator(
+                                      value: progress,
+                                      minHeight: 8,
+                                      backgroundColor:
+                                          Theme.of(context).brightness ==
+                                              Brightness.dark
+                                          ? AppColors.darkGlassBorder
+                                          : AppColors.glassBorder,
+                                    ),
+                                  ),
+                                  const SizedBox(height: AppSpacing.md),
+                                  Row(
+                                    children: [
+                                      FilledButton(
+                                        onPressed: () =>
+                                            context.push('/topics/${topic.id}'),
+                                        child: const Text('查看'),
+                                      ),
+                                      const SizedBox(width: AppSpacing.sm),
+                                      OutlinedButton(
+                                        onPressed: () =>
+                                            createOrEdit(topicId: topic.id),
+                                        child: const Text('编辑'),
+                                      ),
+                                      const SizedBox(width: AppSpacing.sm),
+                                      TextButton(
+                                        onPressed: () async {
+                                          final ok = await showDialog<bool>(
+                                            context: context,
+                                            builder: (context) => AlertDialog(
+                                              title: const Text('删除主题'),
+                                              content: Text(
+                                                '确定删除「${topic.name}」吗？删除后仅解除关联，不删除学习内容。',
+                                              ),
+                                              actions: [
+                                                TextButton(
+                                                  onPressed: () => Navigator.of(
+                                                    context,
+                                                  ).pop(false),
+                                                  child: const Text('取消'),
+                                                ),
+                                                FilledButton(
+                                                  onPressed: () => Navigator.of(
+                                                    context,
+                                                  ).pop(true),
+                                                  child: const Text('删除'),
+                                                ),
+                                              ],
+                                            ),
+                                          );
+                                          if (ok != true) return;
+                                          try {
+                                            await notifier.delete(topic.id!);
+                                          } catch (e) {
+                                            if (!context.mounted) return;
+                                            ScaffoldMessenger.of(
+                                              context,
+                                            ).showSnackBar(
+                                              SnackBar(
+                                                content: Text('删除失败：$e'),
+                                              ),
+                                            );
+                                          }
+                                        },
+                                        child: const Text('删除'),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
               ),
             ],
           ),

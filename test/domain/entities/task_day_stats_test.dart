@@ -20,4 +20,3 @@ void main() {
     expect(empty.hasSkipped, isFalse);
   });
 }
-

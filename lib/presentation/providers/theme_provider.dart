@@ -48,9 +48,9 @@ enum AppThemeMode {
 /// 主题模式 Provider。
 final themeModeProvider =
     StateNotifierProvider<ThemeModeNotifier, AppThemeMode>((ref) {
-  final repository = ref.read(themeSettingsRepositoryProvider);
-  return ThemeModeNotifier(repository);
-});
+      final repository = ref.read(themeSettingsRepositoryProvider);
+      return ThemeModeNotifier(repository);
+    });
 
 /// 主题模式状态管理器。
 ///
@@ -96,4 +96,3 @@ class ThemeModeNotifier extends StateNotifier<AppThemeMode> {
     }
   }
 }
-

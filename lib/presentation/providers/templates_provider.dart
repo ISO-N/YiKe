@@ -128,4 +128,3 @@ final templatesProvider =
       notifier.load();
       return notifier;
     });
-

@@ -128,4 +128,3 @@ class LearningTopicRepositoryImpl implements LearningTopicRepository {
     );
   }
 }
-

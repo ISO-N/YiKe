@@ -57,7 +57,11 @@ class ReviewIntervalsNotifier extends StateNotifier<ReviewIntervalsState> {
 
   /// 保存配置（并持久化到设置表）。
   Future<void> save(List<ReviewIntervalConfigEntity> configs) async {
-    state = state.copyWith(isLoading: true, errorMessage: null, configs: configs);
+    state = state.copyWith(
+      isLoading: true,
+      errorMessage: null,
+      configs: configs,
+    );
     try {
       await _repository.saveReviewIntervalConfigs(configs);
       state = state.copyWith(isLoading: false, configs: configs);
@@ -118,4 +122,3 @@ final reviewIntervalsProvider =
       notifier.load();
       return notifier;
     });
-

@@ -157,4 +157,3 @@ void main() {
     expect(row2.updatedAt, isNotNull);
   });
 }
-

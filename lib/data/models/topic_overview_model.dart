@@ -31,4 +31,3 @@ class TopicOverviewModel {
   final int completedCount;
   final int totalCount;
 }
-

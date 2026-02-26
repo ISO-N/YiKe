@@ -197,7 +197,9 @@ class SettingsPage extends ConsumerWidget {
                                   Expanded(
                                     child: Text(
                                       text,
-                                      style: AppTypography.bodySecondary(context),
+                                      style: AppTypography.bodySecondary(
+                                        context,
+                                      ),
                                     ),
                                   ),
                                   OutlinedButton(

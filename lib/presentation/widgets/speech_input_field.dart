@@ -70,9 +70,9 @@ class _SpeechInputFieldState extends ConsumerState<SpeechInputField> {
     final service = ref.read(speechServiceProvider);
 
     if (!_speechSupported) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('设备不支持语音识别')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('设备不支持语音识别')));
       return;
     }
 
@@ -184,17 +184,16 @@ class _SpeechInputFieldState extends ConsumerState<SpeechInputField> {
           await openAppSettings();
         }
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('语音识别失败：$e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('语音识别失败：$e')));
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final canUseSpeech =
-        widget.enabled && !_initializing && _speechSupported;
+    final canUseSpeech = widget.enabled && !_initializing && _speechSupported;
 
     return TextFormField(
       controller: widget.controller,
@@ -235,7 +234,8 @@ class _WaveState extends State<_Wave> with SingleTickerProviderStateMixin {
     );
 
     // 无障碍：尊重系统“减少动态效果”设置，必要时关闭波形动画。
-    final features = WidgetsBinding.instance.platformDispatcher.accessibilityFeatures;
+    final features =
+        WidgetsBinding.instance.platformDispatcher.accessibilityFeatures;
     final disableAnimations =
         features.disableAnimations || features.accessibleNavigation;
     if (!disableAnimations) {

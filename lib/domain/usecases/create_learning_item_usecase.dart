@@ -47,9 +47,9 @@ class CreateLearningItemResult {
 
 /// 创建学习内容用例。
 ///
-  /// 逻辑：
-  /// 1) 保存学习内容
-  /// 2) 基于复习间隔配置生成 1-5 条复习任务并保存（允许禁用轮次）
+/// 逻辑：
+/// 1) 保存学习内容
+/// 2) 基于复习间隔配置生成 1-5 条复习任务并保存（允许禁用轮次）
 class CreateLearningItemUseCase {
   /// 构造函数。
   const CreateLearningItemUseCase({
@@ -91,19 +91,20 @@ class CreateLearningItemUseCase {
 
     final configs = _normalizeIntervals(params.reviewIntervals);
 
-    final tasks = configs
-        .where((e) => e.enabled)
-        .map(
-          (c) => ReviewTaskEntity(
-            learningItemId: saved.id!,
-            reviewRound: c.round,
-            scheduledDate: learningDate.add(Duration(days: c.intervalDays)),
-            status: ReviewTaskStatus.pending,
-            createdAt: now,
-          ),
-        )
-        .toList()
-      ..sort((a, b) => a.reviewRound.compareTo(b.reviewRound));
+    final tasks =
+        configs
+            .where((e) => e.enabled)
+            .map(
+              (c) => ReviewTaskEntity(
+                learningItemId: saved.id!,
+                reviewRound: c.round,
+                scheduledDate: learningDate.add(Duration(days: c.intervalDays)),
+                status: ReviewTaskStatus.pending,
+                createdAt: now,
+              ),
+            )
+            .toList()
+          ..sort((a, b) => a.reviewRound.compareTo(b.reviewRound));
 
     final savedTasks = await _reviewTaskRepository.createBatch(tasks);
     return CreateLearningItemResult(item: saved, generatedTasks: savedTasks);
@@ -130,7 +131,8 @@ class CreateLearningItemUseCase {
       if (c.intervalDays < 1) continue;
       map[c.round] = c;
     }
-    final list = map.values.toList()..sort((a, b) => a.round.compareTo(b.round));
+    final list = map.values.toList()
+      ..sort((a, b) => a.round.compareTo(b.round));
     final hasEnabled = list.any((e) => e.enabled);
     if (!hasEnabled) {
       throw ArgumentError('至少保留一轮复习');

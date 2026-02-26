@@ -48,15 +48,12 @@ class _ReviewPreviewPanelState extends ConsumerState<ReviewPreviewPanel> {
           padding: const EdgeInsets.all(AppSpacing.lg),
           child: Row(
             children: [
-              Icon(_expanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down),
+              Icon(
+                _expanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+              ),
               const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: Text('复习计划预览', style: AppTypography.h2(context)),
-              ),
-              Text(
-                '默认复习间隔',
-                style: AppTypography.bodySecondary(context),
-              ),
+              Expanded(child: Text('复习计划预览', style: AppTypography.h2(context))),
+              Text('默认复习间隔', style: AppTypography.bodySecondary(context)),
             ],
           ),
         ),
@@ -85,8 +82,9 @@ class _ReviewPreviewPanelState extends ConsumerState<ReviewPreviewPanel> {
         children: [
           header(),
           AnimatedCrossFade(
-            crossFadeState:
-                _expanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+            crossFadeState: _expanded
+                ? CrossFadeState.showSecond
+                : CrossFadeState.showFirst,
             duration: const Duration(milliseconds: 200),
             firstChild: const SizedBox.shrink(),
             secondChild: Padding(
@@ -104,55 +102,61 @@ class _ReviewPreviewPanelState extends ConsumerState<ReviewPreviewPanel> {
                     style: AppTypography.bodySecondary(context),
                   ),
                   const SizedBox(height: AppSpacing.md),
-                  ..._draft.map((c) => _RoundTile(
-                        config: c,
-                        learningDate: widget.learningDate,
-                        onToggle: (v) async {
-                          final next = _draft
-                              .map(
-                                (e) => e.round == c.round
-                                    ? e.copyWith(enabled: v)
-                                    : e,
-                              )
-                              .toList();
-                          if (!next.any((e) => e.enabled)) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('至少保留一轮复习')),
-                            );
-                            return;
-                          }
-                          setState(() => _draft = next);
-                          await notifier.save(next);
-                        },
-                        onIntervalChanged: (value) {
-                          setState(() {
-                            _draft = _draft
-                                .map(
-                                  (e) => e.round == c.round
-                                      ? e.copyWith(intervalDays: value)
-                                      : e,
-                                )
-                                .toList();
-                          });
-                        },
-                        onIntervalChangeEnd: (value) async {
-                          final next = _draft
+                  ..._draft.map(
+                    (c) => _RoundTile(
+                      config: c,
+                      learningDate: widget.learningDate,
+                      onToggle: (v) async {
+                        final next = _draft
+                            .map(
+                              (e) => e.round == c.round
+                                  ? e.copyWith(enabled: v)
+                                  : e,
+                            )
+                            .toList();
+                        if (!next.any((e) => e.enabled)) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('至少保留一轮复习')),
+                          );
+                          return;
+                        }
+                        setState(() => _draft = next);
+                        await notifier.save(next);
+                      },
+                      onIntervalChanged: (value) {
+                        setState(() {
+                          _draft = _draft
                               .map(
                                 (e) => e.round == c.round
                                     ? e.copyWith(intervalDays: value)
                                     : e,
                               )
                               .toList();
-                          await notifier.save(next);
-                        },
-                      )),
+                        });
+                      },
+                      onIntervalChangeEnd: (value) async {
+                        final next = _draft
+                            .map(
+                              (e) => e.round == c.round
+                                  ? e.copyWith(intervalDays: value)
+                                  : e,
+                            )
+                            .toList();
+                        await notifier.save(next);
+                      },
+                    ),
+                  ),
                   const SizedBox(height: AppSpacing.md),
                   Row(
                     children: [
                       TextButton(
                         onPressed: () async {
                           await notifier.resetDefault();
-                          setState(() => _draft = [...ref.read(reviewIntervalsProvider).configs]);
+                          setState(
+                            () => _draft = [
+                              ...ref.read(reviewIntervalsProvider).configs,
+                            ],
+                          );
                         },
                         child: const Text('恢复默认'),
                       ),
@@ -160,7 +164,11 @@ class _ReviewPreviewPanelState extends ConsumerState<ReviewPreviewPanel> {
                       TextButton(
                         onPressed: () async {
                           await notifier.enableAll();
-                          setState(() => _draft = [...ref.read(reviewIntervalsProvider).configs]);
+                          setState(
+                            () => _draft = [
+                              ...ref.read(reviewIntervalsProvider).configs,
+                            ],
+                          );
                         },
                         child: const Text('启用全部'),
                       ),
@@ -168,9 +176,9 @@ class _ReviewPreviewPanelState extends ConsumerState<ReviewPreviewPanel> {
                       if (state.errorMessage != null)
                         Text(
                           '保存失败：${state.errorMessage}',
-                          style: AppTypography.bodySecondary(context).copyWith(
-                            color: AppColors.error,
-                          ),
+                          style: AppTypography.bodySecondary(
+                            context,
+                          ).copyWith(color: AppColors.error),
                         ),
                     ],
                   ),
@@ -202,10 +210,15 @@ class _RoundTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final borderColor = isDark ? AppColors.darkGlassBorder : AppColors.glassBorder;
+    final borderColor = isDark
+        ? AppColors.darkGlassBorder
+        : AppColors.glassBorder;
 
-    final date = DateTime(learningDate.year, learningDate.month, learningDate.day)
-        .add(Duration(days: config.intervalDays));
+    final date = DateTime(
+      learningDate.year,
+      learningDate.month,
+      learningDate.day,
+    ).add(Duration(days: config.intervalDays));
     final dateText =
         '${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
 
@@ -229,10 +242,7 @@ class _RoundTile extends StatelessWidget {
                       style: AppTypography.body(context),
                     ),
                   ),
-                  Switch(
-                    value: config.enabled,
-                    onChanged: onToggle,
-                  ),
+                  Switch(value: config.enabled, onChanged: onToggle),
                 ],
               ),
               Slider(
@@ -251,9 +261,9 @@ class _RoundTile extends StatelessWidget {
               if (config.intervalDays > 30)
                 Text(
                   '间隔过长可能导致遗忘',
-                  style: AppTypography.bodySecondary(context).copyWith(
-                    color: AppColors.warning,
-                  ),
+                  style: AppTypography.bodySecondary(
+                    context,
+                  ).copyWith(color: AppColors.warning),
                 ),
             ],
           ),

@@ -21,4 +21,3 @@ abstract class ThemeSettingsRepository {
   /// 异常：数据库写入失败时可能抛出异常。
   Future<void> saveThemeSettings(ThemeSettingsEntity settings);
 }
-
