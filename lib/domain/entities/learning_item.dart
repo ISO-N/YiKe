@@ -26,6 +26,7 @@ class LearningItemEntity {
     required this.learningDate,
     required this.createdAt,
     this.updatedAt,
+    this.isMockData = false,
   });
 
   final int? id;
@@ -36,6 +37,9 @@ class LearningItemEntity {
   final DateTime createdAt;
   final DateTime? updatedAt;
 
+  /// 是否为模拟数据（v3.1：用于 Debug 模拟数据隔离）。
+  final bool isMockData;
+
   LearningItemEntity copyWith({
     int? id,
     String? title,
@@ -44,6 +48,7 @@ class LearningItemEntity {
     DateTime? learningDate,
     DateTime? createdAt,
     DateTime? updatedAt,
+    bool? isMockData,
   }) {
     return LearningItemEntity(
       id: id ?? this.id,
@@ -53,6 +58,7 @@ class LearningItemEntity {
       learningDate: learningDate ?? this.learningDate,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      isMockData: isMockData ?? this.isMockData,
     );
   }
 }

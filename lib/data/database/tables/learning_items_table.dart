@@ -30,4 +30,7 @@ class LearningItems extends Table {
 
   /// 更新时间（可空）。
   DateTimeColumn get updatedAt => dateTime().nullable()();
+
+  /// 是否为模拟数据（v3.1：用于 Debug 模式生成/清理、同步/导出隔离）。
+  BoolColumn get isMockData => boolean().withDefault(const Constant(false))();
 }

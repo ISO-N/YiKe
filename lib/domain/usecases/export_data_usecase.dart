@@ -96,10 +96,14 @@ class ExportDataUseCase {
     }
 
     final items = params.includeItems
-        ? await _learningItemRepository.getAll()
+        ? (await _learningItemRepository.getAll())
+            .where((e) => !e.isMockData)
+            .toList()
         : const <LearningItemEntity>[];
     final tasks = params.includeTasks
-        ? await _reviewTaskRepository.getAllTasks()
+        ? (await _reviewTaskRepository.getAllTasks())
+            .where((e) => !e.isMockData)
+            .toList()
         : const <ReviewTaskEntity>[];
 
     return ExportPreview(itemCount: items.length, taskCount: tasks.length);
@@ -117,10 +121,14 @@ class ExportDataUseCase {
 
     final exportedAt = DateTime.now();
     final items = params.includeItems
-        ? await _learningItemRepository.getAll()
+        ? (await _learningItemRepository.getAll())
+            .where((e) => !e.isMockData)
+            .toList()
         : const <LearningItemEntity>[];
     final tasks = params.includeTasks
-        ? await _reviewTaskRepository.getAllTasks()
+        ? (await _reviewTaskRepository.getAllTasks())
+            .where((e) => !e.isMockData)
+            .toList()
         : const <ReviewTaskEntity>[];
 
     if (items.isEmpty && tasks.isEmpty) {

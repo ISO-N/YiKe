@@ -42,6 +42,9 @@ class ReviewTasks extends Table {
   /// 更新时间（用于同步冲突解决，v3.0 新增）。
   DateTimeColumn get updatedAt => dateTime().nullable()();
 
+  /// 是否为模拟数据（v3.1：用于 Debug 模式生成/清理、同步/导出隔离）。
+  BoolColumn get isMockData => boolean().withDefault(const Constant(false))();
+
   @override
   List<String> get customConstraints => const [
     // 复习轮次范围约束（避免 Analyzer 对 self-reference 的提示）。

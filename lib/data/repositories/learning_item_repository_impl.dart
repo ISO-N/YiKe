@@ -70,12 +70,18 @@ class LearningItemRepositoryImpl implements LearningItemRepository {
 
   @override
   Future<void> delete(int id) async {
-    final ts = DateTime.now().millisecondsSinceEpoch;
-    await _sync?.logDelete(
-      entityType: 'learning_item',
-      localEntityId: id,
-      timestampMs: ts,
-    );
+    final existing = await dao.getLearningItemById(id);
+    final isMockData = existing?.isMockData ?? false;
+
+    // v3.1：Mock 数据不参与同步，因此不写入 delete 日志。
+    if (!isMockData) {
+      final ts = DateTime.now().millisecondsSinceEpoch;
+      await _sync?.logDelete(
+        entityType: 'learning_item',
+        localEntityId: id,
+        timestampMs: ts,
+      );
+    }
     await dao.deleteLearningItem(id);
   }
 
@@ -120,6 +126,11 @@ class LearningItemRepositoryImpl implements LearningItemRepository {
       throw ArgumentError('更新学习内容时 id 不能为空');
     }
 
+    final existing = await dao.getLearningItemById(item.id!);
+    if (existing == null) {
+      throw StateError('学习内容不存在（id=${item.id}）');
+    }
+
     final now = DateTime.now();
     final ts = now.millisecondsSinceEpoch;
     final ok = await dao.updateLearningItem(
@@ -131,6 +142,7 @@ class LearningItemRepositoryImpl implements LearningItemRepository {
         learningDate: item.learningDate,
         createdAt: item.createdAt,
         updatedAt: now,
+        isMockData: existing.isMockData,
       ),
     );
     if (!ok) {
@@ -139,7 +151,7 @@ class LearningItemRepositoryImpl implements LearningItemRepository {
     final saved = item.copyWith(updatedAt: now);
 
     final sync = _sync;
-    if (sync == null) return saved;
+    if (sync == null || existing.isMockData) return saved;
 
     final origin = await sync.resolveOriginKey(
       entityType: 'learning_item',
@@ -173,6 +185,7 @@ class LearningItemRepositoryImpl implements LearningItemRepository {
       learningDate: row.learningDate,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
+      isMockData: row.isMockData,
     );
   }
 

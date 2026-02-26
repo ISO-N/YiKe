@@ -14,6 +14,8 @@ import '../../presentation/pages/help/help_page.dart';
 import '../../presentation/pages/input/input_page.dart';
 import '../../presentation/pages/input/import_preview_page.dart';
 import '../../presentation/pages/input/templates_page.dart';
+import '../../presentation/pages/debug/mock_data_generator_page.dart';
+import '../../presentation/pages/learning_item/learning_item_detail_page.dart';
 import '../../presentation/pages/settings/export_page.dart';
 import '../../presentation/pages/settings/settings_page.dart';
 import '../../presentation/pages/settings/sync_settings_page.dart';
@@ -99,11 +101,40 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         },
       ),
       GoRoute(
+        path: '/items/:id',
+        pageBuilder: (context, state) {
+          final id = int.tryParse(state.pathParameters['id'] ?? '');
+          if (id == null) {
+            return const MaterialPage(child: HomePage());
+          }
+          return _dialogPageIfDesktop(
+            context,
+            LearningItemDetailPage(itemId: id),
+            fallback: MaterialPage(child: LearningItemDetailPage(itemId: id)),
+            dialogSize: const Size(720, 720),
+          );
+        },
+      ),
+      GoRoute(
         path: '/settings/export',
         pageBuilder: (context, state) {
           return const MaterialPage(
             fullscreenDialog: true,
             child: ExportPage(),
+          );
+        },
+      ),
+      GoRoute(
+        path: '/settings/debug/mock-data',
+        pageBuilder: (context, state) {
+          return _dialogPageIfDesktop(
+            context,
+            const MockDataGeneratorPage(),
+            fallback: const MaterialPage(
+              fullscreenDialog: true,
+              child: MockDataGeneratorPage(),
+            ),
+            dialogSize: const Size(680, 760),
           );
         },
       ),
