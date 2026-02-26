@@ -14,6 +14,7 @@ import '../../presentation/pages/help/help_page.dart';
 import '../../presentation/pages/input/input_page.dart';
 import '../../presentation/pages/input/import_preview_page.dart';
 import '../../presentation/pages/input/templates_page.dart';
+import '../../presentation/pages/debug/mock_data_generator_page.dart';
 import '../../presentation/pages/settings/export_page.dart';
 import '../../presentation/pages/settings/settings_page.dart';
 import '../../presentation/pages/settings/sync_settings_page.dart';
@@ -104,6 +105,20 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           return const MaterialPage(
             fullscreenDialog: true,
             child: ExportPage(),
+          );
+        },
+      ),
+      GoRoute(
+        path: '/settings/debug/mock-data',
+        pageBuilder: (context, state) {
+          return _dialogPageIfDesktop(
+            context,
+            const MockDataGeneratorPage(),
+            fallback: const MaterialPage(
+              fullscreenDialog: true,
+              child: MockDataGeneratorPage(),
+            ),
+            dialogSize: const Size(680, 760),
           );
         },
       ),

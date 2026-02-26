@@ -401,6 +401,16 @@ class ReviewTaskDao {
     return db.select(db.reviewTasks).get();
   }
 
+  /// 删除所有模拟复习任务（v3.1 Debug）。
+  ///
+  /// 说明：按 isMockData=true 条件删除。
+  /// 返回值：删除行数。
+  /// 异常：数据库删除失败时可能抛出异常。
+  Future<int> deleteMockReviewTasks() {
+    return (db.delete(db.reviewTasks)..where((t) => t.isMockData.equals(true)))
+        .go();
+  }
+
   Future<List<ReviewTaskWithItemModel>> _getTasksWithItem({
     required DateTime date,
     required bool onlyPending,

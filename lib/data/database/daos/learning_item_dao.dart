@@ -66,6 +66,19 @@ class LearningItemDao {
     )..orderBy([(t) => OrderingTerm.desc(t.createdAt)])).get();
   }
 
+  /// 删除所有模拟学习内容（v3.1 Debug）。
+  ///
+  /// 说明：
+  /// - 按 isMockData=true 条件删除
+  /// - 由于 review_tasks 对 learning_items 具有级联删除，删除学习内容会自动清理关联任务
+  /// 返回值：删除行数。
+  /// 异常：数据库删除失败时可能抛出异常。
+  Future<int> deleteMockLearningItems() {
+    return (db.delete(db.learningItems)
+          ..where((t) => t.isMockData.equals(true)))
+        .go();
+  }
+
   /// 根据日期查询学习内容（按学习日期）。
   ///
   /// 参数：

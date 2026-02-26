@@ -5,6 +5,7 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app_settings/app_settings.dart';
 import 'package:go_router/go_router.dart';
@@ -353,6 +354,34 @@ class SettingsPage extends ConsumerWidget {
                   ),
                 ),
               ),
+              if (kDebugMode) ...[
+                const SizedBox(height: AppSpacing.lg),
+                GlassCard(
+                  child: Padding(
+                    padding: const EdgeInsets.all(AppSpacing.lg),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('开发工具', style: AppTypography.h2(context)),
+                        const SizedBox(height: AppSpacing.sm),
+                        Text(
+                          '仅 Debug 模式下可见，用于快速生成测试数据。',
+                          style: AppTypography.bodySecondary(context),
+                        ),
+                        const SizedBox(height: AppSpacing.md),
+                        ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: const Icon(Icons.developer_mode_outlined),
+                          title: const Text('模拟数据生成器'),
+                          subtitle: const Text('一键生成/清理 Mock 学习内容与复习任务'),
+                          trailing: const Icon(Icons.chevron_right),
+                          onTap: () => context.push('/settings/debug/mock-data'),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
               if (state.errorMessage != null) ...[
                 const SizedBox(height: AppSpacing.lg),
                 GlassCard(
