@@ -5,6 +5,7 @@ library;
 
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
@@ -103,6 +104,11 @@ class _HelpPageState extends State<HelpPage> {
 
   @override
   Widget build(BuildContext context) {
+    // Windows 端体验优化：大面积 BackdropFilter 在滚动/拖动滚动条时容易产生明显卡顿，
+    // 用户会感知为“滚动条拖动时突然跳很多”。这里对帮助页正文的大块区域禁用模糊，保留半透明样式。
+    final disableHeavyBlurOnWindows =
+        defaultTargetPlatform == TargetPlatform.windows;
+
     return Scaffold(
       appBar: AppBar(title: const Text(AppStrings.learningGuideTitle)),
       body: SafeArea(
@@ -146,6 +152,7 @@ class _HelpPageState extends State<HelpPage> {
                 ),
                 const SizedBox(height: AppSpacing.lg),
                 GlassCard(
+                  blurSigma: disableHeavyBlurOnWindows ? 0 : 14,
                   child: Padding(
                     padding: const EdgeInsets.all(AppSpacing.lg),
                     child: MarkdownBody(
