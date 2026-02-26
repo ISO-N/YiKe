@@ -68,6 +68,15 @@ dependencies:
   fl_chart: ^0.66.0
   share_plus: ^7.0.0
 
+  # v2.1 新增：录入功能升级（批量导入 / 模板 / 语音 / OCR / 权限）
+  file_picker: ^8.0.0
+  csv: ^6.0.0
+  speech_to_text: ^6.0.0
+  google_mlkit_text_recognition: ^0.11.0
+  image_picker: ^1.0.0
+  permission_handler: ^11.0.0
+  gbk_codec: ^0.4.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
