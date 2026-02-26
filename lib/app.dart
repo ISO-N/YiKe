@@ -15,6 +15,7 @@ import 'infrastructure/router/app_router.dart';
 import 'presentation/providers/theme_provider.dart';
 import 'presentation/widgets/desktop_shortcuts.dart';
 import 'presentation/widgets/desktop_title_bar.dart';
+import 'presentation/widgets/sync_bootstrap.dart';
 
 class YiKeApp extends ConsumerWidget {
   /// App 根组件。
@@ -46,17 +47,18 @@ class YiKeApp extends ConsumerWidget {
       routerConfig: router,
       builder: (context, child) {
         final content = child ?? const SizedBox.shrink();
+        final bootstrapped = SyncBootstrap(child: content);
         if (kIsWeb) return content;
 
         // v3.0（F11）：Windows 使用隐藏系统标题栏 + 自定义标题栏。
         if (Platform.isWindows) {
           return DesktopShortcuts(
-            child: DesktopWindowFrame(title: '忆刻', child: content),
+            child: DesktopWindowFrame(title: '忆刻', child: bootstrapped),
           );
         }
 
         // 其他平台保持默认行为（避免不同桌面平台标题栏风格差异带来的适配风险）。
-        return content;
+        return bootstrapped;
       },
       debugShowCheckedModeBanner: false,
     );

@@ -23,6 +23,7 @@ import '../../widgets/gradient_background.dart';
 import '../../providers/home_tasks_provider.dart';
 import '../../providers/notification_permission_provider.dart';
 import '../../providers/settings_provider.dart';
+import '../../providers/sync_provider.dart';
 
 class HomePage extends ConsumerStatefulWidget {
   /// 首页（今日复习）。
@@ -48,6 +49,7 @@ class _HomePageState extends ConsumerState<HomePage> {
     final notifier = ref.read(homeTasksProvider.notifier);
     final settingsState = ref.watch(settingsProvider);
     final permissionAsync = ref.watch(notificationPermissionProvider);
+    final syncUi = ref.watch(syncControllerProvider);
 
     final permission = permissionAsync.valueOrNull;
     final shouldPromptPermission =
@@ -72,6 +74,14 @@ class _HomePageState extends ConsumerState<HomePage> {
       appBar: AppBar(
         title: const Text(AppStrings.todayReview),
         actions: [
+          IconButton(
+            tooltip: _syncTooltip(syncUi.state),
+            onPressed: () => context.push('/settings/sync'),
+            icon: Icon(
+              _syncIcon(syncUi.state),
+              color: _syncColor(context, syncUi.state),
+            ),
+          ),
           IconButton(
             tooltip: state.topicFilterId == null
                 ? '筛选：全部'
@@ -216,6 +226,53 @@ class _HomePageState extends ConsumerState<HomePage> {
             )
           : null,
     );
+  }
+
+  String _syncTooltip(SyncState state) {
+    switch (state) {
+      case SyncState.disconnected:
+        return '同步：未连接';
+      case SyncState.connecting:
+        return '同步：连接中…';
+      case SyncState.connected:
+        return '同步：已连接';
+      case SyncState.syncing:
+        return '同步：同步中…';
+      case SyncState.synced:
+        return '同步：同步完成';
+      case SyncState.error:
+        return '同步：失败（点击查看）';
+    }
+  }
+
+  IconData _syncIcon(SyncState state) {
+    switch (state) {
+      case SyncState.disconnected:
+        return Icons.cloud_off_outlined;
+      case SyncState.connecting:
+      case SyncState.syncing:
+        return Icons.sync;
+      case SyncState.connected:
+      case SyncState.synced:
+        return Icons.cloud_done_outlined;
+      case SyncState.error:
+        return Icons.error_outline;
+    }
+  }
+
+  Color? _syncColor(BuildContext context, SyncState state) {
+    switch (state) {
+      case SyncState.connected:
+      case SyncState.synced:
+        return Colors.green;
+      case SyncState.connecting:
+      case SyncState.syncing:
+        return Colors.blue;
+      case SyncState.error:
+        return Colors.red;
+      case SyncState.disconnected:
+        return Theme.of(context).colorScheme.onSurface.withAlpha(160);
+    }
   }
 
   Future<void> _showTopicFilterSheet() async {

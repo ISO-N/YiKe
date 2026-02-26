@@ -16,6 +16,7 @@ import '../../presentation/pages/input/import_preview_page.dart';
 import '../../presentation/pages/input/templates_page.dart';
 import '../../presentation/pages/settings/export_page.dart';
 import '../../presentation/pages/settings/settings_page.dart';
+import '../../presentation/pages/settings/sync_settings_page.dart';
 import '../../presentation/pages/statistics/statistics_page.dart';
 import '../../presentation/pages/topics/topic_detail_page.dart';
 import '../../presentation/pages/topics/topics_page.dart';
@@ -104,6 +105,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             fullscreenDialog: true,
             child: ExportPage(),
           );
+        },
+      ),
+      GoRoute(
+        path: '/settings/sync',
+        pageBuilder: (context, state) {
+          return const MaterialPage(child: SyncSettingsPage());
         },
       ),
       GoRoute(
