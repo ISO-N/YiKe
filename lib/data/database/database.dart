@@ -63,7 +63,7 @@ class AppDatabase extends _$AppDatabase {
   }
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -96,6 +96,30 @@ class AppDatabase extends _$AppDatabase {
       if (from < 4) {
         await migrator.addColumn(learningItems, learningItems.isMockData);
         await migrator.addColumn(reviewTasks, reviewTasks.isMockData);
+      }
+
+      // v3.2：补偿性迁移——确保局域网同步相关表存在。
+      //
+      // 背景：历史版本中曾出现“schemaVersion 已提升，但同步表未创建”的情况，导致：
+      // - 主机端能显示配对码（内存态），但配对确认写库失败 -> 客户端提示“同步失败”
+      // - 两端“已连接设备”列表始终为空（表不存在或查询失败）
+      //
+      // 处理：在 v5 强制兜底创建缺失表（仅在确实缺失时创建，避免影响已有数据）。
+      if (from < 5) {
+        final rows = await customSelect(
+          "SELECT name FROM sqlite_master WHERE type='table' AND name IN ('sync_devices','sync_logs','sync_entity_mappings')",
+        ).get();
+        final existing = rows.map((r) => r.read<String>('name')).toSet();
+
+        if (!existing.contains('sync_devices')) {
+          await migrator.createTable(syncDevices);
+        }
+        if (!existing.contains('sync_logs')) {
+          await migrator.createTable(syncLogs);
+        }
+        if (!existing.contains('sync_entity_mappings')) {
+          await migrator.createTable(syncEntityMappings);
+        }
       }
     },
     beforeOpen: (details) async {
