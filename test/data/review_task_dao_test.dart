@@ -72,6 +72,16 @@ void main() {
         createdAt: drift.Value(todayStart),
       ),
     );
+    // 边界条件：明天 00:00 不应算作“今天”。
+    await dao.insertReviewTask(
+      ReviewTasksCompanion.insert(
+        learningItemId: itemId,
+        reviewRound: 5,
+        scheduledDate: todayStart.add(const Duration(days: 1)),
+        status: const drift.Value('pending'),
+        createdAt: drift.Value(todayStart),
+      ),
+    );
     await dao.insertReviewTask(
       ReviewTasksCompanion.insert(
         learningItemId: itemId,

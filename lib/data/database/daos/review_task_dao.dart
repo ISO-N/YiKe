@@ -124,7 +124,8 @@ class ReviewTaskDao {
     final start = DateTime(date.year, date.month, date.day);
     final end = start.add(const Duration(days: 1));
     return (db.select(db.reviewTasks)
-          ..where((t) => t.scheduledDate.isBetweenValues(start, end))
+          ..where((t) => t.scheduledDate.isBiggerOrEqualValue(start))
+          ..where((t) => t.scheduledDate.isSmallerThanValue(end))
           ..orderBy([(t) => OrderingTerm.asc(t.scheduledDate)]))
         .get();
   }
@@ -145,7 +146,8 @@ class ReviewTaskDao {
         db.select(task).join([
             innerJoin(item, item.id.equalsExp(task.learningItemId)),
           ])
-          ..where(task.scheduledDate.isBetweenValues(start, end))
+          ..where(task.scheduledDate.isBiggerOrEqualValue(start))
+          ..where(task.scheduledDate.isSmallerThanValue(end))
           ..orderBy([
             OrderingTerm.asc(task.status),
             OrderingTerm.asc(task.reviewRound),
@@ -198,7 +200,8 @@ class ReviewTaskDao {
             innerJoin(item, item.id.equalsExp(task.learningItemId)),
           ])
           ..where(task.status.equals('done'))
-          ..where(task.completedAt.isBetweenValues(start, end))
+          ..where(task.completedAt.isBiggerOrEqualValue(start))
+          ..where(task.completedAt.isSmallerThanValue(end))
           ..orderBy([
             OrderingTerm.desc(task.completedAt),
             OrderingTerm.desc(task.id),
@@ -233,7 +236,8 @@ class ReviewTaskDao {
             innerJoin(item, item.id.equalsExp(task.learningItemId)),
           ])
           ..where(task.status.equals('skipped'))
-          ..where(task.skippedAt.isBetweenValues(start, end))
+          ..where(task.skippedAt.isBiggerOrEqualValue(start))
+          ..where(task.skippedAt.isSmallerThanValue(end))
           ..orderBy([OrderingTerm.desc(task.skippedAt), OrderingTerm.desc(task.id)]);
 
     final rows = await query.get();
@@ -412,7 +416,8 @@ LIMIT ?
     final row =
         await (db.selectOnly(db.reviewTasks)
               ..addColumns([totalExp, completedExp])
-              ..where(db.reviewTasks.scheduledDate.isBetweenValues(start, end)))
+              ..where(db.reviewTasks.scheduledDate.isBiggerOrEqualValue(start))
+              ..where(db.reviewTasks.scheduledDate.isSmallerThanValue(end)))
             .getSingle();
 
     final total = row.read(totalExp) ?? 0;
@@ -641,7 +646,8 @@ LIMIT ?
     if (onlyOverdue) {
       query.where(task.scheduledDate.isSmallerThanValue(start));
     } else {
-      query.where(task.scheduledDate.isBetweenValues(start, end));
+      query.where(task.scheduledDate.isBiggerOrEqualValue(start));
+      query.where(task.scheduledDate.isSmallerThanValue(end));
     }
 
     if (onlyPending) {
