@@ -24,7 +24,7 @@ void main() {
     await db.close();
   });
 
-  Future<int> insertItem({required String tags}) {
+  Future<int> insertItem({required String tags, bool isDeleted = false}) {
     return db
         .into(db.learningItems)
         .insert(
@@ -34,6 +34,10 @@ void main() {
             tags: drift.Value(tags),
             learningDate: DateTime(2026, 2, 25),
             createdAt: drift.Value(DateTime(2026, 2, 25, 9)),
+            isDeleted: drift.Value(isDeleted),
+            deletedAt: isDeleted
+                ? drift.Value(DateTime(2026, 2, 28, 12))
+                : const drift.Value.absent(),
           ),
         );
   }
@@ -127,6 +131,57 @@ void main() {
     final rows = await dao.getOverdueTasksWithItem();
     expect(rows.length, 1);
     expect(rows.single.task.status, 'pending');
+  });
+
+  test('已停用学习内容的任务不会出现在今日列表查询中', () async {
+    final activeId = await insertItem(tags: jsonEncode(['a']), isDeleted: false);
+    final deletedId = await insertItem(tags: jsonEncode(['b']), isDeleted: true);
+
+    final now = DateTime.now();
+    final todayStart = DateTime(now.year, now.month, now.day);
+
+    await dao.insertReviewTask(
+      ReviewTasksCompanion.insert(
+        learningItemId: activeId,
+        reviewRound: 1,
+        scheduledDate: todayStart.add(const Duration(hours: 9)),
+        status: const drift.Value('pending'),
+        createdAt: drift.Value(todayStart),
+      ),
+    );
+    await dao.insertReviewTask(
+      ReviewTasksCompanion.insert(
+        learningItemId: deletedId,
+        reviewRound: 1,
+        scheduledDate: todayStart.add(const Duration(hours: 10)),
+        status: const drift.Value('pending'),
+        createdAt: drift.Value(todayStart),
+      ),
+    );
+
+    final rows = await dao.getTodayPendingTasksWithItem();
+    expect(rows.length, 1);
+    expect(rows.single.item.id, activeId);
+  });
+
+  test('已停用学习内容禁止任务状态变更（complete/skip/undo）', () async {
+    final deletedId = await insertItem(tags: jsonEncode(['a']), isDeleted: true);
+    final base = DateTime(2026, 2, 25);
+    final taskId = await dao.insertReviewTask(
+      ReviewTasksCompanion.insert(
+        learningItemId: deletedId,
+        reviewRound: 1,
+        scheduledDate: base,
+        status: const drift.Value('pending'),
+        createdAt: drift.Value(base),
+      ),
+    );
+
+    await expectLater(
+      dao.updateTaskStatus(taskId, 'done', completedAt: DateTime.now()),
+      throwsA(isA<StateError>()),
+    );
+    await expectLater(dao.undoTaskStatus(taskId), throwsA(isA<StateError>()));
   });
 
   test('updateTaskStatusBatch 会更新状态与对应时间戳字段', () async {
@@ -342,7 +397,7 @@ void main() {
     await dao.insertReviewTask(
       ReviewTasksCompanion.insert(
         learningItemId: itemId,
-        reviewRound: 1,
+        reviewRound: 2,
         scheduledDate: yesterday.add(const Duration(hours: 9)),
         status: const drift.Value('done'),
         completedAt: drift.Value(yesterday.add(const Duration(hours: 9))),
@@ -355,7 +410,7 @@ void main() {
     await dao.insertReviewTask(
       ReviewTasksCompanion.insert(
         learningItemId: itemId,
-        reviewRound: 1,
+        reviewRound: 3,
         scheduledDate: twoDaysAgo.add(const Duration(hours: 9)),
         status: const drift.Value('skipped'),
         skippedAt: drift.Value(twoDaysAgo.add(const Duration(hours: 9))),
@@ -368,7 +423,7 @@ void main() {
     await dao.insertReviewTask(
       ReviewTasksCompanion.insert(
         learningItemId: itemId,
-        reviewRound: 1,
+        reviewRound: 4,
         scheduledDate: threeDaysAgo.add(const Duration(hours: 9)),
         status: const drift.Value('done'),
         completedAt: drift.Value(threeDaysAgo.add(const Duration(hours: 9))),
@@ -381,7 +436,7 @@ void main() {
     await dao.insertReviewTask(
       ReviewTasksCompanion.insert(
         learningItemId: itemId,
-        reviewRound: 1,
+        reviewRound: 5,
         scheduledDate: fourDaysAgo.add(const Duration(hours: 9)),
         status: const drift.Value('pending'),
         createdAt: drift.Value(fourDaysAgo),

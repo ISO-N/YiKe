@@ -14,7 +14,7 @@ void main() {
     );
     expect(
       () =>
-          ReviewIntervalConfigEntity(round: 6, intervalDays: 1, enabled: true),
+          ReviewIntervalConfigEntity(round: 11, intervalDays: 1, enabled: true),
       throwsArgumentError,
     );
     expect(
