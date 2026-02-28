@@ -52,11 +52,14 @@ void main() {
     expect(out.lastNotifiedDate, '2026-02-25');
   });
 
-  test('getReviewIntervalConfigs：无数据时返回默认 5 轮配置（全启用）', () async {
+  test('getReviewIntervalConfigs：无数据时返回默认 10 轮配置（全启用）', () async {
     final configs = await repo.getReviewIntervalConfigs();
-    expect(configs.length, 5);
-    expect(configs.map((e) => e.round).toList(), [1, 2, 3, 4, 5]);
-    expect(configs.map((e) => e.intervalDays).toList(), [1, 2, 4, 7, 15]);
+    expect(configs.length, 10);
+    expect(configs.map((e) => e.round).toList(), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+    expect(
+      configs.map((e) => e.intervalDays).toList(),
+      [1, 2, 4, 7, 15, 30, 60, 90, 120, 180],
+    );
     expect(configs.every((e) => e.enabled), isTrue);
   });
 
@@ -95,7 +98,7 @@ void main() {
 
     final out = await repo.getReviewIntervalConfigs();
     // round=2 唯一有效但被禁用，因此整体回退默认配置。
-    expect(out.length, 5);
+    expect(out.length, 10);
     expect(out.every((e) => e.enabled), isTrue);
   });
 

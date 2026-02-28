@@ -49,7 +49,7 @@ class CreateLearningItemResult {
 ///
 /// 逻辑：
 /// 1) 保存学习内容
-/// 2) 基于复习间隔配置生成 1-5 条复习任务并保存（允许禁用轮次）
+/// 2) 基于复习间隔配置生成 1-10 条复习任务并保存（允许禁用轮次）
 class CreateLearningItemUseCase {
   /// 构造函数。
   const CreateLearningItemUseCase({
@@ -127,7 +127,7 @@ class CreateLearningItemUseCase {
     // 关键逻辑：保证 round 唯一且范围合法，避免生成重复/越界任务。
     final map = <int, ReviewIntervalConfigEntity>{};
     for (final c in raw) {
-      if (c.round < 1 || c.round > 5) continue;
+      if (c.round < 1 || c.round > 10) continue;
       if (c.intervalDays < 1) continue;
       map[c.round] = c;
     }

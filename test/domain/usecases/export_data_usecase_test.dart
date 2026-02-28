@@ -123,7 +123,7 @@ void main() {
       expect(content.contains('学习内容'), true);
       expect(content.contains('复习任务'), true);
       expect(
-        content.contains('id,title,note,tags,learningDate,createdAt'),
+        content.contains('id,title,note,tags,learningDate,createdAt,isDeleted,deletedAt'),
         true,
       );
       expect(

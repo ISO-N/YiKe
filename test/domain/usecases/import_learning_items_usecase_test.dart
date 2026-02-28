@@ -96,6 +96,13 @@ class _FakeLearningItemRepository implements LearningItemRepository {
 
   @override
   Future<Map<String, int>> getTagDistribution() => throw UnimplementedError();
+
+  @override
+  Future<void> updateNote({required int id, required String? note}) =>
+      throw UnimplementedError();
+
+  @override
+  Future<void> deactivate(int id) => throw UnimplementedError();
 }
 
 /// 假复习任务仓储：仅实现 createBatch 以满足 CreateLearningItemUseCase。
@@ -188,4 +195,18 @@ class _FakeReviewTaskRepository implements ReviewTaskRepository {
     TaskTimelineCursorEntity? cursor,
     int limit = 20,
   }) => throw UnimplementedError();
+
+  @override
+  Future<List<ReviewTaskViewEntity>> getReviewPlan(int learningItemId) =>
+      throw UnimplementedError();
+
+  @override
+  Future<void> adjustReviewDate({
+    required int learningItemId,
+    required int reviewRound,
+    required DateTime scheduledDate,
+  }) => throw UnimplementedError();
+
+  @override
+  Future<void> addReviewRound(int learningItemId) => throw UnimplementedError();
 }

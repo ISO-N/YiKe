@@ -121,7 +121,7 @@ class SettingsRepositoryImpl implements SettingsRepository {
         final enabled = item['enabled'];
         if (round is! int || interval is! int || enabled is! bool) continue;
         // 关键逻辑：对边界值做保护，避免脏数据导致录入崩溃。
-        if (round < 1 || round > 5) continue;
+        if (round < 1 || round > 10) continue;
         if (interval < 1) continue;
         result.add(
           ReviewIntervalConfigEntity(
@@ -177,7 +177,8 @@ class SettingsRepositoryImpl implements SettingsRepository {
   }
 
   List<ReviewIntervalConfigEntity> _defaultReviewIntervals() {
-    const defaults = [1, 2, 4, 7, 15];
+    // v1.4：扩展默认间隔至 10 轮，供“增加轮次/生成默认计划”使用。
+    const defaults = [1, 2, 4, 7, 15, 30, 60, 90, 120, 180];
     return List<ReviewIntervalConfigEntity>.generate(
       defaults.length,
       (index) => ReviewIntervalConfigEntity(

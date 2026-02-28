@@ -4,7 +4,7 @@
 #
 # 用法：
 # - 仅运行测试：powershell -ExecutionPolicy Bypass -File tool/run_tests.ps1
-# - 运行覆盖率并校验非 UI ≥ 90%：powershell -ExecutionPolicy Bypass -File tool/run_tests.ps1 -Coverage
+# - 运行覆盖率并校验非 UI ≥ 95%：powershell -ExecutionPolicy Bypass -File tool/run_tests.ps1 -Coverage
 
 param(
   [switch]$Coverage

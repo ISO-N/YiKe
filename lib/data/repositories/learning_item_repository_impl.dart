@@ -61,6 +61,8 @@ class LearningItemRepositoryImpl implements LearningItemRepository {
         'learning_date': saved.learningDate.toIso8601String(),
         'created_at': saved.createdAt.toIso8601String(),
         'updated_at': (saved.updatedAt ?? saved.createdAt).toIso8601String(),
+        'is_deleted': saved.isDeleted,
+        'deleted_at': saved.deletedAt?.toIso8601String(),
       },
       timestampMs: ts,
     );
@@ -130,6 +132,9 @@ class LearningItemRepositoryImpl implements LearningItemRepository {
     if (existing == null) {
       throw StateError('学习内容不存在（id=${item.id}）');
     }
+    if (existing.isDeleted) {
+      throw StateError('学习内容已停用，无法修改（id=${item.id}）');
+    }
 
     final now = DateTime.now();
     final ts = now.millisecondsSinceEpoch;
@@ -142,6 +147,8 @@ class LearningItemRepositoryImpl implements LearningItemRepository {
         learningDate: item.learningDate,
         createdAt: item.createdAt,
         updatedAt: now,
+        isDeleted: existing.isDeleted,
+        deletedAt: existing.deletedAt,
         isMockData: existing.isMockData,
       ),
     );
@@ -169,11 +176,104 @@ class LearningItemRepositoryImpl implements LearningItemRepository {
         'learning_date': saved.learningDate.toIso8601String(),
         'created_at': saved.createdAt.toIso8601String(),
         'updated_at': (saved.updatedAt ?? saved.createdAt).toIso8601String(),
+        'is_deleted': saved.isDeleted,
+        'deleted_at': saved.deletedAt?.toIso8601String(),
       },
       timestampMs: ts,
     );
 
     return saved;
+  }
+
+  @override
+  Future<void> updateNote({required int id, required String? note}) async {
+    final existing = await dao.getLearningItemById(id);
+    if (existing == null) {
+      throw StateError('学习内容不存在（id=$id）');
+    }
+    if (existing.isDeleted) {
+      throw StateError('学习内容已停用，无法编辑备注（id=$id）');
+    }
+
+    final normalized = note?.trim().isEmpty == true ? null : note?.trim();
+    final updated = await dao.updateLearningItemNote(id, normalized);
+    if (updated <= 0) {
+      throw StateError('学习内容备注更新失败（id=$id）');
+    }
+
+    final sync = _sync;
+    if (sync == null || existing.isMockData) return;
+
+    final row = await dao.getLearningItemById(id);
+    if (row == null) return;
+
+    final now = DateTime.now();
+    final ts = now.millisecondsSinceEpoch;
+    final origin = await sync.resolveOriginKey(
+      entityType: 'learning_item',
+      localEntityId: id,
+      appliedAtMs: ts,
+    );
+    await sync.logEvent(
+      origin: origin,
+      entityType: 'learning_item',
+      operation: 'update',
+      data: {
+        'title': row.title,
+        'note': row.note,
+        'tags': _parseTags(row.tags),
+        'learning_date': row.learningDate.toIso8601String(),
+        'created_at': row.createdAt.toIso8601String(),
+        'updated_at': (row.updatedAt ?? row.createdAt).toIso8601String(),
+        'is_deleted': row.isDeleted,
+        'deleted_at': row.deletedAt?.toIso8601String(),
+      },
+      timestampMs: ts,
+    );
+  }
+
+  @override
+  Future<void> deactivate(int id) async {
+    final existing = await dao.getLearningItemById(id);
+    if (existing == null) {
+      throw StateError('学习内容不存在（id=$id）');
+    }
+    if (existing.isDeleted) return;
+
+    final updated = await dao.deactivateLearningItem(id);
+    if (updated <= 0) {
+      throw StateError('学习内容停用失败（id=$id）');
+    }
+
+    final sync = _sync;
+    if (sync == null || existing.isMockData) return;
+
+    final row = await dao.getLearningItemById(id);
+    if (row == null) return;
+
+    final now = DateTime.now();
+    final ts = now.millisecondsSinceEpoch;
+    final origin = await sync.resolveOriginKey(
+      entityType: 'learning_item',
+      localEntityId: id,
+      appliedAtMs: ts,
+    );
+    await sync.logEvent(
+      origin: origin,
+      entityType: 'learning_item',
+      operation: 'update',
+      data: {
+        'title': row.title,
+        'note': row.note,
+        'tags': _parseTags(row.tags),
+        'learning_date': row.learningDate.toIso8601String(),
+        'created_at': row.createdAt.toIso8601String(),
+        'updated_at': (row.updatedAt ?? row.createdAt).toIso8601String(),
+        'is_deleted': row.isDeleted,
+        'deleted_at': row.deletedAt?.toIso8601String(),
+      },
+      timestampMs: ts,
+    );
   }
 
   LearningItemEntity _toEntity(LearningItem row) {
@@ -185,6 +285,8 @@ class LearningItemRepositoryImpl implements LearningItemRepository {
       learningDate: row.learningDate,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
+      isDeleted: row.isDeleted,
+      deletedAt: row.deletedAt,
       isMockData: row.isMockData,
     );
   }

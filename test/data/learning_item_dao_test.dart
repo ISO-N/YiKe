@@ -163,4 +163,105 @@ void main() {
     expect(dist['b'], 2);
     expect(dist['c'], 1);
   });
+
+  test('searchLearningItems: keyword 为空时返回空列表', () async {
+    final rows = await dao.searchLearningItems(keyword: '   ');
+    expect(rows, isEmpty);
+  });
+
+  test('searchLearningItems: 可匹配 title/note，且会排除已停用学习内容并按 createdAt 倒序', () async {
+    await dao.insertLearningItem(
+      LearningItemsCompanion.insert(
+        title: 'Apple',
+        note: const drift.Value.absent(),
+        tags: const drift.Value('[]'),
+        learningDate: DateTime(2026, 2, 25),
+        createdAt: drift.Value(DateTime(2026, 2, 25, 9)),
+        updatedAt: drift.Value(DateTime(2026, 2, 25, 9)),
+      ),
+    );
+    await dao.insertLearningItem(
+      LearningItemsCompanion.insert(
+        title: 'Banana',
+        note: const drift.Value('contains apple in note'),
+        tags: const drift.Value('[]'),
+        learningDate: DateTime(2026, 2, 25),
+        createdAt: drift.Value(DateTime(2026, 2, 25, 10)),
+        updatedAt: drift.Value(DateTime(2026, 2, 25, 10)),
+      ),
+    );
+    await dao.insertLearningItem(
+      LearningItemsCompanion.insert(
+        title: 'Deleted Apple',
+        note: const drift.Value.absent(),
+        tags: const drift.Value('[]'),
+        learningDate: DateTime(2026, 2, 25),
+        createdAt: drift.Value(DateTime(2026, 2, 25, 11)),
+        updatedAt: drift.Value(DateTime(2026, 2, 25, 11)),
+        isDeleted: const drift.Value(true),
+        deletedAt: drift.Value(DateTime(2026, 2, 25, 11)),
+      ),
+    );
+
+    final rows = await dao.searchLearningItems(keyword: 'apple', limit: 200);
+    expect(rows.map((e) => e.title).toList(), ['Banana', 'Apple']);
+
+    // limit 会被 clamp 到最小 1。
+    final one = await dao.searchLearningItems(keyword: 'apple', limit: 0);
+    expect(one.length, 1);
+  });
+
+  test('deleteMockLearningItems: 仅删除 isMockData=true 的学习内容', () async {
+    await dao.insertLearningItem(
+      LearningItemsCompanion.insert(
+        title: 'Mock',
+        note: const drift.Value.absent(),
+        tags: const drift.Value('[]'),
+        learningDate: DateTime(2026, 2, 25),
+        createdAt: drift.Value(DateTime(2026, 2, 25, 10)),
+        isMockData: const drift.Value(true),
+      ),
+    );
+    await dao.insertLearningItem(
+      LearningItemsCompanion.insert(
+        title: 'Real',
+        note: const drift.Value.absent(),
+        tags: const drift.Value('[]'),
+        learningDate: DateTime(2026, 2, 25),
+        createdAt: drift.Value(DateTime(2026, 2, 25, 11)),
+        isMockData: const drift.Value(false),
+      ),
+    );
+
+    final deleted = await dao.deleteMockLearningItems();
+    expect(deleted, 1);
+
+    final left = await dao.getAllLearningItems();
+    expect(left.map((e) => e.title).toList(), ['Real']);
+  });
+
+  test('updateLearningItemNote / deactivateLearningItem 会更新字段并回写 updatedAt', () async {
+    final id = await dao.insertLearningItem(
+      LearningItemsCompanion.insert(
+        title: 'T',
+        note: const drift.Value.absent(),
+        tags: const drift.Value('[]'),
+        learningDate: DateTime(2026, 2, 25),
+        createdAt: drift.Value(DateTime(2026, 2, 25, 10)),
+      ),
+    );
+
+    final updated1 = await dao.updateLearningItemNote(id, 'n');
+    expect(updated1, 1);
+    final row1 = await dao.getLearningItemById(id);
+    expect(row1!.note, 'n');
+    expect(row1.updatedAt, isNotNull);
+
+    final updated2 = await dao.deactivateLearningItem(id);
+    expect(updated2, 1);
+    final row2 = await dao.getLearningItemById(id);
+    expect(row2!.isDeleted, true);
+    expect(row2.deletedAt, isNotNull);
+    expect(row2.updatedAt, isNotNull);
+  });
 }

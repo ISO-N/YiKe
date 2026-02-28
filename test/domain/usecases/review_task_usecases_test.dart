@@ -52,6 +52,8 @@ class _FakeReviewTaskRepository implements ReviewTaskRepository {
         status: ReviewTaskStatus.pending,
         completedAt: null,
         skippedAt: null,
+        isDeleted: false,
+        deletedAt: null,
       ),
     ];
   }
@@ -128,6 +130,20 @@ class _FakeReviewTaskRepository implements ReviewTaskRepository {
     TaskTimelineCursorEntity? cursor,
     int limit = 20,
   }) => throw UnimplementedError();
+
+  @override
+  Future<List<ReviewTaskViewEntity>> getReviewPlan(int learningItemId) =>
+      throw UnimplementedError();
+
+  @override
+  Future<void> adjustReviewDate({
+    required int learningItemId,
+    required int reviewRound,
+    required DateTime scheduledDate,
+  }) => throw UnimplementedError();
+
+  @override
+  Future<void> addReviewRound(int learningItemId) => throw UnimplementedError();
 }
 
 void main() {

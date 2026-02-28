@@ -70,7 +70,7 @@ void main() {
         .insert(
           ReviewTasksCompanion.insert(
             learningItemId: itemId1,
-            reviewRound: 1,
+            reviewRound: 2,
             scheduledDate: DateTime(2026, 2, 24, 9),
             status: const drift.Value('done'),
             completedAt: drift.Value(DateTime(2026, 2, 24, 9)),
@@ -94,7 +94,7 @@ void main() {
         .insert(
           ReviewTasksCompanion.insert(
             learningItemId: itemId2,
-            reviewRound: 1,
+            reviewRound: 2,
             scheduledDate: DateTime(2026, 2, 22, 9),
             status: const drift.Value('done'),
             completedAt: drift.Value(DateTime(2026, 2, 22, 9)),
@@ -106,7 +106,7 @@ void main() {
         .insert(
           ReviewTasksCompanion.insert(
             learningItemId: itemId2,
-            reviewRound: 1,
+            reviewRound: 3,
             scheduledDate: DateTime(2026, 2, 21, 9),
             status: const drift.Value('pending'),
             createdAt: drift.Value(DateTime(2026, 2, 21)),
@@ -119,7 +119,7 @@ void main() {
         .insert(
           ReviewTasksCompanion.insert(
             learningItemId: itemId1,
-            reviewRound: 2,
+            reviewRound: 3,
             // 放在“今天之后”，避免影响连续打卡计算；仍落在本周范围内。
             scheduledDate: DateTime(2026, 2, 26, 10),
             status: const drift.Value('pending'),
@@ -131,7 +131,7 @@ void main() {
         .insert(
           ReviewTasksCompanion.insert(
             learningItemId: itemId1,
-            reviewRound: 2,
+            reviewRound: 4,
             scheduledDate: DateTime(2026, 2, 24, 10),
             status: const drift.Value('skipped'),
             skippedAt: drift.Value(DateTime(2026, 2, 24, 10)),
@@ -145,7 +145,7 @@ void main() {
 
     // 本周范围：2026-02-23(周一) ~ 2026-03-02
     // done: 25、24 => 2
-    // pending: 23(10点) => 1
+    // pending: 26(10点) => 1
     // skipped 不计入
     expect(result.weekCompleted, 2);
     expect(result.weekTotal, 3);

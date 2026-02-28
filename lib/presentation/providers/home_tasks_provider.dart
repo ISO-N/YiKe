@@ -24,6 +24,7 @@ class HomeTasksState {
     required this.totalCount,
     required this.isSelectionMode,
     required this.selectedTaskIds,
+    required this.expandedTaskIds,
     required this.topicFilterId,
     this.errorMessage,
   });
@@ -37,6 +38,9 @@ class HomeTasksState {
   final int totalCount;
   final bool isSelectionMode;
   final Set<int> selectedTaskIds;
+
+  /// 首页任务卡片展开状态（用于查看备注/标签详情与撤销按钮）。
+  final Set<int> expandedTaskIds;
 
   /// 主题筛选（可选，F1.6）。
   ///
@@ -54,6 +58,7 @@ class HomeTasksState {
     totalCount: 0,
     isSelectionMode: false,
     selectedTaskIds: {},
+    expandedTaskIds: {},
     topicFilterId: null,
   );
 
@@ -67,6 +72,7 @@ class HomeTasksState {
     int? totalCount,
     bool? isSelectionMode,
     Set<int>? selectedTaskIds,
+    Set<int>? expandedTaskIds,
     int? topicFilterId,
     String? errorMessage,
   }) {
@@ -80,6 +86,7 @@ class HomeTasksState {
       totalCount: totalCount ?? this.totalCount,
       isSelectionMode: isSelectionMode ?? this.isSelectionMode,
       selectedTaskIds: selectedTaskIds ?? this.selectedTaskIds,
+      expandedTaskIds: expandedTaskIds ?? this.expandedTaskIds,
       topicFilterId: topicFilterId ?? this.topicFilterId,
       errorMessage: errorMessage,
     );
@@ -167,6 +174,17 @@ class HomeTasksNotifier extends StateNotifier<HomeTasksState> {
     } catch (e) {
       state = state.copyWith(isLoading: false, errorMessage: e.toString());
     }
+  }
+
+  /// 展开/收起任务卡片详情区域。
+  void toggleExpanded(int taskId) {
+    final next = Set<int>.from(state.expandedTaskIds);
+    if (next.contains(taskId)) {
+      next.remove(taskId);
+    } else {
+      next.add(taskId);
+    }
+    state = state.copyWith(expandedTaskIds: next);
   }
 
   /// 开关选择模式（用于批量完成/跳过）。

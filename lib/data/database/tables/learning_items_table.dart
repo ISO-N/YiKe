@@ -31,6 +31,22 @@ class LearningItems extends Table {
   /// 更新时间（可空）。
   DateTimeColumn get updatedAt => dateTime().nullable()();
 
+  /// 是否已停用（软删除标记）。
+  ///
+  /// 说明：
+  /// - Drift 字段名：isDeleted
+  /// - 数据库列名：is_deleted
+  /// - 仅用于“停用学习内容”，查询列表需默认过滤 is_deleted=0
+  BoolColumn get isDeleted =>
+      boolean().named('is_deleted').withDefault(const Constant(false))();
+
+  /// 停用时间（Unix epoch 毫秒；与 createdAt/updatedAt 保持一致）。
+  ///
+  /// 说明：
+  /// - Drift 字段名：deletedAt
+  /// - 数据库列名：deleted_at
+  DateTimeColumn get deletedAt => dateTime().nullable().named('deleted_at')();
+
   /// 是否为模拟数据（v3.1：用于 Debug 模式生成/清理、同步/导出隔离）。
   BoolColumn get isMockData => boolean().withDefault(const Constant(false))();
 }

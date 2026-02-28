@@ -5,6 +5,7 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/constants/app_spacing.dart';
@@ -74,9 +75,7 @@ class _TaskHubPageState extends ConsumerState<TaskHubPage> {
         builder: (context) {
           return AlertDialog(
             title: const Text('撤销任务状态？'),
-            content: const Text(
-              '该任务将恢复为待复习状态。此操作可能影响今日统计和连续打卡天数，是否确认撤销？',
-            ),
+            content: const Text('该任务将恢复为待复习状态，是否确认撤销？'),
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(false),
@@ -100,6 +99,7 @@ class _TaskHubPageState extends ConsumerState<TaskHubPage> {
       grouped.putIfAbsent(day, () => []).add(
         _TaskTimelineItem(
           taskId: item.task.taskId,
+          learningItemId: item.task.learningItemId,
           title: item.task.title,
           note: item.task.note,
           tags: item.task.tags,
@@ -189,6 +189,9 @@ class _TaskHubPageState extends ConsumerState<TaskHubPage> {
                             item.status == ReviewTaskStatus.pending
                                 ? null
                                 : () => confirmUndo(item.taskId),
+                        onOpenDetail: () => context.push(
+                          '/tasks/detail/${item.learningItemId}',
+                        ),
                       ),
                       const SizedBox(height: AppSpacing.md),
                     ],
@@ -246,6 +249,7 @@ class _GroupHeader extends StatelessWidget {
 class _TaskTimelineItem {
   const _TaskTimelineItem({
     required this.taskId,
+    required this.learningItemId,
     required this.title,
     required this.note,
     required this.tags,
@@ -258,6 +262,7 @@ class _TaskTimelineItem {
   });
 
   final int taskId;
+  final int learningItemId;
   final String title;
   final String? note;
   final List<String> tags;
@@ -278,6 +283,7 @@ class _TaskTimelineCard extends StatelessWidget {
     required this.onComplete,
     required this.onSkip,
     required this.onUndo,
+    required this.onOpenDetail,
   });
 
   final _TaskTimelineItem item;
@@ -286,6 +292,7 @@ class _TaskTimelineCard extends StatelessWidget {
   final VoidCallback? onComplete;
   final VoidCallback? onSkip;
   final VoidCallback? onUndo;
+  final VoidCallback onOpenDetail;
 
   @override
   Widget build(BuildContext context) {
@@ -397,6 +404,11 @@ class _TaskTimelineCard extends StatelessWidget {
                               onPressed: onSkip,
                               child: const Text('跳过'),
                             ),
+                          const SizedBox(width: AppSpacing.sm),
+                          OutlinedButton(
+                            onPressed: onOpenDetail,
+                            child: const Text('详情'),
+                          ),
                           if (onUndo != null)
                             OutlinedButton(
                               onPressed: onUndo,

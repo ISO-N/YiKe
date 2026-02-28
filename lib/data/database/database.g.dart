@@ -88,6 +88,32 @@ class $LearningItemsTable extends LearningItems
     type: DriftSqlType.dateTime,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _isDeletedMeta = const VerificationMeta(
+    'isDeleted',
+  );
+  @override
+  late final GeneratedColumn<bool> isDeleted = GeneratedColumn<bool>(
+    'is_deleted',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_deleted" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _deletedAtMeta = const VerificationMeta(
+    'deletedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> deletedAt = GeneratedColumn<DateTime>(
+    'deleted_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _isMockDataMeta = const VerificationMeta(
     'isMockData',
   );
@@ -112,6 +138,8 @@ class $LearningItemsTable extends LearningItems
     learningDate,
     createdAt,
     updatedAt,
+    isDeleted,
+    deletedAt,
     isMockData,
   ];
   @override
@@ -172,6 +200,18 @@ class $LearningItemsTable extends LearningItems
         updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
       );
     }
+    if (data.containsKey('is_deleted')) {
+      context.handle(
+        _isDeletedMeta,
+        isDeleted.isAcceptableOrUnknown(data['is_deleted']!, _isDeletedMeta),
+      );
+    }
+    if (data.containsKey('deleted_at')) {
+      context.handle(
+        _deletedAtMeta,
+        deletedAt.isAcceptableOrUnknown(data['deleted_at']!, _deletedAtMeta),
+      );
+    }
     if (data.containsKey('is_mock_data')) {
       context.handle(
         _isMockDataMeta,
@@ -218,6 +258,14 @@ class $LearningItemsTable extends LearningItems
         DriftSqlType.dateTime,
         data['${effectivePrefix}updated_at'],
       ),
+      isDeleted: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_deleted'],
+      )!,
+      deletedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}deleted_at'],
+      ),
       isMockData: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
         data['${effectivePrefix}is_mock_data'],
@@ -253,6 +301,21 @@ class LearningItem extends DataClass implements Insertable<LearningItem> {
   /// 更新时间（可空）。
   final DateTime? updatedAt;
 
+  /// 是否已停用（软删除标记）。
+  ///
+  /// 说明：
+  /// - Drift 字段名：isDeleted
+  /// - 数据库列名：is_deleted
+  /// - 仅用于“停用学习内容”，查询列表需默认过滤 is_deleted=0
+  final bool isDeleted;
+
+  /// 停用时间（Unix epoch 毫秒；与 createdAt/updatedAt 保持一致）。
+  ///
+  /// 说明：
+  /// - Drift 字段名：deletedAt
+  /// - 数据库列名：deleted_at
+  final DateTime? deletedAt;
+
   /// 是否为模拟数据（v3.1：用于 Debug 模式生成/清理、同步/导出隔离）。
   final bool isMockData;
   const LearningItem({
@@ -263,6 +326,8 @@ class LearningItem extends DataClass implements Insertable<LearningItem> {
     required this.learningDate,
     required this.createdAt,
     this.updatedAt,
+    required this.isDeleted,
+    this.deletedAt,
     required this.isMockData,
   });
   @override
@@ -279,6 +344,10 @@ class LearningItem extends DataClass implements Insertable<LearningItem> {
     if (!nullToAbsent || updatedAt != null) {
       map['updated_at'] = Variable<DateTime>(updatedAt);
     }
+    map['is_deleted'] = Variable<bool>(isDeleted);
+    if (!nullToAbsent || deletedAt != null) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt);
+    }
     map['is_mock_data'] = Variable<bool>(isMockData);
     return map;
   }
@@ -294,6 +363,10 @@ class LearningItem extends DataClass implements Insertable<LearningItem> {
       updatedAt: updatedAt == null && nullToAbsent
           ? const Value.absent()
           : Value(updatedAt),
+      isDeleted: Value(isDeleted),
+      deletedAt: deletedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(deletedAt),
       isMockData: Value(isMockData),
     );
   }
@@ -311,6 +384,8 @@ class LearningItem extends DataClass implements Insertable<LearningItem> {
       learningDate: serializer.fromJson<DateTime>(json['learningDate']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime?>(json['updatedAt']),
+      isDeleted: serializer.fromJson<bool>(json['isDeleted']),
+      deletedAt: serializer.fromJson<DateTime?>(json['deletedAt']),
       isMockData: serializer.fromJson<bool>(json['isMockData']),
     );
   }
@@ -325,6 +400,8 @@ class LearningItem extends DataClass implements Insertable<LearningItem> {
       'learningDate': serializer.toJson<DateTime>(learningDate),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime?>(updatedAt),
+      'isDeleted': serializer.toJson<bool>(isDeleted),
+      'deletedAt': serializer.toJson<DateTime?>(deletedAt),
       'isMockData': serializer.toJson<bool>(isMockData),
     };
   }
@@ -337,6 +414,8 @@ class LearningItem extends DataClass implements Insertable<LearningItem> {
     DateTime? learningDate,
     DateTime? createdAt,
     Value<DateTime?> updatedAt = const Value.absent(),
+    bool? isDeleted,
+    Value<DateTime?> deletedAt = const Value.absent(),
     bool? isMockData,
   }) => LearningItem(
     id: id ?? this.id,
@@ -346,6 +425,8 @@ class LearningItem extends DataClass implements Insertable<LearningItem> {
     learningDate: learningDate ?? this.learningDate,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt.present ? updatedAt.value : this.updatedAt,
+    isDeleted: isDeleted ?? this.isDeleted,
+    deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
     isMockData: isMockData ?? this.isMockData,
   );
   LearningItem copyWithCompanion(LearningItemsCompanion data) {
@@ -359,6 +440,8 @@ class LearningItem extends DataClass implements Insertable<LearningItem> {
           : this.learningDate,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      isDeleted: data.isDeleted.present ? data.isDeleted.value : this.isDeleted,
+      deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
       isMockData: data.isMockData.present
           ? data.isMockData.value
           : this.isMockData,
@@ -375,6 +458,8 @@ class LearningItem extends DataClass implements Insertable<LearningItem> {
           ..write('learningDate: $learningDate, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
+          ..write('isDeleted: $isDeleted, ')
+          ..write('deletedAt: $deletedAt, ')
           ..write('isMockData: $isMockData')
           ..write(')'))
         .toString();
@@ -389,6 +474,8 @@ class LearningItem extends DataClass implements Insertable<LearningItem> {
     learningDate,
     createdAt,
     updatedAt,
+    isDeleted,
+    deletedAt,
     isMockData,
   );
   @override
@@ -402,6 +489,8 @@ class LearningItem extends DataClass implements Insertable<LearningItem> {
           other.learningDate == this.learningDate &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt &&
+          other.isDeleted == this.isDeleted &&
+          other.deletedAt == this.deletedAt &&
           other.isMockData == this.isMockData);
 }
 
@@ -413,6 +502,8 @@ class LearningItemsCompanion extends UpdateCompanion<LearningItem> {
   final Value<DateTime> learningDate;
   final Value<DateTime> createdAt;
   final Value<DateTime?> updatedAt;
+  final Value<bool> isDeleted;
+  final Value<DateTime?> deletedAt;
   final Value<bool> isMockData;
   const LearningItemsCompanion({
     this.id = const Value.absent(),
@@ -422,6 +513,8 @@ class LearningItemsCompanion extends UpdateCompanion<LearningItem> {
     this.learningDate = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
+    this.isDeleted = const Value.absent(),
+    this.deletedAt = const Value.absent(),
     this.isMockData = const Value.absent(),
   });
   LearningItemsCompanion.insert({
@@ -432,6 +525,8 @@ class LearningItemsCompanion extends UpdateCompanion<LearningItem> {
     required DateTime learningDate,
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
+    this.isDeleted = const Value.absent(),
+    this.deletedAt = const Value.absent(),
     this.isMockData = const Value.absent(),
   }) : title = Value(title),
        learningDate = Value(learningDate);
@@ -443,6 +538,8 @@ class LearningItemsCompanion extends UpdateCompanion<LearningItem> {
     Expression<DateTime>? learningDate,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
+    Expression<bool>? isDeleted,
+    Expression<DateTime>? deletedAt,
     Expression<bool>? isMockData,
   }) {
     return RawValuesInsertable({
@@ -453,6 +550,8 @@ class LearningItemsCompanion extends UpdateCompanion<LearningItem> {
       if (learningDate != null) 'learning_date': learningDate,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
+      if (isDeleted != null) 'is_deleted': isDeleted,
+      if (deletedAt != null) 'deleted_at': deletedAt,
       if (isMockData != null) 'is_mock_data': isMockData,
     });
   }
@@ -465,6 +564,8 @@ class LearningItemsCompanion extends UpdateCompanion<LearningItem> {
     Value<DateTime>? learningDate,
     Value<DateTime>? createdAt,
     Value<DateTime?>? updatedAt,
+    Value<bool>? isDeleted,
+    Value<DateTime?>? deletedAt,
     Value<bool>? isMockData,
   }) {
     return LearningItemsCompanion(
@@ -475,6 +576,8 @@ class LearningItemsCompanion extends UpdateCompanion<LearningItem> {
       learningDate: learningDate ?? this.learningDate,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      isDeleted: isDeleted ?? this.isDeleted,
+      deletedAt: deletedAt ?? this.deletedAt,
       isMockData: isMockData ?? this.isMockData,
     );
   }
@@ -503,6 +606,12 @@ class LearningItemsCompanion extends UpdateCompanion<LearningItem> {
     if (updatedAt.present) {
       map['updated_at'] = Variable<DateTime>(updatedAt.value);
     }
+    if (isDeleted.present) {
+      map['is_deleted'] = Variable<bool>(isDeleted.value);
+    }
+    if (deletedAt.present) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt.value);
+    }
     if (isMockData.present) {
       map['is_mock_data'] = Variable<bool>(isMockData.value);
     }
@@ -519,6 +628,8 @@ class LearningItemsCompanion extends UpdateCompanion<LearningItem> {
           ..write('learningDate: $learningDate, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
+          ..write('isDeleted: $isDeleted, ')
+          ..write('deletedAt: $deletedAt, ')
           ..write('isMockData: $isMockData')
           ..write(')'))
         .toString();
@@ -819,7 +930,9 @@ class ReviewTask extends DataClass implements Insertable<ReviewTask> {
   /// 外键：关联的学习内容 ID（删除学习内容时级联删除）。
   final int learningItemId;
 
-  /// 复习轮次（1-5）。
+  /// 复习轮次（1-10）。
+  ///
+  /// 说明：数据库层不再使用 CHECK 约束限制范围，最大轮次由应用层控制。
   final int reviewRound;
 
   /// 计划复习日期。
@@ -4560,6 +4673,8 @@ typedef $$LearningItemsTableCreateCompanionBuilder =
       required DateTime learningDate,
       Value<DateTime> createdAt,
       Value<DateTime?> updatedAt,
+      Value<bool> isDeleted,
+      Value<DateTime?> deletedAt,
       Value<bool> isMockData,
     });
 typedef $$LearningItemsTableUpdateCompanionBuilder =
@@ -4571,6 +4686,8 @@ typedef $$LearningItemsTableUpdateCompanionBuilder =
       Value<DateTime> learningDate,
       Value<DateTime> createdAt,
       Value<DateTime?> updatedAt,
+      Value<bool> isDeleted,
+      Value<DateTime?> deletedAt,
       Value<bool> isMockData,
     });
 
@@ -4669,6 +4786,16 @@ class $$LearningItemsTableFilterComposer
 
   ColumnFilters<DateTime> get updatedAt => $composableBuilder(
     column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isDeleted => $composableBuilder(
+    column: $table.isDeleted,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get deletedAt => $composableBuilder(
+    column: $table.deletedAt,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -4772,6 +4899,16 @@ class $$LearningItemsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<bool> get isDeleted => $composableBuilder(
+    column: $table.isDeleted,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get deletedAt => $composableBuilder(
+    column: $table.deletedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<bool> get isMockData => $composableBuilder(
     column: $table.isMockData,
     builder: (column) => ColumnOrderings(column),
@@ -4809,6 +4946,12 @@ class $$LearningItemsTableAnnotationComposer
 
   GeneratedColumn<DateTime> get updatedAt =>
       $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  GeneratedColumn<bool> get isDeleted =>
+      $composableBuilder(column: $table.isDeleted, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get deletedAt =>
+      $composableBuilder(column: $table.deletedAt, builder: (column) => column);
 
   GeneratedColumn<bool> get isMockData => $composableBuilder(
     column: $table.isMockData,
@@ -4905,6 +5048,8 @@ class $$LearningItemsTableTableManager
                 Value<DateTime> learningDate = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime?> updatedAt = const Value.absent(),
+                Value<bool> isDeleted = const Value.absent(),
+                Value<DateTime?> deletedAt = const Value.absent(),
                 Value<bool> isMockData = const Value.absent(),
               }) => LearningItemsCompanion(
                 id: id,
@@ -4914,6 +5059,8 @@ class $$LearningItemsTableTableManager
                 learningDate: learningDate,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
+                isDeleted: isDeleted,
+                deletedAt: deletedAt,
                 isMockData: isMockData,
               ),
           createCompanionCallback:
@@ -4925,6 +5072,8 @@ class $$LearningItemsTableTableManager
                 required DateTime learningDate,
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime?> updatedAt = const Value.absent(),
+                Value<bool> isDeleted = const Value.absent(),
+                Value<DateTime?> deletedAt = const Value.absent(),
                 Value<bool> isMockData = const Value.absent(),
               }) => LearningItemsCompanion.insert(
                 id: id,
@@ -4934,6 +5083,8 @@ class $$LearningItemsTableTableManager
                 learningDate: learningDate,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
+                isDeleted: isDeleted,
+                deletedAt: deletedAt,
                 isMockData: isMockData,
               ),
           withReferenceMapper: (p0) => p0

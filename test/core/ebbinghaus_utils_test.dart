@@ -7,9 +7,10 @@ import 'package:yike/core/utils/ebbinghaus_utils.dart';
 import 'package:yike/domain/entities/review_config.dart';
 
 void main() {
-  test('默认复习间隔符合 v1.0 约定', () {
-    expect(EbbinghausUtils.defaultIntervalsDays, [1, 2, 4, 7, 15]);
-    expect(ReviewConfig.defaultIntervals, [1, 2, 4, 7, 15]);
+  test('默认复习间隔符合 v1.4 规格（扩展至 10 轮）', () {
+    const expected = [1, 2, 4, 7, 15, 30, 60, 90, 120, 180];
+    expect(EbbinghausUtils.defaultIntervalsDays, expected);
+    expect(ReviewConfig.defaultIntervals, expected);
   });
 
   test('复习日期计算正确', () {
@@ -19,5 +20,10 @@ void main() {
     expect(ReviewConfig.calculateReviewDate(d0, 3), DateTime(2026, 3, 1));
     expect(ReviewConfig.calculateReviewDate(d0, 4), DateTime(2026, 3, 4));
     expect(ReviewConfig.calculateReviewDate(d0, 5), DateTime(2026, 3, 12));
+    expect(ReviewConfig.calculateReviewDate(d0, 6), DateTime(2026, 3, 27));
+    expect(ReviewConfig.calculateReviewDate(d0, 7), DateTime(2026, 4, 26));
+    expect(ReviewConfig.calculateReviewDate(d0, 8), DateTime(2026, 5, 26));
+    expect(ReviewConfig.calculateReviewDate(d0, 9), DateTime(2026, 6, 25));
+    expect(ReviewConfig.calculateReviewDate(d0, 10), DateTime(2026, 8, 24));
   });
 }

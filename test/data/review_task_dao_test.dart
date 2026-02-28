@@ -24,7 +24,7 @@ void main() {
     await db.close();
   });
 
-  Future<int> insertItem({required String tags}) {
+  Future<int> insertItem({required String tags, bool isDeleted = false}) {
     return db
         .into(db.learningItems)
         .insert(
@@ -34,6 +34,10 @@ void main() {
             tags: drift.Value(tags),
             learningDate: DateTime(2026, 2, 25),
             createdAt: drift.Value(DateTime(2026, 2, 25, 9)),
+            isDeleted: drift.Value(isDeleted),
+            deletedAt: isDeleted
+                ? drift.Value(DateTime(2026, 2, 28, 12))
+                : const drift.Value.absent(),
           ),
         );
   }
@@ -127,6 +131,57 @@ void main() {
     final rows = await dao.getOverdueTasksWithItem();
     expect(rows.length, 1);
     expect(rows.single.task.status, 'pending');
+  });
+
+  test('已停用学习内容的任务不会出现在今日列表查询中', () async {
+    final activeId = await insertItem(tags: jsonEncode(['a']), isDeleted: false);
+    final deletedId = await insertItem(tags: jsonEncode(['b']), isDeleted: true);
+
+    final now = DateTime.now();
+    final todayStart = DateTime(now.year, now.month, now.day);
+
+    await dao.insertReviewTask(
+      ReviewTasksCompanion.insert(
+        learningItemId: activeId,
+        reviewRound: 1,
+        scheduledDate: todayStart.add(const Duration(hours: 9)),
+        status: const drift.Value('pending'),
+        createdAt: drift.Value(todayStart),
+      ),
+    );
+    await dao.insertReviewTask(
+      ReviewTasksCompanion.insert(
+        learningItemId: deletedId,
+        reviewRound: 1,
+        scheduledDate: todayStart.add(const Duration(hours: 10)),
+        status: const drift.Value('pending'),
+        createdAt: drift.Value(todayStart),
+      ),
+    );
+
+    final rows = await dao.getTodayPendingTasksWithItem();
+    expect(rows.length, 1);
+    expect(rows.single.item.id, activeId);
+  });
+
+  test('已停用学习内容禁止任务状态变更（complete/skip/undo）', () async {
+    final deletedId = await insertItem(tags: jsonEncode(['a']), isDeleted: true);
+    final base = DateTime(2026, 2, 25);
+    final taskId = await dao.insertReviewTask(
+      ReviewTasksCompanion.insert(
+        learningItemId: deletedId,
+        reviewRound: 1,
+        scheduledDate: base,
+        status: const drift.Value('pending'),
+        createdAt: drift.Value(base),
+      ),
+    );
+
+    await expectLater(
+      dao.updateTaskStatus(taskId, 'done', completedAt: DateTime.now()),
+      throwsA(isA<StateError>()),
+    );
+    await expectLater(dao.undoTaskStatus(taskId), throwsA(isA<StateError>()));
   });
 
   test('updateTaskStatusBatch 会更新状态与对应时间戳字段', () async {
@@ -320,6 +375,286 @@ void main() {
     expect(total, 2);
   });
 
+  test('updateTaskStatusBatch: ids 为空时直接返回 0', () async {
+    final updated = await dao.updateTaskStatusBatch(const [], 'done');
+    expect(updated, 0);
+  });
+
+  test('getGlobalTaskStatusCounts 会统计全量状态计数并排除已停用学习内容', () async {
+    final activeId = await insertItem(tags: jsonEncode(['a']), isDeleted: false);
+    final deletedId = await insertItem(tags: jsonEncode(['b']), isDeleted: true);
+
+    final base = DateTime(2026, 2, 10);
+    // active: pending/done/done/skipped 共 4 条
+    await dao.insertReviewTask(
+      ReviewTasksCompanion.insert(
+        learningItemId: activeId,
+        reviewRound: 1,
+        scheduledDate: base.add(const Duration(hours: 9)),
+        status: const drift.Value('pending'),
+        createdAt: drift.Value(base),
+      ),
+    );
+    await dao.insertReviewTask(
+      ReviewTasksCompanion.insert(
+        learningItemId: activeId,
+        reviewRound: 2,
+        scheduledDate: base.add(const Duration(hours: 10)),
+        status: const drift.Value('done'),
+        completedAt: drift.Value(base.add(const Duration(hours: 8))),
+        createdAt: drift.Value(base),
+      ),
+    );
+    await dao.insertReviewTask(
+      ReviewTasksCompanion.insert(
+        learningItemId: activeId,
+        reviewRound: 3,
+        scheduledDate: base.add(const Duration(hours: 7)),
+        status: const drift.Value('done'),
+        // completedAt 为空时不影响计数口径（按 status 统计）
+        createdAt: drift.Value(base),
+      ),
+    );
+    await dao.insertReviewTask(
+      ReviewTasksCompanion.insert(
+        learningItemId: activeId,
+        reviewRound: 4,
+        scheduledDate: base.add(const Duration(hours: 11)),
+        status: const drift.Value('skipped'),
+        createdAt: drift.Value(base),
+      ),
+    );
+
+    // deleted item 的任务应被排除
+    await dao.insertReviewTask(
+      ReviewTasksCompanion.insert(
+        learningItemId: deletedId,
+        reviewRound: 1,
+        scheduledDate: base.add(const Duration(hours: 6)),
+        status: const drift.Value('pending'),
+        createdAt: drift.Value(base),
+      ),
+    );
+
+    final (all, pending, done, skipped) = await dao.getGlobalTaskStatusCounts();
+    expect(all, 4);
+    expect(pending, 1);
+    expect(done, 2);
+    expect(skipped, 1);
+  });
+
+  test('getTaskTimelinePageWithItem: occurredAt 口径、状态筛选与游标分页', () async {
+    final activeId = await insertItem(tags: jsonEncode(['a']), isDeleted: false);
+    final deletedId = await insertItem(tags: jsonEncode(['b']), isDeleted: true);
+    final base = DateTime(2026, 2, 10);
+
+    // done2：completedAt 为空，occurredAt 回退 scheduledDate（07:00）
+    final done2Id = await dao.insertReviewTask(
+      ReviewTasksCompanion.insert(
+        learningItemId: activeId,
+        reviewRound: 1,
+        scheduledDate: base.add(const Duration(hours: 7)),
+        status: const drift.Value('done'),
+        createdAt: drift.Value(base),
+      ),
+    );
+    // done1：occurredAt=completedAt（08:00）
+    final done1Id = await dao.insertReviewTask(
+      ReviewTasksCompanion.insert(
+        learningItemId: activeId,
+        reviewRound: 2,
+        scheduledDate: base.add(const Duration(hours: 10)),
+        status: const drift.Value('done'),
+        completedAt: drift.Value(base.add(const Duration(hours: 8))),
+        createdAt: drift.Value(base),
+      ),
+    );
+    // pending：occurredAt=scheduledDate（09:00）
+    final pendingId = await dao.insertReviewTask(
+      ReviewTasksCompanion.insert(
+        learningItemId: activeId,
+        reviewRound: 3,
+        scheduledDate: base.add(const Duration(hours: 9)),
+        status: const drift.Value('pending'),
+        createdAt: drift.Value(base),
+      ),
+    );
+    // skipped：skippedAt 为空，occurredAt 回退 scheduledDate（11:00）
+    final skippedId = await dao.insertReviewTask(
+      ReviewTasksCompanion.insert(
+        learningItemId: activeId,
+        reviewRound: 4,
+        scheduledDate: base.add(const Duration(hours: 11)),
+        status: const drift.Value('skipped'),
+        createdAt: drift.Value(base),
+      ),
+    );
+
+    // deleted item 的任务应被排除（即使 occurredAt 更早）
+    await dao.insertReviewTask(
+      ReviewTasksCompanion.insert(
+        learningItemId: deletedId,
+        reviewRound: 1,
+        scheduledDate: base.add(const Duration(hours: 6)),
+        status: const drift.Value('pending'),
+        createdAt: drift.Value(base),
+      ),
+    );
+
+    final all = await dao.getTaskTimelinePageWithItem(limit: 10);
+    expect(all.map((e) => e.model.task.id).toList(), [
+      done2Id,
+      done1Id,
+      pendingId,
+      skippedId,
+    ]);
+    expect(all.map((e) => e.occurredAt).toList(), [
+      base.add(const Duration(hours: 7)),
+      base.add(const Duration(hours: 8)),
+      base.add(const Duration(hours: 9)),
+      base.add(const Duration(hours: 11)),
+    ]);
+
+    final onlyPending = await dao.getTaskTimelinePageWithItem(
+      status: 'pending',
+      limit: 10,
+    );
+    expect(onlyPending.map((e) => e.model.task.id).toList(), [pendingId]);
+
+    // 游标分页：先取前 2 条，再从“第二条”之后继续取。
+    final firstPage = await dao.getTaskTimelinePageWithItem(limit: 2);
+    expect(firstPage.map((e) => e.model.task.id).toList(), [done2Id, done1Id]);
+
+    final cursorOccurredAt = firstPage.last.occurredAt;
+    final cursorTaskId = firstPage.last.model.task.id;
+    final nextPage = await dao.getTaskTimelinePageWithItem(
+      cursorOccurredAt: cursorOccurredAt,
+      cursorTaskId: cursorTaskId,
+      limit: 10,
+    );
+    expect(nextPage.map((e) => e.model.task.id).toList(), [pendingId, skippedId]);
+  });
+
+  test('getReviewPlanWithItem: 不过滤 is_deleted（详情页只读模式需要）', () async {
+    final deletedId = await insertItem(tags: jsonEncode(['a']), isDeleted: true);
+    final base = DateTime(2026, 2, 10);
+
+    await dao.insertReviewTask(
+      ReviewTasksCompanion.insert(
+        learningItemId: deletedId,
+        reviewRound: 2,
+        scheduledDate: base.add(const Duration(days: 2)),
+        status: const drift.Value('pending'),
+        createdAt: drift.Value(base),
+      ),
+    );
+    await dao.insertReviewTask(
+      ReviewTasksCompanion.insert(
+        learningItemId: deletedId,
+        reviewRound: 1,
+        scheduledDate: base.add(const Duration(days: 1)),
+        status: const drift.Value('pending'),
+        createdAt: drift.Value(base),
+      ),
+    );
+
+    final plan = await dao.getReviewPlanWithItem(deletedId);
+    expect(plan.map((e) => e.task.reviewRound).toList(), [1, 2]);
+    expect(plan.first.item.isDeleted, true);
+  });
+
+  test('insertReviewTasks / getTasksByDate: 可批量插入并按 scheduledDate 升序返回', () async {
+    final itemId = await insertItem(tags: jsonEncode(['a']));
+    final day = DateTime(2026, 2, 10);
+
+    await dao.insertReviewTasks([
+      ReviewTasksCompanion.insert(
+        learningItemId: itemId,
+        reviewRound: 1,
+        scheduledDate: day.add(const Duration(hours: 10)),
+        status: const drift.Value('pending'),
+        createdAt: drift.Value(day),
+      ),
+      ReviewTasksCompanion.insert(
+        learningItemId: itemId,
+        reviewRound: 2,
+        scheduledDate: day.add(const Duration(hours: 9)),
+        status: const drift.Value('pending'),
+        createdAt: drift.Value(day),
+      ),
+    ]);
+
+    final rows = await dao.getTasksByDate(day);
+    expect(rows.length, 2);
+    expect(rows.first.scheduledDate, day.add(const Duration(hours: 9)));
+    expect(rows.last.scheduledDate, day.add(const Duration(hours: 10)));
+  });
+
+  test('updateReviewTask: replace 可更新字段', () async {
+    final itemId = await insertItem(tags: jsonEncode(['a']));
+    final day = DateTime(2026, 2, 10);
+    final id = await dao.insertReviewTask(
+      ReviewTasksCompanion.insert(
+        learningItemId: itemId,
+        reviewRound: 1,
+        scheduledDate: day.add(const Duration(hours: 9)),
+        status: const drift.Value('pending'),
+        createdAt: drift.Value(day),
+      ),
+    );
+
+    final existing = await dao.getReviewTaskById(id);
+    expect(existing, isNotNull);
+
+    final ok = await dao.updateReviewTask(
+      existing!.copyWith(
+        status: 'done',
+        completedAt: drift.Value(day.add(const Duration(hours: 9))),
+      ),
+    );
+    expect(ok, true);
+
+    final updated = await dao.getReviewTaskById(id);
+    expect(updated!.status, 'done');
+    expect(updated.completedAt, day.add(const Duration(hours: 9)));
+  });
+
+  test('getAllTasks / deleteMockReviewTasks: 可查询全量并仅删除 Mock 数据', () async {
+    final itemId = await insertItem(tags: jsonEncode(['a']));
+    final day = DateTime(2026, 2, 10);
+
+    await dao.insertReviewTask(
+      ReviewTasksCompanion.insert(
+        learningItemId: itemId,
+        reviewRound: 1,
+        scheduledDate: day.add(const Duration(hours: 9)),
+        status: const drift.Value('pending'),
+        createdAt: drift.Value(day),
+        isMockData: const drift.Value(true),
+      ),
+    );
+    await dao.insertReviewTask(
+      ReviewTasksCompanion.insert(
+        learningItemId: itemId,
+        reviewRound: 2,
+        scheduledDate: day.add(const Duration(hours: 10)),
+        status: const drift.Value('pending'),
+        createdAt: drift.Value(day),
+        isMockData: const drift.Value(false),
+      ),
+    );
+
+    final all = await dao.getAllTasks();
+    expect(all.length, 2);
+
+    final deleted = await dao.deleteMockReviewTasks();
+    expect(deleted, 1);
+
+    final left = await dao.getAllTasks();
+    expect(left.length, 1);
+    expect(left.single.isMockData, false);
+  });
+
   test('getConsecutiveCompletedDays 支持“无任务不间断、pending 断签”口径', () async {
     final itemId = await insertItem(tags: jsonEncode(['a']));
     final now = DateTime.now();
@@ -342,7 +677,7 @@ void main() {
     await dao.insertReviewTask(
       ReviewTasksCompanion.insert(
         learningItemId: itemId,
-        reviewRound: 1,
+        reviewRound: 2,
         scheduledDate: yesterday.add(const Duration(hours: 9)),
         status: const drift.Value('done'),
         completedAt: drift.Value(yesterday.add(const Duration(hours: 9))),
@@ -355,7 +690,7 @@ void main() {
     await dao.insertReviewTask(
       ReviewTasksCompanion.insert(
         learningItemId: itemId,
-        reviewRound: 1,
+        reviewRound: 3,
         scheduledDate: twoDaysAgo.add(const Duration(hours: 9)),
         status: const drift.Value('skipped'),
         skippedAt: drift.Value(twoDaysAgo.add(const Duration(hours: 9))),
@@ -368,7 +703,7 @@ void main() {
     await dao.insertReviewTask(
       ReviewTasksCompanion.insert(
         learningItemId: itemId,
-        reviewRound: 1,
+        reviewRound: 4,
         scheduledDate: threeDaysAgo.add(const Duration(hours: 9)),
         status: const drift.Value('done'),
         completedAt: drift.Value(threeDaysAgo.add(const Duration(hours: 9))),
@@ -381,7 +716,7 @@ void main() {
     await dao.insertReviewTask(
       ReviewTasksCompanion.insert(
         learningItemId: itemId,
-        reviewRound: 1,
+        reviewRound: 5,
         scheduledDate: fourDaysAgo.add(const Duration(hours: 9)),
         status: const drift.Value('pending'),
         createdAt: drift.Value(fourDaysAgo),

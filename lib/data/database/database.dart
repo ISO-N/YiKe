@@ -63,12 +63,16 @@ class AppDatabase extends _$AppDatabase {
   }
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 7;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
     onCreate: (migrator) async {
       await migrator.createAll();
+      // v1.4：为“调整计划/增加轮次”提供唯一定位键（learning_item_id + review_round）。
+      await customStatement(
+        'CREATE UNIQUE INDEX IF NOT EXISTS idx_review_tasks_learning_item_round ON review_tasks (learning_item_id, review_round)',
+      );
     },
     onUpgrade: (migrator, from, to) async {
       // v2.1：新增学习模板、学习主题与关联表。
@@ -129,6 +133,32 @@ class AppDatabase extends _$AppDatabase {
         );
         await customStatement(
           'CREATE INDEX IF NOT EXISTS idx_skipped_at_status ON review_tasks (skipped_at, status)',
+        );
+      }
+
+      // v1.4：任务操作增强
+      // - learning_items：新增 is_deleted / deleted_at（软删除）
+      // - review_tasks：移除 review_round 的 CHECK 约束，允许扩展至 10 轮（应用层控制上限）
+      // - 新增唯一索引：review_tasks(learning_item_id, review_round)
+      if (from < 7) {
+        Future<bool> hasColumn(String table, String column) async {
+          final rows = await customSelect('PRAGMA table_info($table)').get();
+          return rows.any((r) => r.read<String>('name') == column);
+        }
+
+        // 兼容：若 user_version 异常回退（或历史脏库）导致列已存在，则跳过 addColumn，避免重复添加报错。
+        if (!await hasColumn('learning_items', 'is_deleted')) {
+          await migrator.addColumn(learningItems, learningItems.isDeleted);
+        }
+        if (!await hasColumn('learning_items', 'deleted_at')) {
+          await migrator.addColumn(learningItems, learningItems.deletedAt);
+        }
+
+        // Drift 会通过重建表的方式应用约束差异（移除 CHECK 约束）。
+        await migrator.alterTable(TableMigration(reviewTasks));
+
+        await customStatement(
+          'CREATE UNIQUE INDEX IF NOT EXISTS idx_review_tasks_learning_item_round ON review_tasks (learning_item_id, review_round)',
         );
       }
     },

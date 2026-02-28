@@ -90,9 +90,7 @@ class _HomePageState extends ConsumerState<HomePage> {
         builder: (context) {
           return AlertDialog(
             title: const Text('撤销任务状态？'),
-            content: const Text(
-              '该任务将恢复为待复习状态。此操作可能影响今日统计和连续打卡天数，是否确认撤销？',
-            ),
+            content: const Text('该任务将恢复为待复习状态，是否确认撤销？'),
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(false),
@@ -273,7 +271,9 @@ class _HomePageState extends ConsumerState<HomePage> {
                         isOverdue: true,
                         selectionMode: effectiveSelectionMode,
                         selectedTaskIds: state.selectedTaskIds,
+                        expandedTaskIds: state.expandedTaskIds,
                         onToggleSelected: notifier.toggleSelected,
+                        onToggleExpanded: notifier.toggleExpanded,
                         onComplete:
                             (id) => runAction(
                               () => notifier.completeTask(id),
@@ -305,7 +305,9 @@ class _HomePageState extends ConsumerState<HomePage> {
                         isOverdue: false,
                         selectionMode: effectiveSelectionMode,
                         selectedTaskIds: state.selectedTaskIds,
+                        expandedTaskIds: state.expandedTaskIds,
                         onToggleSelected: notifier.toggleSelected,
+                        onToggleExpanded: notifier.toggleExpanded,
                         onComplete:
                             (id) => runAction(
                               () => notifier.completeTask(id),
@@ -333,7 +335,9 @@ class _HomePageState extends ConsumerState<HomePage> {
                         isOverdue: false,
                         selectionMode: false,
                         selectedTaskIds: const {},
+                        expandedTaskIds: state.expandedTaskIds,
                         onToggleSelected: (_) {},
+                        onToggleExpanded: notifier.toggleExpanded,
                         onComplete: (_) {},
                         onSkip: (_) {},
                         onUndo: (id) => confirmUndo(id),
@@ -354,7 +358,9 @@ class _HomePageState extends ConsumerState<HomePage> {
                         isOverdue: false,
                         selectionMode: false,
                         selectedTaskIds: const {},
+                        expandedTaskIds: state.expandedTaskIds,
                         onToggleSelected: (_) {},
+                        onToggleExpanded: notifier.toggleExpanded,
                         onComplete: (_) {},
                         onSkip: (_) {},
                         onUndo: (id) => confirmUndo(id),
@@ -375,7 +381,9 @@ class _HomePageState extends ConsumerState<HomePage> {
                           isOverdue: true,
                           selectionMode: false,
                           selectedTaskIds: const {},
+                          expandedTaskIds: state.expandedTaskIds,
                           onToggleSelected: (_) {},
+                          onToggleExpanded: notifier.toggleExpanded,
                           onComplete:
                               (id) => runAction(
                                 () => notifier.completeTask(id),
@@ -404,7 +412,9 @@ class _HomePageState extends ConsumerState<HomePage> {
                           isOverdue: false,
                           selectionMode: false,
                           selectedTaskIds: const {},
+                          expandedTaskIds: state.expandedTaskIds,
                           onToggleSelected: (_) {},
+                          onToggleExpanded: notifier.toggleExpanded,
                           onComplete:
                               (id) => runAction(
                                 () => notifier.completeTask(id),
@@ -432,7 +442,9 @@ class _HomePageState extends ConsumerState<HomePage> {
                           isOverdue: false,
                           selectionMode: false,
                           selectedTaskIds: const {},
+                          expandedTaskIds: state.expandedTaskIds,
                           onToggleSelected: (_) {},
+                          onToggleExpanded: notifier.toggleExpanded,
                           onComplete: (_) {},
                           onSkip: (_) {},
                           onUndo: (id) => confirmUndo(id),
@@ -453,7 +465,9 @@ class _HomePageState extends ConsumerState<HomePage> {
                           isOverdue: false,
                           selectionMode: false,
                           selectedTaskIds: const {},
+                          expandedTaskIds: state.expandedTaskIds,
                           onToggleSelected: (_) {},
+                          onToggleExpanded: notifier.toggleExpanded,
                           onComplete: (_) {},
                           onSkip: (_) {},
                           onUndo: (id) => confirmUndo(id),
@@ -824,7 +838,9 @@ class _TaskGrid extends StatelessWidget {
     required this.isOverdue,
     required this.selectionMode,
     required this.selectedTaskIds,
+    required this.expandedTaskIds,
     required this.onToggleSelected,
+    required this.onToggleExpanded,
     required this.onComplete,
     required this.onSkip,
     this.onUndo,
@@ -834,7 +850,9 @@ class _TaskGrid extends StatelessWidget {
   final bool isOverdue;
   final bool selectionMode;
   final Set<int> selectedTaskIds;
+  final Set<int> expandedTaskIds;
   final void Function(int taskId) onToggleSelected;
+  final void Function(int taskId) onToggleExpanded;
   final void Function(int taskId) onComplete;
   final void Function(int taskId) onSkip;
   final void Function(int taskId)? onUndo;
@@ -853,6 +871,7 @@ class _TaskGrid extends StatelessWidget {
                 child: _TaskCard(
                   taskId: t.taskId,
                   title: t.title,
+                  note: t.note,
                   tags: t.tags,
                   reviewRound: t.reviewRound,
                   scheduledDate: t.scheduledDate,
@@ -862,7 +881,9 @@ class _TaskGrid extends StatelessWidget {
                   isOverdue: isOverdue,
                   selectionMode: selectionMode,
                   selected: selectedTaskIds.contains(t.taskId),
+                  expanded: expandedTaskIds.contains(t.taskId),
                   onToggleSelected: () => onToggleSelected(t.taskId),
+                  onToggleExpanded: () => onToggleExpanded(t.taskId),
                   onComplete: () => onComplete(t.taskId),
                   onSkip: () => onSkip(t.taskId),
                   onUndo: onUndo == null ? null : () => onUndo!(t.taskId),
@@ -890,6 +911,7 @@ class _TaskGrid extends StatelessWidget {
         return _TaskCard(
           taskId: t.taskId,
           title: t.title,
+          note: t.note,
           tags: t.tags,
           reviewRound: t.reviewRound,
           scheduledDate: t.scheduledDate,
@@ -899,8 +921,10 @@ class _TaskGrid extends StatelessWidget {
           isOverdue: isOverdue,
           selectionMode: selectionMode,
           selected: selectedTaskIds.contains(t.taskId),
+          expanded: expandedTaskIds.contains(t.taskId),
           enableSwipe: false,
           onToggleSelected: () => onToggleSelected(t.taskId),
+          onToggleExpanded: () => onToggleExpanded(t.taskId),
           onComplete: () => onComplete(t.taskId),
           onSkip: () => onSkip(t.taskId),
           onUndo: onUndo == null ? null : () => onUndo!(t.taskId),
@@ -914,6 +938,7 @@ class _TaskCard extends StatelessWidget {
   const _TaskCard({
     required this.taskId,
     required this.title,
+    required this.note,
     required this.tags,
     required this.reviewRound,
     required this.scheduledDate,
@@ -923,8 +948,10 @@ class _TaskCard extends StatelessWidget {
     required this.isOverdue,
     required this.selectionMode,
     required this.selected,
+    required this.expanded,
     this.enableSwipe = true,
     required this.onToggleSelected,
+    required this.onToggleExpanded,
     required this.onComplete,
     required this.onSkip,
     required this.onUndo,
@@ -932,6 +959,7 @@ class _TaskCard extends StatelessWidget {
 
   final int taskId;
   final String title;
+  final String? note;
   final List<String> tags;
   final int reviewRound;
   final DateTime scheduledDate;
@@ -941,8 +969,10 @@ class _TaskCard extends StatelessWidget {
   final bool isOverdue;
   final bool selectionMode;
   final bool selected;
+  final bool expanded;
   final bool enableSwipe;
   final VoidCallback onToggleSelected;
+  final VoidCallback onToggleExpanded;
   final VoidCallback onComplete;
   final VoidCallback onSkip;
   final VoidCallback? onUndo;
@@ -975,19 +1005,22 @@ class _TaskCard extends StatelessWidget {
       ReviewTaskStatus.pending => null,
     };
 
-    final card = GlassCard(
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          border: Border.all(color: borderColor),
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Stack(
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(AppSpacing.lg),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
+    final card = InkWell(
+      onTap: selectionMode ? onToggleSelected : onToggleExpanded,
+      borderRadius: BorderRadius.circular(16),
+      child: GlassCard(
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            border: Border.all(color: borderColor),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Stack(
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(AppSpacing.lg),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
                   if (selectionMode)
                     Padding(
                       padding: const EdgeInsets.only(top: 2),
@@ -1060,6 +1093,43 @@ class _TaskCard extends StatelessWidget {
                                 .toList(),
                           ),
                         ],
+                        AnimatedCrossFade(
+                          crossFadeState:
+                              expanded
+                                  ? CrossFadeState.showSecond
+                                  : CrossFadeState.showFirst,
+                          duration: const Duration(milliseconds: 160),
+                          firstChild: const SizedBox.shrink(),
+                          secondChild: Padding(
+                            padding: const EdgeInsets.only(top: AppSpacing.md),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                if (note?.trim().isNotEmpty ?? false) ...[
+                                  Text(
+                                    '备注',
+                                    style: AppTypography.h2(
+                                      context,
+                                    ).copyWith(fontSize: 14),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    note!.trim(),
+                                    style: AppTypography.bodySecondary(context),
+                                  ),
+                                  const SizedBox(height: AppSpacing.sm),
+                                ],
+                                Text(
+                                  '点击卡片可收起详情',
+                                  style: TextStyle(
+                                    color: secondaryText,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -1094,7 +1164,8 @@ class _TaskCard extends StatelessWidget {
             ),
             if (statusTag != null)
               Positioned(right: 12, top: 12, child: statusTag),
-          ],
+            ],
+          ),
         ),
       ),
     );

@@ -185,6 +185,8 @@ class ExportDataUseCase {
       'tags': item.tags,
       'learningDate': item.learningDate.toIso8601String(),
       'createdAt': item.createdAt.toIso8601String(),
+      'isDeleted': item.isDeleted,
+      'deletedAt': item.deletedAt?.toIso8601String(),
     };
   }
 
@@ -214,7 +216,7 @@ class ExportDataUseCase {
 
     if (items.isNotEmpty) {
       buffer.writeln('学习内容');
-      buffer.writeln('id,title,note,tags,learningDate,createdAt');
+      buffer.writeln('id,title,note,tags,learningDate,createdAt,isDeleted,deletedAt');
       for (final item in items) {
         buffer
           ..write(_csvInt(item.id))
@@ -227,7 +229,11 @@ class ExportDataUseCase {
           ..write(',')
           ..write(_csvText(item.learningDate.toIso8601String()))
           ..write(',')
-          ..writeln(_csvText(item.createdAt.toIso8601String()));
+          ..write(_csvText(item.createdAt.toIso8601String()))
+          ..write(',')
+          ..write(_csvText(item.isDeleted.toString()))
+          ..write(',')
+          ..writeln(_csvText(item.deletedAt?.toIso8601String() ?? ''));
       }
       buffer.writeln();
     }

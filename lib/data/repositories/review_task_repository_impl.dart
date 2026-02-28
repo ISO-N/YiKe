@@ -7,6 +7,7 @@ import 'dart:convert';
 
 import 'package:drift/drift.dart';
 
+import '../../core/utils/ebbinghaus_utils.dart';
 import '../../domain/entities/review_task.dart';
 import '../../domain/entities/task_day_stats.dart';
 import '../../domain/entities/task_timeline.dart';
@@ -84,7 +85,7 @@ class ReviewTaskRepositoryImpl implements ReviewTaskRepository {
   Future<List<ReviewTaskEntity>> createBatch(
     List<ReviewTaskEntity> tasks,
   ) async {
-    // v1.0 MVP：每次最多插入 5 条任务，逐条插入以获得 ID，便于后续扩展（如按任务调度通知）。
+    // 规格增强：默认复习计划可扩展至 10 轮，逐条插入以获得 ID，便于后续扩展（如按任务调度通知）。
     final saved = <ReviewTaskEntity>[];
     for (final task in tasks) {
       saved.add(await create(task));
@@ -154,6 +155,94 @@ class ReviewTaskRepositoryImpl implements ReviewTaskRepository {
   Future<void> undoTaskStatus(int id) async {
     await dao.undoTaskStatus(id);
     await _logTaskUpdateById(id);
+  }
+
+  @override
+  Future<List<ReviewTaskViewEntity>> getReviewPlan(int learningItemId) async {
+    final rows = await dao.getReviewPlanWithItem(learningItemId);
+    return rows.map(_toViewEntity).toList()
+      ..sort((a, b) => a.reviewRound.compareTo(b.reviewRound));
+  }
+
+  @override
+  Future<void> adjustReviewDate({
+    required int learningItemId,
+    required int reviewRound,
+    required DateTime scheduledDate,
+  }) async {
+    // 规格增强：已停用学习内容禁止任何操作。
+    final itemRow =
+        await (dao.db.select(dao.db.learningItems)
+              ..where((t) => t.id.equals(learningItemId)))
+            .getSingleOrNull();
+    if (itemRow == null) {
+      throw StateError('学习内容不存在（id=$learningItemId）');
+    }
+    if (itemRow.isDeleted) {
+      throw StateError('学习内容已停用，无法调整计划');
+    }
+
+    final taskRow = await dao.getTaskByLearningItemAndRound(
+      learningItemId,
+      reviewRound,
+    );
+    if (taskRow == null) {
+      throw StateError(
+        '复习任务不存在（learningItemId=$learningItemId, reviewRound=$reviewRound）',
+      );
+    }
+
+    final updated = await dao.updateScheduledDateByLearningItemAndRound(
+      learningItemId: learningItemId,
+      reviewRound: reviewRound,
+      scheduledDate: scheduledDate,
+    );
+    if (updated <= 0) {
+      throw StateError('调整计划失败（learningItemId=$learningItemId, round=$reviewRound）');
+    }
+    await _logTaskUpdateById(taskRow.id);
+  }
+
+  @override
+  Future<void> addReviewRound(int learningItemId) async {
+    // 规格增强：已停用学习内容禁止任何操作。
+    final itemRow =
+        await (dao.db.select(dao.db.learningItems)
+              ..where((t) => t.id.equals(learningItemId)))
+            .getSingleOrNull();
+    if (itemRow == null) {
+      throw StateError('学习内容不存在（id=$learningItemId）');
+    }
+    if (itemRow.isDeleted) {
+      throw StateError('学习内容已停用，无法增加轮次');
+    }
+
+    final maxRound = await dao.getMaxReviewRound(learningItemId);
+    if (maxRound >= 10) {
+      throw StateError('已达到最大轮次（10）');
+    }
+
+    final tasks = await dao.getTasksByLearningItemId(learningItemId);
+    if (tasks.isEmpty) {
+      throw StateError('学习内容缺少复习任务，无法增加轮次（id=$learningItemId）');
+    }
+    tasks.sort((a, b) => a.reviewRound.compareTo(b.reviewRound));
+    final last = tasks.last;
+
+    final nextRound = maxRound + 1;
+    final interval = EbbinghausUtils.defaultIntervalsDays[nextRound - 1];
+    final nextDate = last.scheduledDate.add(Duration(days: interval));
+
+    final now = DateTime.now();
+    await create(
+      ReviewTaskEntity(
+        learningItemId: learningItemId,
+        reviewRound: nextRound,
+        scheduledDate: nextDate,
+        status: ReviewTaskStatus.pending,
+        createdAt: now,
+      ),
+    );
   }
 
   @override
@@ -268,6 +357,8 @@ class ReviewTaskRepositoryImpl implements ReviewTaskRepository {
       status: ReviewTaskStatusX.fromDbValue(task.status),
       completedAt: task.completedAt,
       skippedAt: task.skippedAt,
+      isDeleted: item.isDeleted,
+      deletedAt: item.deletedAt,
     );
   }
 
