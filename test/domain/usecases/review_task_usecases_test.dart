@@ -5,6 +5,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:yike/domain/entities/review_task.dart';
 import 'package:yike/domain/entities/task_day_stats.dart';
+import 'package:yike/domain/entities/task_timeline.dart';
 import 'package:yike/domain/repositories/review_task_repository.dart';
 import 'package:yike/domain/usecases/complete_review_task_usecase.dart';
 import 'package:yike/domain/usecases/get_home_tasks_usecase.dart';
@@ -103,6 +104,30 @@ class _FakeReviewTaskRepository implements ReviewTaskRepository {
   @override
   Future<List<ReviewTaskViewEntity>> getTasksByDate(DateTime date) =>
       throw UnimplementedError();
+
+  @override
+  Future<List<ReviewTaskViewEntity>> getTodayCompletedTasks() async {
+    return const [];
+  }
+
+  @override
+  Future<List<ReviewTaskViewEntity>> getTodaySkippedTasks() async {
+    return const [];
+  }
+
+  @override
+  Future<void> undoTaskStatus(int id) => throw UnimplementedError();
+
+  @override
+  Future<(int all, int pending, int done, int skipped)>
+  getGlobalTaskStatusCounts() => throw UnimplementedError();
+
+  @override
+  Future<TaskTimelinePageEntity> getTaskTimelinePage({
+    ReviewTaskStatus? status,
+    TaskTimelineCursorEntity? cursor,
+    int limit = 20,
+  }) => throw UnimplementedError();
 }
 
 void main() {

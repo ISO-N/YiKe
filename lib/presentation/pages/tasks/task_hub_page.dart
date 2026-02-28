@@ -11,7 +11,7 @@ import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_strings.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/utils/date_utils.dart';
-import '../../providers/task_filter_provider.dart';
+import '../../../domain/entities/review_task.dart';
 import '../../providers/task_hub_provider.dart';
 import '../../widgets/glass_card.dart';
 import '../../widgets/gradient_background.dart';
@@ -328,7 +328,7 @@ class _TaskTimelineCard extends StatelessWidget {
                       ],
                     ),
                   ),
-                  if (tag != null) tag,
+                  tag ?? const SizedBox.shrink(),
                 ],
               ),
               if (item.tags.isNotEmpty) ...[
@@ -378,7 +378,7 @@ class _TaskTimelineCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      if ((item.note ?? '').trim().isNotEmpty) ...[
+                      if (item.note?.trim().isNotEmpty ?? false) ...[
                         Text('备注', style: AppTypography.h2(context).copyWith(fontSize: 14)),
                         const SizedBox(height: 6),
                         Text(item.note!.trim(), style: AppTypography.bodySecondary(context)),
@@ -421,18 +421,17 @@ class _TaskTimelineCard extends StatelessWidget {
   }
 
   String _subtitleText(BuildContext context) {
-    switch (item.status) {
-      case ReviewTaskStatus.pending:
-        return '待复习';
-      case ReviewTaskStatus.done:
-        final time = item.completedAt;
-        if (time == null) return '已完成';
-        return '完成于 ${TimeOfDay.fromDateTime(time).format(context)}';
-      case ReviewTaskStatus.skipped:
-        final time = item.skippedAt;
-        if (time == null) return '已跳过';
-        return '跳过于 ${TimeOfDay.fromDateTime(time).format(context)}';
-    }
+    return switch (item.status) {
+      ReviewTaskStatus.pending => '待复习',
+      ReviewTaskStatus.done =>
+        item.completedAt == null
+            ? '已完成'
+            : '完成于 ${TimeOfDay.fromDateTime(item.completedAt!).format(context)}',
+      ReviewTaskStatus.skipped =>
+        item.skippedAt == null
+            ? '已跳过'
+            : '跳过于 ${TimeOfDay.fromDateTime(item.skippedAt!).format(context)}',
+    };
   }
 }
 

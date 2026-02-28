@@ -12,7 +12,6 @@ import '../../domain/entities/task_day_stats.dart';
 import '../../domain/entities/task_timeline.dart';
 import '../../domain/repositories/review_task_repository.dart';
 import '../models/review_task_with_item_model.dart';
-import '../models/review_task_timeline_model.dart';
 import '../database/daos/review_task_dao.dart';
 import '../database/database.dart';
 import '../sync/sync_log_writer.dart';

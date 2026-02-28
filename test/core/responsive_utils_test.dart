@@ -11,7 +11,7 @@ void main() {
 
   /// 构建一个最小 Widget，并在 build 阶段读取响应式工具类的结果。
   Future<({bool isMobile, bool isTablet, bool isDesktop, int columns})>
-  _measure(WidgetTester tester, double width) async {
+  measure(WidgetTester tester, double width) async {
     var isMobile = false;
     var isTablet = false;
     var isDesktop = false;
@@ -44,19 +44,19 @@ void main() {
   }
 
   testWidgets('断点判断：mobile/tablet/desktop', (tester) async {
-    final mobile = await _measure(tester, 500);
+    final mobile = await measure(tester, 500);
     expect(mobile.isMobile, isTrue);
     expect(mobile.isTablet, isFalse);
     expect(mobile.isDesktop, isFalse);
     expect(mobile.columns, 1);
 
-    final tablet = await _measure(tester, 700);
+    final tablet = await measure(tester, 700);
     expect(tablet.isMobile, isFalse);
     expect(tablet.isTablet, isTrue);
     expect(tablet.isDesktop, isFalse);
     expect(tablet.columns, 1);
 
-    final desktop = await _measure(tester, 1300);
+    final desktop = await measure(tester, 1300);
     expect(desktop.isMobile, isFalse);
     expect(desktop.isTablet, isFalse);
     expect(desktop.isDesktop, isTrue);

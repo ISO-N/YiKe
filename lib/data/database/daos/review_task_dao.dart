@@ -309,7 +309,7 @@ class ReviewTaskDao {
     int limit = 20,
   }) async {
     final where = StringBuffer();
-    final variables = <Variable<Object?>>[];
+    final variables = <Variable>[];
 
     where.write('1=1');
     if (status != null) {
@@ -327,7 +327,7 @@ END
 ''';
 
     final cursorWhere = StringBuffer();
-    final cursorVars = <Variable<Object?>>[];
+    final cursorVars = <Variable>[];
     if (cursorOccurredAt != null && cursorTaskId != null) {
       cursorWhere.write(
         'WHERE (t.occurred_at < ? OR (t.occurred_at = ? AND t."rt.id" < ?))',
@@ -381,7 +381,7 @@ LIMIT ?
         .map((row) {
           final task = db.reviewTasks.map(row.data, tablePrefix: 'rt');
           final item = db.learningItems.map(row.data, tablePrefix: 'li');
-          final occurredAt = row.read<DateTime>('occurred_at')!;
+          final occurredAt = row.read<DateTime>('occurred_at');
           return ReviewTaskTimelineModel(
             model: ReviewTaskWithItemModel(task: task, item: item),
             occurredAt: occurredAt,

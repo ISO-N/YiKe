@@ -7,6 +7,7 @@ import 'package:yike/domain/entities/learning_item.dart';
 import 'package:yike/domain/entities/review_config.dart';
 import 'package:yike/domain/entities/review_task.dart';
 import 'package:yike/domain/entities/task_day_stats.dart';
+import 'package:yike/domain/entities/task_timeline.dart';
 import 'package:yike/domain/repositories/learning_item_repository.dart';
 import 'package:yike/domain/repositories/review_task_repository.dart';
 import 'package:yike/domain/usecases/create_learning_item_usecase.dart';
@@ -120,6 +121,29 @@ class _FakeReviewTaskRepository implements ReviewTaskRepository {
 
   @override
   Future<void> skipTasks(List<int> ids) => throw UnimplementedError();
+
+  // 以下为当前测试不涉及的方法（为满足接口编译要求）。
+  @override
+  Future<List<ReviewTaskViewEntity>> getTodayCompletedTasks() =>
+      throw UnimplementedError();
+
+  @override
+  Future<List<ReviewTaskViewEntity>> getTodaySkippedTasks() =>
+      throw UnimplementedError();
+
+  @override
+  Future<void> undoTaskStatus(int id) => throw UnimplementedError();
+
+  @override
+  Future<(int all, int pending, int done, int skipped)>
+  getGlobalTaskStatusCounts() => throw UnimplementedError();
+
+  @override
+  Future<TaskTimelinePageEntity> getTaskTimelinePage({
+    ReviewTaskStatus? status,
+    TaskTimelineCursorEntity? cursor,
+    int limit = 20,
+  }) => throw UnimplementedError();
 }
 
 void main() {
