@@ -21,7 +21,7 @@ class ShellScaffold extends StatelessWidget {
 
   int _locationToIndex(String location) {
     if (location.startsWith('/settings')) return 4;
-    if (location.startsWith('/help')) return 3;
+    if (location.startsWith('/tasks')) return 3;
     if (location.startsWith('/statistics')) return 2;
     if (location.startsWith('/calendar')) return 1;
     return 0;
@@ -39,7 +39,7 @@ class ShellScaffold extends StatelessWidget {
         context.go('/statistics');
         return;
       case 3:
-        context.go('/help');
+        context.go('/tasks');
         return;
       case 4:
         context.go('/settings');
@@ -75,9 +75,9 @@ class ShellScaffold extends StatelessWidget {
             label: AppStrings.statistics,
           ),
           NavigationDestination(
-            icon: Icon(Icons.help_outline),
-            selectedIcon: Icon(Icons.help),
-            label: AppStrings.help,
+            icon: Icon(Icons.list_alt_outlined),
+            selectedIcon: Icon(Icons.list_alt),
+            label: AppStrings.tasks,
           ),
           NavigationDestination(
             icon: Icon(Icons.settings_outlined),

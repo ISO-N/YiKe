@@ -172,6 +172,19 @@ class SettingsPage extends ConsumerWidget {
               ),
               const SizedBox(height: AppSpacing.lg),
               GlassCard(
+                child: Column(
+                  children: [
+                    ListTile(
+                      title: const Text('帮助'),
+                      subtitle: const Text('查看忆刻学习指南与使用说明'),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () => context.push('/settings/help'),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              GlassCard(
                 child: Padding(
                   padding: const EdgeInsets.all(AppSpacing.lg),
                   child: Column(

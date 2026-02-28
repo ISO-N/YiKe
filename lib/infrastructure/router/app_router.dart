@@ -16,6 +16,7 @@ import '../../presentation/pages/input/import_preview_page.dart';
 import '../../presentation/pages/input/templates_page.dart';
 import '../../presentation/pages/debug/mock_data_generator_page.dart';
 import '../../presentation/pages/learning_item/learning_item_detail_page.dart';
+import '../../presentation/pages/tasks/task_hub_page.dart';
 import '../../presentation/pages/settings/export_page.dart';
 import '../../presentation/pages/settings/settings_page.dart';
 import '../../presentation/pages/settings/sync_settings_page.dart';
@@ -50,7 +51,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                 const NoTransitionPage(child: StatisticsPage()),
           ),
           GoRoute(
-            path: '/help',
+            path: '/tasks',
+            pageBuilder: (context, state) =>
+                const NoTransitionPage(child: TaskHubPage()),
+          ),
+          GoRoute(
+            path: '/settings/help',
             pageBuilder: (context, state) =>
                 const NoTransitionPage(child: HelpPage()),
           ),
@@ -60,6 +66,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                 const NoTransitionPage(child: SettingsPage()),
           ),
         ],
+      ),
+      GoRoute(
+        path: '/help',
+        redirect: (context, state) => '/settings/help',
       ),
       GoRoute(
         path: '/input',
