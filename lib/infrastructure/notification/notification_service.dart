@@ -84,4 +84,11 @@ class NotificationService {
       const NotificationDetails(android: androidDetails),
     );
   }
+
+  /// 取消全部通知。
+  ///
+  /// 说明：用于“导入恢复后”清理旧通知残留（避免通知 ID/内容与新数据不一致）。
+  /// 返回值：Future（无返回值）。
+  /// 异常：取消失败时可能抛出异常。
+  Future<void> cancelAll() => _plugin.cancelAll();
 }
