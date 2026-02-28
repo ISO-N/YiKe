@@ -298,24 +298,34 @@ class SyncController extends StateNotifier<SyncUiState> {
     state = state.copyWith(state: SyncState.connecting, errorMessage: null);
     _refreshTrayStatus();
 
-    final resp = await _transfer.requestPairing(
-      ipAddress: master.ipAddress,
-      request: PairRequest(
-        clientDeviceId: localDeviceId,
-        clientDeviceName: localName,
-        clientDeviceType: localType,
-      ),
-    );
+    try {
+      final resp = await _transfer.requestPairing(
+        ipAddress: master.ipAddress,
+        request: PairRequest(
+          clientDeviceId: localDeviceId,
+          clientDeviceName: localName,
+          clientDeviceType: localType,
+        ),
+      );
 
-    final outgoing = OutgoingPairing(
-      masterDeviceId: master.deviceId,
-      masterDeviceName: master.deviceName,
-      masterIp: master.ipAddress,
-      sessionId: resp.sessionId,
-      expiresAtMs: resp.expiresAtMs,
-    );
-    state = state.copyWith(outgoingPairing: outgoing);
-    return outgoing;
+      final outgoing = OutgoingPairing(
+        masterDeviceId: master.deviceId,
+        masterDeviceName: master.deviceName,
+        masterIp: master.ipAddress,
+        sessionId: resp.sessionId,
+        expiresAtMs: resp.expiresAtMs,
+      );
+      state = state.copyWith(outgoingPairing: outgoing);
+      return outgoing;
+    } catch (e) {
+      // 说明：配对请求失败时，将错误信息落到状态，避免 UI 弹窗链路因未捕获异常而中断。
+      state = state.copyWith(
+        state: SyncState.error,
+        errorMessage: e.toString(),
+      );
+      _refreshTrayStatus();
+      rethrow;
+    }
   }
 
   /// 客户端：提交配对码完成配对。
@@ -343,34 +353,43 @@ class SyncController extends StateNotifier<SyncUiState> {
     state = state.copyWith(state: SyncState.connecting, errorMessage: null);
     _refreshTrayStatus();
 
-    final resp = await _transfer.confirmPairing(
-      ipAddress: outgoing.masterIp,
-      request: PairConfirmRequest(
-        sessionId: outgoing.sessionId,
-        pairingCode: pairingCode,
-      ),
-    );
+    try {
+      final resp = await _transfer.confirmPairing(
+        ipAddress: outgoing.masterIp,
+        request: PairConfirmRequest(
+          sessionId: outgoing.sessionId,
+          pairingCode: pairingCode,
+        ),
+      );
 
-    final syncDeviceDao = _ref.read(syncDeviceDaoProvider);
-    await syncDeviceDao.upsert(
-      SyncDevicesCompanion.insert(
-        deviceId: outgoing.masterDeviceId,
-        deviceName: outgoing.masterDeviceName,
-        deviceType: 'unknown',
-        ipAddress: Value(outgoing.masterIp),
-        authToken: Value(resp.authToken),
-        isMaster: const Value(true),
-        lastSyncMs: const Value.absent(),
-        lastOutgoingMs: const Value.absent(),
-        lastIncomingMs: const Value.absent(),
-      ),
-    );
+      final syncDeviceDao = _ref.read(syncDeviceDaoProvider);
+      await syncDeviceDao.upsert(
+        SyncDevicesCompanion.insert(
+          deviceId: outgoing.masterDeviceId,
+          deviceName: outgoing.masterDeviceName,
+          deviceType: 'unknown',
+          ipAddress: Value(outgoing.masterIp),
+          authToken: Value(resp.authToken),
+          isMaster: const Value(true),
+          lastSyncMs: const Value.absent(),
+          lastOutgoingMs: const Value.absent(),
+          lastIncomingMs: const Value.absent(),
+        ),
+      );
 
-    state = state.copyWith(outgoingPairing: null, state: SyncState.connected);
-    _refreshTrayStatus();
+      state = state.copyWith(outgoingPairing: null, state: SyncState.connected);
+      _refreshTrayStatus();
 
-    // 首次配对后做一次全量同步。
-    await syncNow();
+      // 首次配对后做一次全量同步。
+      await syncNow();
+    } catch (e) {
+      // 说明：这里不向外抛异常，避免弹窗 onPressed 链路崩溃；错误统一展示在页面“错误”卡片。
+      state = state.copyWith(
+        state: SyncState.error,
+        errorMessage: e.toString(),
+      );
+      _refreshTrayStatus();
+    }
   }
 
   /// 手动同步。

@@ -254,12 +254,17 @@ class _DiscoveredDevicesCard extends ConsumerWidget {
                       ? const SizedBox.shrink()
                       : FilledButton(
                           onPressed: () async {
-                            await controller.requestPairing(d);
-                            if (!context.mounted) return;
-                            await _showPairingCodeDialog(
-                              context: context,
-                              ref: ref,
-                            );
+                            try {
+                              await controller.requestPairing(d);
+                              if (!context.mounted) return;
+                              await _showPairingCodeDialog(
+                                context: context,
+                                ref: ref,
+                              );
+                            } catch (_) {
+                              // 说明：失败原因会写入 SyncUiState.errorMessage 并在页面下方展示。
+                              // 这里不再弹出“输入配对码”对话框，避免无效操作。
+                            }
                           },
                           child: const Text('配对'),
                         ),
