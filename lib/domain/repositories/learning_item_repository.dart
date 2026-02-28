@@ -16,6 +16,16 @@ abstract class LearningItemRepository {
   /// 更新学习内容。
   Future<LearningItemEntity> update(LearningItemEntity item);
 
+  /// 更新学习内容备注（仅更新 note 字段）。
+  ///
+  /// 说明：用于任务详情中的“编辑备注”。
+  Future<void> updateNote({required int id, required String? note});
+
+  /// 停用学习内容（软删除）。
+  ///
+  /// 说明：设置 isDeleted=true 并写入 deletedAt，不物理删除数据。
+  Future<void> deactivate(int id);
+
   /// 删除学习内容。
   Future<void> delete(int id);
 

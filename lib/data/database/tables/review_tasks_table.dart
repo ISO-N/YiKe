@@ -23,7 +23,9 @@ class ReviewTasks extends Table {
   IntColumn get learningItemId =>
       integer().references(LearningItems, #id, onDelete: KeyAction.cascade)();
 
-  /// 复习轮次（1-5）。
+  /// 复习轮次（1-10）。
+  ///
+  /// 说明：数据库层不再使用 CHECK 约束限制范围，最大轮次由应用层控制。
   IntColumn get reviewRound => integer()();
 
   /// 计划复习日期。
@@ -47,9 +49,5 @@ class ReviewTasks extends Table {
   /// 是否为模拟数据（v3.1：用于 Debug 模式生成/清理、同步/导出隔离）。
   BoolColumn get isMockData => boolean().withDefault(const Constant(false))();
 
-  @override
-  List<String> get customConstraints => const [
-    // 复习轮次范围约束（避免 Analyzer 对 self-reference 的提示）。
-    'CHECK (review_round BETWEEN 1 AND 5)',
-  ];
+  // 注意：最大轮次约束在应用层完成（见 AddReviewRoundUseCase / EbbinghausUtils.maxReviewRound）。
 }

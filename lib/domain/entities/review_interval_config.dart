@@ -6,21 +6,21 @@ library;
 /// 复习间隔配置实体。
 ///
 /// 说明：
-/// - round：复习轮次（1-5）
+/// - round：复习轮次（1-10）
 /// - intervalDays：与学习日的间隔天数（最小 1）
 /// - enabled：是否启用该轮次
 class ReviewIntervalConfigEntity {
   /// 构造函数。
   ///
   /// 异常：
-  /// - 当 [round] 不在 1-5 或 [intervalDays] < 1 时抛出 [ArgumentError]。
+  /// - 当 [round] 不在 1-10 或 [intervalDays] < 1 时抛出 [ArgumentError]。
   ReviewIntervalConfigEntity({
     required this.round,
     required this.intervalDays,
     required this.enabled,
   }) {
-    if (round < 1 || round > 5) {
-      throw ArgumentError('round 必须在 1-5 范围内');
+    if (round < 1 || round > 10) {
+      throw ArgumentError('round 必须在 1-10 范围内');
     }
     if (intervalDays < 1) {
       throw ArgumentError('intervalDays 最小为 1');

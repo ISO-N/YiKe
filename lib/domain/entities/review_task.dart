@@ -49,7 +49,7 @@ class ReviewTaskEntity {
   /// 参数：
   /// - [id] 数据库 ID（新建时可为 null）
   /// - [learningItemId] 关联学习内容 ID
-  /// - [reviewRound] 复习轮次（1-5）
+  /// - [reviewRound] 复习轮次（1-10）
   /// - [scheduledDate] 计划日期
   /// - [status] 当前状态
   /// - [completedAt] 完成时间
@@ -120,6 +120,8 @@ class ReviewTaskViewEntity {
     required this.status,
     required this.completedAt,
     required this.skippedAt,
+    required this.isDeleted,
+    required this.deletedAt,
   });
 
   final int taskId;
@@ -132,4 +134,12 @@ class ReviewTaskViewEntity {
   final ReviewTaskStatus status;
   final DateTime? completedAt;
   final DateTime? skippedAt;
+
+  /// 学习内容是否已停用（软删除）。
+  ///
+  /// 说明：用于详情页只读模式与操作禁用判断。
+  final bool isDeleted;
+
+  /// 学习内容停用时间（可空）。
+  final DateTime? deletedAt;
 }

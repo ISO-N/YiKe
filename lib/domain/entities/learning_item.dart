@@ -17,6 +17,8 @@ class LearningItemEntity {
   /// - [learningDate] 学习日期（用于生成复习节点）
   /// - [createdAt] 创建时间
   /// - [updatedAt] 更新时间
+  /// - [isDeleted] 是否已停用（软删除）
+  /// - [deletedAt] 停用时间（可空）
   /// 异常：无（校验由上层负责）。
   const LearningItemEntity({
     this.id,
@@ -26,6 +28,8 @@ class LearningItemEntity {
     required this.learningDate,
     required this.createdAt,
     this.updatedAt,
+    this.isDeleted = false,
+    this.deletedAt,
     this.isMockData = false,
   });
 
@@ -36,6 +40,12 @@ class LearningItemEntity {
   final DateTime learningDate;
   final DateTime createdAt;
   final DateTime? updatedAt;
+
+  /// 是否已停用（软删除标记）。
+  final bool isDeleted;
+
+  /// 停用时间（可空）。
+  final DateTime? deletedAt;
 
   /// 是否为模拟数据（v3.1：用于 Debug 模拟数据隔离）。
   final bool isMockData;
@@ -48,6 +58,8 @@ class LearningItemEntity {
     DateTime? learningDate,
     DateTime? createdAt,
     DateTime? updatedAt,
+    bool? isDeleted,
+    DateTime? deletedAt,
     bool? isMockData,
   }) {
     return LearningItemEntity(
@@ -58,6 +70,8 @@ class LearningItemEntity {
       learningDate: learningDate ?? this.learningDate,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      isDeleted: isDeleted ?? this.isDeleted,
+      deletedAt: deletedAt ?? this.deletedAt,
       isMockData: isMockData ?? this.isMockData,
     );
   }

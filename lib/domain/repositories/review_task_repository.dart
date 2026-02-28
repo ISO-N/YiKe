@@ -113,4 +113,19 @@ abstract class ReviewTaskRepository {
     TaskTimelineCursorEntity? cursor,
     int limit = 20,
   });
+
+  /// 获取指定学习内容的完整复习计划（按轮次正序）。
+  ///
+  /// 说明：用于任务详情 Sheet 展示与调整计划。
+  Future<List<ReviewTaskViewEntity>> getReviewPlan(int learningItemId);
+
+  /// 调整指定轮次的计划日期（定位键：learningItemId + reviewRound）。
+  Future<void> adjustReviewDate({
+    required int learningItemId,
+    required int reviewRound,
+    required DateTime scheduledDate,
+  });
+
+  /// 为指定学习内容增加 1 轮复习任务（最大轮次由上层校验）。
+  Future<void> addReviewRound(int learningItemId);
 }
