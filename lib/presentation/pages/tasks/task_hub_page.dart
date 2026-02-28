@@ -113,8 +113,8 @@ class _TaskHubPageState extends ConsumerState<TaskHubPage> {
       );
     }
 
-    final sortedDays = grouped.keys.toList()
-      ..sort((a, b) => b.compareTo(a));
+    // 发生时间正序：日期分组按从早到晚展示。
+    final sortedDays = grouped.keys.toList()..sort((a, b) => a.compareTo(b));
 
     return Scaffold(
       appBar: AppBar(title: const Text(AppStrings.taskHubTitle)),

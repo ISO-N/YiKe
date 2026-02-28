@@ -7,7 +7,7 @@ import 'review_task.dart';
 
 /// 任务时间线游标（用于游标分页）。
 ///
-/// 说明：按 (occurredAt DESC, taskId DESC) 排序时，下一页游标取“当前页最后一条”。
+/// 说明：按 (occurredAt ASC, taskId ASC) 排序时，下一页游标取“当前页最后一条”。
 class TaskTimelineCursorEntity {
   /// 构造函数。
   const TaskTimelineCursorEntity({
@@ -51,4 +51,3 @@ class TaskTimelinePageEntity {
   /// 下一页游标；为空表示没有更多数据。
   final TaskTimelineCursorEntity? nextCursor;
 }
-

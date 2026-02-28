@@ -300,8 +300,8 @@ class ReviewTaskDao {
   /// - pending：occurredAt = scheduled_date
   /// - done：occurredAt = COALESCE(completed_at, scheduled_date)
   /// - skipped：occurredAt = COALESCE(skipped_at, scheduled_date)
-  /// - 排序：occurredAt DESC, taskId DESC（稳定排序）
-  /// - 游标：下一页取“当前页最后一条”，查询条件为 (occurredAt < cursor) OR (occurredAt = cursor AND taskId < cursorId)
+  /// - 排序：occurredAt ASC, taskId ASC（稳定排序）
+  /// - 游标：下一页取“当前页最后一条”，查询条件为 (occurredAt > cursor) OR (occurredAt = cursor AND taskId > cursorId)
   Future<List<ReviewTaskTimelineModel>> getTaskTimelinePageWithItem({
     String? status,
     DateTime? cursorOccurredAt,
@@ -330,7 +330,7 @@ END
     final cursorVars = <Variable>[];
     if (cursorOccurredAt != null && cursorTaskId != null) {
       cursorWhere.write(
-        'WHERE (t.occurred_at < ? OR (t.occurred_at = ? AND t."rt.id" < ?))',
+        'WHERE (t.occurred_at > ? OR (t.occurred_at = ? AND t."rt.id" > ?))',
       );
       cursorVars.add(Variable<DateTime>(cursorOccurredAt));
       cursorVars.add(Variable<DateTime>(cursorOccurredAt));
@@ -366,7 +366,7 @@ SELECT * FROM (
   WHERE ${where.toString()}
 ) t
 ${cursorWhere.toString()}
-ORDER BY t.occurred_at DESC, t."rt.id" DESC
+ORDER BY t.occurred_at ASC, t."rt.id" ASC
 LIMIT ?
 ''';
 
