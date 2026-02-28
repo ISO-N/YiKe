@@ -6,10 +6,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:yike/domain/entities/learning_topic.dart';
 import 'package:yike/domain/entities/learning_topic_overview.dart';
 
+import '../../helpers/test_uuid.dart';
+
 void main() {
   test('LearningTopicOverviewEntity 会保留 topic 与聚合字段', () {
     final topic = LearningTopicEntity(
       id: 1,
+      uuid: testUuid(1),
       name: 'T',
       createdAt: DateTime(2026, 2, 26),
     );

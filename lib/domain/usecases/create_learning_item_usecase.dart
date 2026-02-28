@@ -3,6 +3,8 @@
 /// 创建日期：2026-02-25
 library;
 
+import 'package:uuid/uuid.dart';
+
 import '../entities/learning_item.dart';
 import '../entities/review_config.dart';
 import '../entities/review_interval_config.dart';
@@ -61,6 +63,8 @@ class CreateLearningItemUseCase {
   final LearningItemRepository _learningItemRepository;
   final ReviewTaskRepository _reviewTaskRepository;
 
+  static const Uuid _uuid = Uuid();
+
   /// 执行用例。
   ///
   /// 返回值：创建结果（学习内容 + 生成的复习任务）。
@@ -76,6 +80,7 @@ class CreateLearningItemUseCase {
     );
 
     final item = LearningItemEntity(
+      uuid: _uuid.v4(),
       title: params.title.trim(),
       note: params.note?.trim().isEmpty == true ? null : params.note?.trim(),
       tags: params.tags
@@ -96,6 +101,7 @@ class CreateLearningItemUseCase {
             .where((e) => e.enabled)
             .map(
               (c) => ReviewTaskEntity(
+                uuid: _uuid.v4(),
                 learningItemId: saved.id!,
                 reviewRound: c.round,
                 scheduledDate: learningDate.add(Duration(days: c.intervalDays)),

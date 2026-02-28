@@ -10,10 +10,12 @@ import 'package:yike/data/database/daos/learning_item_dao.dart';
 import 'package:yike/data/database/database.dart';
 
 import '../helpers/test_database.dart';
+import '../helpers/test_uuid.dart';
 
 void main() {
   late AppDatabase db;
   late LearningItemDao dao;
+  var uuidSeed = 1;
 
   setUp(() {
     db = createInMemoryDatabase();
@@ -27,6 +29,7 @@ void main() {
   test('insertLearningItem / getLearningItemById 正常读写', () async {
     final id = await dao.insertLearningItem(
       LearningItemsCompanion.insert(
+        uuid: drift.Value(testUuid(uuidSeed++)),
         title: 'T1',
         tags: drift.Value(jsonEncode(['a', 'b'])),
         learningDate: DateTime(2026, 2, 25),
@@ -44,6 +47,7 @@ void main() {
   test('getAllLearningItems 按 createdAt 倒序', () async {
     await dao.insertLearningItem(
       LearningItemsCompanion.insert(
+        uuid: drift.Value(testUuid(uuidSeed++)),
         title: 'Old',
         tags: const drift.Value('[]'),
         learningDate: DateTime(2026, 2, 25),
@@ -52,6 +56,7 @@ void main() {
     );
     await dao.insertLearningItem(
       LearningItemsCompanion.insert(
+        uuid: drift.Value(testUuid(uuidSeed++)),
         title: 'New',
         tags: const drift.Value('[]'),
         learningDate: DateTime(2026, 2, 25),
@@ -66,6 +71,7 @@ void main() {
   test('getLearningItemsByDate 仅返回当天数据', () async {
     await dao.insertLearningItem(
       LearningItemsCompanion.insert(
+        uuid: drift.Value(testUuid(uuidSeed++)),
         title: 'D1',
         tags: const drift.Value('[]'),
         learningDate: DateTime(2026, 2, 25, 23, 59),
@@ -74,6 +80,7 @@ void main() {
     );
     await dao.insertLearningItem(
       LearningItemsCompanion.insert(
+        uuid: drift.Value(testUuid(uuidSeed++)),
         title: 'D2',
         tags: const drift.Value('[]'),
         // 边界：DAO 使用 isBetweenValues(start, end)，此处避免落在 end 的包含边界上。
@@ -90,6 +97,7 @@ void main() {
   test('getLearningItemsByTag 使用 LIKE 匹配 JSON 文本', () async {
     await dao.insertLearningItem(
       LearningItemsCompanion.insert(
+        uuid: drift.Value(testUuid(uuidSeed++)),
         title: 'TagA',
         tags: drift.Value(jsonEncode(['a'])),
         learningDate: DateTime(2026, 2, 25),
@@ -98,6 +106,7 @@ void main() {
     );
     await dao.insertLearningItem(
       LearningItemsCompanion.insert(
+        uuid: drift.Value(testUuid(uuidSeed++)),
         title: 'TagB',
         tags: drift.Value(jsonEncode(['b'])),
         learningDate: DateTime(2026, 2, 25),
@@ -113,6 +122,7 @@ void main() {
   test('getAllTags 会去重、trim、排序，且容错非法 JSON', () async {
     await dao.insertLearningItem(
       LearningItemsCompanion.insert(
+        uuid: drift.Value(testUuid(uuidSeed++)),
         title: 'A',
         tags: drift.Value(jsonEncode(['  z  ', 'a', '', 'a'])),
         learningDate: DateTime(2026, 2, 25),
@@ -121,6 +131,7 @@ void main() {
     );
     await dao.insertLearningItem(
       LearningItemsCompanion.insert(
+        uuid: drift.Value(testUuid(uuidSeed++)),
         title: 'B',
         tags: const drift.Value('not-json'),
         learningDate: DateTime(2026, 2, 25),
@@ -129,6 +140,7 @@ void main() {
     );
     await dao.insertLearningItem(
       LearningItemsCompanion.insert(
+        uuid: drift.Value(testUuid(uuidSeed++)),
         title: 'C',
         tags: drift.Value(jsonEncode(['b'])),
         learningDate: DateTime(2026, 2, 25),
@@ -143,6 +155,7 @@ void main() {
   test('getTagDistribution 按标签统计数量（多标签各计一次）', () async {
     await dao.insertLearningItem(
       LearningItemsCompanion.insert(
+        uuid: drift.Value(testUuid(uuidSeed++)),
         title: 'I1',
         tags: drift.Value(jsonEncode(['a', 'b', 'a'])),
         learningDate: DateTime(2026, 2, 25),
@@ -151,6 +164,7 @@ void main() {
     );
     await dao.insertLearningItem(
       LearningItemsCompanion.insert(
+        uuid: drift.Value(testUuid(uuidSeed++)),
         title: 'I2',
         tags: drift.Value(jsonEncode(['b', 'c'])),
         learningDate: DateTime(2026, 2, 26),
@@ -172,6 +186,7 @@ void main() {
   test('searchLearningItems: 可匹配 title/note，且会排除已停用学习内容并按 createdAt 倒序', () async {
     await dao.insertLearningItem(
       LearningItemsCompanion.insert(
+        uuid: drift.Value(testUuid(uuidSeed++)),
         title: 'Apple',
         note: const drift.Value.absent(),
         tags: const drift.Value('[]'),
@@ -182,6 +197,7 @@ void main() {
     );
     await dao.insertLearningItem(
       LearningItemsCompanion.insert(
+        uuid: drift.Value(testUuid(uuidSeed++)),
         title: 'Banana',
         note: const drift.Value('contains apple in note'),
         tags: const drift.Value('[]'),
@@ -192,6 +208,7 @@ void main() {
     );
     await dao.insertLearningItem(
       LearningItemsCompanion.insert(
+        uuid: drift.Value(testUuid(uuidSeed++)),
         title: 'Deleted Apple',
         note: const drift.Value.absent(),
         tags: const drift.Value('[]'),
@@ -214,6 +231,7 @@ void main() {
   test('deleteMockLearningItems: 仅删除 isMockData=true 的学习内容', () async {
     await dao.insertLearningItem(
       LearningItemsCompanion.insert(
+        uuid: drift.Value(testUuid(uuidSeed++)),
         title: 'Mock',
         note: const drift.Value.absent(),
         tags: const drift.Value('[]'),
@@ -224,6 +242,7 @@ void main() {
     );
     await dao.insertLearningItem(
       LearningItemsCompanion.insert(
+        uuid: drift.Value(testUuid(uuidSeed++)),
         title: 'Real',
         note: const drift.Value.absent(),
         tags: const drift.Value('[]'),
@@ -243,6 +262,7 @@ void main() {
   test('updateLearningItemNote / deactivateLearningItem 会更新字段并回写 updatedAt', () async {
     final id = await dao.insertLearningItem(
       LearningItemsCompanion.insert(
+        uuid: drift.Value(testUuid(uuidSeed++)),
         title: 'T',
         note: const drift.Value.absent(),
         tags: const drift.Value('[]'),

@@ -11,6 +11,7 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
 import 'tables/learning_items_table.dart';
+import 'tables/review_records_table.dart';
 import 'tables/learning_templates_table.dart';
 import 'tables/learning_topics_table.dart';
 import 'tables/review_tasks_table.dart';
@@ -19,6 +20,8 @@ import 'tables/sync_devices_table.dart';
 import 'tables/sync_entity_mappings_table.dart';
 import 'tables/sync_logs_table.dart';
 import 'tables/topic_item_relations_table.dart';
+
+import 'package:uuid/uuid.dart';
 
 part 'database.g.dart';
 
@@ -31,6 +34,7 @@ part 'database.g.dart';
   tables: [
     LearningItems,
     ReviewTasks,
+    ReviewRecords,
     AppSettingsTable,
     LearningTemplates,
     LearningTopics,
@@ -63,7 +67,7 @@ class AppDatabase extends _$AppDatabase {
   }
 
   @override
-  int get schemaVersion => 7;
+  int get schemaVersion => 8;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -72,6 +76,23 @@ class AppDatabase extends _$AppDatabase {
       // v1.4：为“调整计划/增加轮次”提供唯一定位键（learning_item_id + review_round）。
       await customStatement(
         'CREATE UNIQUE INDEX IF NOT EXISTS idx_review_tasks_learning_item_round ON review_tasks (learning_item_id, review_round)',
+      );
+
+      // v1.5：备份恢复 - 为核心表增加稳定 uuid 唯一索引（用于合并去重）。
+      await customStatement(
+        'CREATE UNIQUE INDEX IF NOT EXISTS idx_learning_items_uuid ON learning_items (uuid)',
+      );
+      await customStatement(
+        'CREATE UNIQUE INDEX IF NOT EXISTS idx_review_tasks_uuid ON review_tasks (uuid)',
+      );
+      await customStatement(
+        'CREATE UNIQUE INDEX IF NOT EXISTS idx_learning_templates_uuid ON learning_templates (uuid)',
+      );
+      await customStatement(
+        'CREATE UNIQUE INDEX IF NOT EXISTS idx_learning_topics_uuid ON learning_topics (uuid)',
+      );
+      await customStatement(
+        'CREATE UNIQUE INDEX IF NOT EXISTS idx_review_records_uuid ON review_records (uuid)',
       );
     },
     onUpgrade: (migrator, from, to) async {
@@ -161,10 +182,166 @@ class AppDatabase extends _$AppDatabase {
           'CREATE UNIQUE INDEX IF NOT EXISTS idx_review_tasks_learning_item_round ON review_tasks (learning_item_id, review_round)',
         );
       }
+
+      // v1.5：备份恢复 - 增加稳定 uuid 字段 + 复习记录表。
+      if (from < 8) {
+        Future<bool> hasTable(String table) async {
+          final rows = await customSelect(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name = ?",
+            variables: [Variable<String>(table)],
+          ).get();
+          return rows.isNotEmpty;
+        }
+
+        Future<bool> hasColumn(String table, String column) async {
+          // PRAGMA 在表不存在时返回空列表，因此无需额外判空。
+          final rows = await customSelect('PRAGMA table_info($table)').get();
+          return rows.any((r) => r.read<String>('name') == column);
+        }
+
+        // 1) 新增 uuid 列（默认空字符串，随后回填真实 UUID）。
+        //
+        // 兼容：历史脏库/回退 user_version 时，表结构可能已包含 uuid 列，这里需先探测再添加，
+        // 避免触发 “duplicate column name” 迁移失败。
+        if (await hasTable('learning_items') &&
+            !await hasColumn('learning_items', 'uuid')) {
+          await customStatement(
+            "ALTER TABLE learning_items ADD COLUMN uuid TEXT NOT NULL DEFAULT ''",
+          );
+        }
+        if (await hasTable('review_tasks') &&
+            !await hasColumn('review_tasks', 'uuid')) {
+          await customStatement(
+            "ALTER TABLE review_tasks ADD COLUMN uuid TEXT NOT NULL DEFAULT ''",
+          );
+        }
+        if (await hasTable('learning_templates') &&
+            !await hasColumn('learning_templates', 'uuid')) {
+          await customStatement(
+            "ALTER TABLE learning_templates ADD COLUMN uuid TEXT NOT NULL DEFAULT ''",
+          );
+        }
+        if (await hasTable('learning_topics') &&
+            !await hasColumn('learning_topics', 'uuid')) {
+          await customStatement(
+            "ALTER TABLE learning_topics ADD COLUMN uuid TEXT NOT NULL DEFAULT ''",
+          );
+        }
+
+        // 2) 新增 review_records 表（兼容：脏库可能已存在）。
+        if (!await hasTable('review_records')) {
+          await migrator.createTable(reviewRecords);
+        }
+
+        // 3) 回填历史数据的 uuid（逐条写入，确保唯一）。
+        const uuidGen = Uuid();
+        if (await hasTable('learning_items') &&
+            await hasColumn('learning_items', 'uuid')) {
+          await _backfillUuid(table: 'learning_items', uuidGen: uuidGen);
+        }
+        if (await hasTable('review_tasks') &&
+            await hasColumn('review_tasks', 'uuid')) {
+          await _backfillUuid(table: 'review_tasks', uuidGen: uuidGen);
+        }
+        if (await hasTable('learning_templates') &&
+            await hasColumn('learning_templates', 'uuid')) {
+          await _backfillUuid(table: 'learning_templates', uuidGen: uuidGen);
+        }
+        if (await hasTable('learning_topics') &&
+            await hasColumn('learning_topics', 'uuid')) {
+          await _backfillUuid(table: 'learning_topics', uuidGen: uuidGen);
+        }
+
+        // 4) 基于历史任务状态回填 review_records（仅 done/skipped）。
+        if (await hasTable('review_records') && await hasTable('review_tasks')) {
+          await _backfillReviewRecordsFromTasks(uuidGen: uuidGen);
+        }
+
+        // 5) 建立 uuid 唯一索引（回填完成后再建，避免默认空字符串冲突）。
+        await customStatement(
+          'CREATE UNIQUE INDEX IF NOT EXISTS idx_learning_items_uuid ON learning_items (uuid)',
+        );
+        await customStatement(
+          'CREATE UNIQUE INDEX IF NOT EXISTS idx_review_tasks_uuid ON review_tasks (uuid)',
+        );
+        await customStatement(
+          'CREATE UNIQUE INDEX IF NOT EXISTS idx_learning_templates_uuid ON learning_templates (uuid)',
+        );
+        await customStatement(
+          'CREATE UNIQUE INDEX IF NOT EXISTS idx_learning_topics_uuid ON learning_topics (uuid)',
+        );
+        await customStatement(
+          'CREATE UNIQUE INDEX IF NOT EXISTS idx_review_records_uuid ON review_records (uuid)',
+        );
+      }
     },
     beforeOpen: (details) async {
       // 开启外键约束，确保级联删除生效。
       await customStatement('PRAGMA foreign_keys = ON');
     },
   );
+
+  /// 为指定表回填 uuid（仅处理 uuid 为空字符串的记录）。
+  ///
+  /// 参数：
+  /// - [table] 表名（需包含 id 与 uuid 两列）
+  /// - [uuidGen] UUID 生成器
+  /// 返回值：Future（无返回值）。
+  /// 异常：数据库读写失败时可能抛出异常。
+  Future<void> _backfillUuid({
+    required String table,
+    required Uuid uuidGen,
+  }) async {
+    final rows = await customSelect(
+      'SELECT id FROM $table WHERE uuid = ?',
+      variables: [const Variable<String>('')],
+    ).get();
+    for (final row in rows) {
+      final id = row.read<int>('id');
+      await customStatement(
+        'UPDATE $table SET uuid = ? WHERE id = ?',
+        [uuidGen.v4(), id],
+      );
+    }
+  }
+
+  /// 基于历史 review_tasks 回填 review_records（done/skipped）。
+  ///
+  /// 说明：
+  /// - 仅用于从旧版本升级到包含 review_records 的版本
+  /// - 以任务的 completedAt/skippedAt 作为 occurredAt（缺失时回退 scheduledDate）
+  Future<void> _backfillReviewRecordsFromTasks({required Uuid uuidGen}) async {
+    final rows = await customSelect(
+      '''
+SELECT id, status, completed_at, skipped_at, scheduled_date
+FROM review_tasks
+WHERE status IN ('done', 'skipped')
+''',
+    ).get();
+
+    for (final row in rows) {
+      final taskId = row.read<int>('id');
+      final action = row.read<String>('status');
+      final completedAt = row.read<DateTime?>('completed_at');
+      final skippedAt = row.read<DateTime?>('skipped_at');
+      final scheduledDate = row.read<DateTime>('scheduled_date');
+      final occurredAt = completedAt ?? skippedAt ?? scheduledDate;
+
+      // 保护：避免极端情况下重复运行迁移导致重复插入。
+      final existing = await customSelect(
+        'SELECT id FROM review_records WHERE review_task_id = ? AND action = ? AND occurred_at = ? LIMIT 1',
+        variables: [
+          Variable<int>(taskId),
+          Variable<String>(action),
+          Variable<DateTime>(occurredAt),
+        ],
+      ).getSingleOrNull();
+      if (existing != null) continue;
+
+      await customStatement(
+        'INSERT INTO review_records (uuid, review_task_id, action, occurred_at, created_at) VALUES (?, ?, ?, ?, ?)',
+        [uuidGen.v4(), taskId, action, occurredAt, occurredAt],
+      );
+    }
+  }
 }

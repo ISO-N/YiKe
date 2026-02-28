@@ -47,6 +47,7 @@ class ReviewTaskEntity {
   /// 构造函数。
   ///
   /// 参数：
+  /// - [uuid] 业务唯一标识（用于备份合并去重，稳定且跨设备）
   /// - [id] 数据库 ID（新建时可为 null）
   /// - [learningItemId] 关联学习内容 ID
   /// - [reviewRound] 复习轮次（1-10）
@@ -56,6 +57,7 @@ class ReviewTaskEntity {
   /// - [skippedAt] 跳过时间
   /// - [createdAt] 创建时间
   const ReviewTaskEntity({
+    required this.uuid,
     this.id,
     required this.learningItemId,
     required this.reviewRound,
@@ -66,6 +68,13 @@ class ReviewTaskEntity {
     required this.createdAt,
     this.isMockData = false,
   });
+
+  /// 业务唯一标识（UUID v4）。
+  ///
+  /// 说明：
+  /// - 用于备份/恢复的合并去重与外键修复（uuid → id 映射）
+  /// - 不参与 UI 展示
+  final String uuid;
 
   final int? id;
   final int learningItemId;
@@ -80,6 +89,7 @@ class ReviewTaskEntity {
   final bool isMockData;
 
   ReviewTaskEntity copyWith({
+    String? uuid,
     int? id,
     int? learningItemId,
     int? reviewRound,
@@ -91,6 +101,7 @@ class ReviewTaskEntity {
     bool? isMockData,
   }) {
     return ReviewTaskEntity(
+      uuid: uuid ?? this.uuid,
       id: id ?? this.id,
       learningItemId: learningItemId ?? this.learningItemId,
       reviewRound: reviewRound ?? this.reviewRound,

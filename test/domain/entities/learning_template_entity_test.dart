@@ -5,11 +5,14 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:yike/domain/entities/learning_template.dart';
 
+import '../../helpers/test_uuid.dart';
+
 void main() {
   test('copyWith 会保留未传入字段并支持覆盖', () {
     final createdAt = DateTime(2026, 2, 26, 10);
     final entity = LearningTemplateEntity(
       id: 1,
+      uuid: testUuid(1),
       name: 'N',
       titlePattern: '{date}',
       notePattern: 'note',

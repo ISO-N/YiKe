@@ -5,6 +5,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:yike/domain/entities/review_task.dart';
 
+import '../../helpers/test_uuid.dart';
+
 void main() {
   test('ReviewTaskStatusX toDbValue 映射正确', () {
     expect(ReviewTaskStatus.pending.toDbValue(), 'pending');
@@ -22,6 +24,7 @@ void main() {
   test('ReviewTaskEntity copyWith 会保留未传入字段', () {
     final base = ReviewTaskEntity(
       id: 1,
+      uuid: testUuid(1),
       learningItemId: 2,
       reviewRound: 1,
       scheduledDate: DateTime(2026, 2, 26),

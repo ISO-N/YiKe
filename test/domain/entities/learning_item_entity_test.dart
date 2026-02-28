@@ -5,9 +5,12 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:yike/domain/entities/learning_item.dart';
 
+import '../../helpers/test_uuid.dart';
+
 void main() {
   test('copyWith 会保留未传入字段', () {
     final base = LearningItemEntity(
+      uuid: testUuid(1),
       id: 1,
       title: 'A',
       note: 'N',

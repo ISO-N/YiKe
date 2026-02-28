@@ -8,6 +8,7 @@ class LearningTemplateEntity {
   /// 构造函数。
   ///
   /// 参数：
+  /// - [uuid] 业务唯一标识（用于备份合并去重，稳定且跨设备）
   /// - [id] 主键（新建时为空）
   /// - [name] 模板名称
   /// - [titlePattern] 标题模板
@@ -17,6 +18,7 @@ class LearningTemplateEntity {
   /// - [createdAt] 创建时间
   /// - [updatedAt] 更新时间（可选）
   const LearningTemplateEntity({
+    required this.uuid,
     this.id,
     required this.name,
     required this.titlePattern,
@@ -26,6 +28,11 @@ class LearningTemplateEntity {
     required this.createdAt,
     this.updatedAt,
   });
+
+  /// 业务唯一标识（UUID v4）。
+  ///
+  /// 说明：用于备份/恢复的合并去重（避免 id 冲突）。
+  final String uuid;
 
   final int? id;
   final String name;
@@ -38,6 +45,7 @@ class LearningTemplateEntity {
 
   /// 复制并替换字段。
   LearningTemplateEntity copyWith({
+    String? uuid,
     int? id,
     String? name,
     String? titlePattern,
@@ -48,6 +56,7 @@ class LearningTemplateEntity {
     DateTime? updatedAt,
   }) {
     return LearningTemplateEntity(
+      uuid: uuid ?? this.uuid,
       id: id ?? this.id,
       name: name ?? this.name,
       titlePattern: titlePattern ?? this.titlePattern,

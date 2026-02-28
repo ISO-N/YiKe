@@ -8,6 +8,7 @@ class LearningTopicEntity {
   /// 构造函数。
   ///
   /// 参数：
+  /// - [uuid] 业务唯一标识（用于备份合并去重，稳定且跨设备）
   /// - [id] 主键（新建时为空）
   /// - [name] 主题名称
   /// - [description] 主题描述（可选）
@@ -15,6 +16,7 @@ class LearningTopicEntity {
   /// - [updatedAt] 更新时间（可选）
   /// - [itemIds] 关联学习内容 ID（用于详情页展示）
   const LearningTopicEntity({
+    required this.uuid,
     this.id,
     required this.name,
     this.description,
@@ -22,6 +24,11 @@ class LearningTopicEntity {
     this.updatedAt,
     this.itemIds = const [],
   });
+
+  /// 业务唯一标识（UUID v4）。
+  ///
+  /// 说明：用于备份/恢复的合并去重（避免 id 冲突）。
+  final String uuid;
 
   final int? id;
   final String name;
@@ -32,6 +39,7 @@ class LearningTopicEntity {
 
   /// 复制并替换字段。
   LearningTopicEntity copyWith({
+    String? uuid,
     int? id,
     String? name,
     String? description,
@@ -40,6 +48,7 @@ class LearningTopicEntity {
     List<int>? itemIds,
   }) {
     return LearningTopicEntity(
+      uuid: uuid ?? this.uuid,
       id: id ?? this.id,
       name: name ?? this.name,
       description: description ?? this.description,

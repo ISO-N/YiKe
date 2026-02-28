@@ -10,10 +10,12 @@ import 'package:yike/data/database/daos/review_task_dao.dart';
 import 'package:yike/data/database/database.dart';
 
 import '../helpers/test_database.dart';
+import '../helpers/test_uuid.dart';
 
 void main() {
   late AppDatabase db;
   late ReviewTaskDao dao;
+  var uuidSeed = 1;
 
   setUp(() {
     db = createInMemoryDatabase();
@@ -29,6 +31,7 @@ void main() {
         .into(db.learningItems)
         .insert(
           LearningItemsCompanion.insert(
+            uuid: drift.Value(testUuid(uuidSeed++)),
             title: 'Item',
             note: const drift.Value.absent(),
             tags: drift.Value(tags),
@@ -48,6 +51,7 @@ void main() {
 
     await dao.insertReviewTask(
       ReviewTasksCompanion.insert(
+        uuid: drift.Value(testUuid(uuidSeed++)),
         learningItemId: itemId,
         reviewRound: 1,
         scheduledDate: DateTime(2026, 2, 25, 9),
@@ -69,6 +73,7 @@ void main() {
 
     await dao.insertReviewTask(
       ReviewTasksCompanion.insert(
+        uuid: drift.Value(testUuid(uuidSeed++)),
         learningItemId: itemId,
         reviewRound: 1,
         scheduledDate: todayStart.add(const Duration(hours: 9)),
@@ -79,6 +84,7 @@ void main() {
     // 边界条件：明天 00:00 不应算作“今天”。
     await dao.insertReviewTask(
       ReviewTasksCompanion.insert(
+        uuid: drift.Value(testUuid(uuidSeed++)),
         learningItemId: itemId,
         reviewRound: 5,
         scheduledDate: todayStart.add(const Duration(days: 1)),
@@ -88,6 +94,7 @@ void main() {
     );
     await dao.insertReviewTask(
       ReviewTasksCompanion.insert(
+        uuid: drift.Value(testUuid(uuidSeed++)),
         learningItemId: itemId,
         reviewRound: 2,
         scheduledDate: todayStart.add(const Duration(hours: 10)),
@@ -110,6 +117,7 @@ void main() {
 
     await dao.insertReviewTask(
       ReviewTasksCompanion.insert(
+        uuid: drift.Value(testUuid(uuidSeed++)),
         learningItemId: itemId,
         reviewRound: 1,
         scheduledDate: yesterday.add(const Duration(hours: 9)),
@@ -119,6 +127,7 @@ void main() {
     );
     await dao.insertReviewTask(
       ReviewTasksCompanion.insert(
+        uuid: drift.Value(testUuid(uuidSeed++)),
         learningItemId: itemId,
         reviewRound: 2,
         scheduledDate: yesterday.add(const Duration(hours: 10)),

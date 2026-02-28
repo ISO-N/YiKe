@@ -78,6 +78,7 @@ class TemplatesNotifier extends StateNotifier<TemplatesState> {
         template.id!,
         params,
         createdAt: template.createdAt,
+        uuid: template.uuid,
       );
       final list = await _useCase.getAll();
       state = state.copyWith(isLoading: false, templates: list);

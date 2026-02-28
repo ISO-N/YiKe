@@ -12,6 +12,7 @@ import 'package:yike/data/repositories/learning_topic_repository_impl.dart';
 import 'package:yike/domain/entities/learning_topic.dart';
 
 import '../helpers/test_database.dart';
+import '../helpers/test_uuid.dart';
 
 void main() {
   late AppDatabase db;
@@ -26,11 +27,15 @@ void main() {
     await db.close();
   });
 
+  var uuidSeed = 100;
+
   Future<int> insertItem(String title) {
+    final seed = uuidSeed++;
     return db
         .into(db.learningItems)
         .insert(
           LearningItemsCompanion.insert(
+            uuid: drift.Value(testUuid(seed)),
             title: title,
             note: const drift.Value.absent(),
             tags: drift.Value(jsonEncode(<String>[])),
@@ -43,6 +48,7 @@ void main() {
   test('create 会写入并回写 id/updatedAt', () async {
     final createdAt = DateTime(2026, 2, 26, 10);
     final input = LearningTopicEntity(
+      uuid: testUuid(1),
       name: '  Topic  ',
       description: '  desc  ',
       createdAt: createdAt,
@@ -56,7 +62,11 @@ void main() {
 
   test('getById / getAll 会附带 itemIds（按关联表 id 升序）', () async {
     final topic = await repo.create(
-      LearningTopicEntity(name: 'T', createdAt: DateTime(2026, 2, 26, 10)),
+      LearningTopicEntity(
+        uuid: testUuid(2),
+        name: 'T',
+        createdAt: DateTime(2026, 2, 26, 10),
+      ),
     );
 
     final item1 = await insertItem('I1');
@@ -75,7 +85,11 @@ void main() {
 
   test('removeItemFromTopic: 移除后 itemIds 会变化', () async {
     final topic = await repo.create(
-      LearningTopicEntity(name: 'T', createdAt: DateTime(2026, 2, 26)),
+      LearningTopicEntity(
+        uuid: testUuid(3),
+        name: 'T',
+        createdAt: DateTime(2026, 2, 26),
+      ),
     );
     final item = await insertItem('I');
     await repo.addItemToTopic(topic.id!, item);
@@ -88,6 +102,7 @@ void main() {
 
   test('update: id 为空会抛 ArgumentError', () async {
     final entity = LearningTopicEntity(
+      uuid: testUuid(4),
       name: 'T',
       createdAt: DateTime(2026, 2, 26),
     );
@@ -97,6 +112,7 @@ void main() {
   test('update: 行不存在会抛 StateError', () async {
     final entity = LearningTopicEntity(
       id: 999,
+      uuid: testUuid(5),
       name: 'T',
       createdAt: DateTime(2026, 2, 26),
     );
@@ -106,6 +122,7 @@ void main() {
   test('update: 行存在时可成功更新并回写 updatedAt', () async {
     final created = await repo.create(
       LearningTopicEntity(
+        uuid: testUuid(6),
         name: 'T',
         description: 'd',
         createdAt: DateTime(2026, 2, 26, 10),
@@ -123,7 +140,11 @@ void main() {
 
   test('delete: 删除后 getById 返回 null', () async {
     final created = await repo.create(
-      LearningTopicEntity(name: 'T', createdAt: DateTime(2026, 2, 26)),
+      LearningTopicEntity(
+        uuid: testUuid(7),
+        name: 'T',
+        createdAt: DateTime(2026, 2, 26),
+      ),
     );
 
     await repo.delete(created.id!);
@@ -133,7 +154,11 @@ void main() {
 
   test('existsName: 支持 exceptId', () async {
     final a = await repo.create(
-      LearningTopicEntity(name: 'A', createdAt: DateTime(2026, 2, 26)),
+      LearningTopicEntity(
+        uuid: testUuid(8),
+        name: 'A',
+        createdAt: DateTime(2026, 2, 26),
+      ),
     );
     expect(await repo.existsName('A'), isTrue);
     expect(await repo.existsName('A', exceptId: a.id), isFalse);
@@ -142,7 +167,11 @@ void main() {
 
   test('getOverviews: 可返回主题概览并透传聚合字段', () async {
     final topic = await repo.create(
-      LearningTopicEntity(name: 'T', createdAt: DateTime(2026, 2, 26)),
+      LearningTopicEntity(
+        uuid: testUuid(9),
+        name: 'T',
+        createdAt: DateTime(2026, 2, 26),
+      ),
     );
     final item = await insertItem('I');
     await repo.addItemToTopic(topic.id!, item);
@@ -152,6 +181,7 @@ void main() {
         .into(db.reviewTasks)
         .insert(
           ReviewTasksCompanion.insert(
+            uuid: drift.Value(testUuid(uuidSeed++)),
             learningItemId: item,
             reviewRound: 1,
             scheduledDate: DateTime(2026, 2, 26),
@@ -162,6 +192,7 @@ void main() {
         .into(db.reviewTasks)
         .insert(
           ReviewTasksCompanion.insert(
+            uuid: drift.Value(testUuid(uuidSeed++)),
             learningItemId: item,
             reviewRound: 2,
             scheduledDate: DateTime(2026, 2, 26),
@@ -172,6 +203,7 @@ void main() {
         .into(db.reviewTasks)
         .insert(
           ReviewTasksCompanion.insert(
+            uuid: drift.Value(testUuid(uuidSeed++)),
             learningItemId: item,
             reviewRound: 3,
             scheduledDate: DateTime(2026, 2, 26),

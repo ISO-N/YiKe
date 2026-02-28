@@ -27,12 +27,14 @@ import 'package:yike/domain/entities/theme_settings.dart';
 import 'package:yike/infrastructure/storage/secure_storage_service.dart';
 
 import '../helpers/test_database.dart';
+import '../helpers/test_uuid.dart';
 
 void main() {
   late AppDatabase db;
   late SyncLogDao logDao;
   late SyncEntityMappingDao mappingDao;
   late SyncLogWriter writer;
+  var uuidSeed = 1;
 
   setUp(() {
     db = createInMemoryDatabase();
@@ -57,6 +59,7 @@ void main() {
 
     final created = await repo.create(
       LearningItemEntity(
+        uuid: testUuid(uuidSeed++),
         id: null,
         title: 't',
         note: 'n',
@@ -84,6 +87,7 @@ void main() {
 
       final t1 = await repo.create(
         LearningTemplateEntity(
+          uuid: testUuid(uuidSeed++),
           id: null,
           name: 'T1',
           titlePattern: '{date} - T1',
@@ -96,6 +100,7 @@ void main() {
       );
       final t2 = await repo.create(
         LearningTemplateEntity(
+          uuid: testUuid(uuidSeed++),
           id: null,
           name: 'T2',
           titlePattern: '{date} - T2',
@@ -134,6 +139,7 @@ void main() {
 
       final item = await itemRepo.create(
         LearningItemEntity(
+          uuid: testUuid(uuidSeed++),
           id: null,
           title: 'item',
           note: null,
@@ -146,6 +152,7 @@ void main() {
 
       final topic = await topicRepo.create(
         LearningTopicEntity(
+          uuid: testUuid(uuidSeed++),
           id: null,
           name: 'topic',
           description: 'desc',
@@ -178,6 +185,7 @@ void main() {
 
     final item = await itemRepo.create(
       LearningItemEntity(
+        uuid: testUuid(uuidSeed++),
         id: null,
         title: 'item',
         note: null,
@@ -190,6 +198,7 @@ void main() {
 
     final t1 = await taskRepo.create(
       ReviewTaskEntity(
+        uuid: testUuid(uuidSeed++),
         id: null,
         learningItemId: item.id!,
         reviewRound: 1,
@@ -202,6 +211,7 @@ void main() {
     );
     final t2 = await taskRepo.create(
       ReviewTaskEntity(
+        uuid: testUuid(uuidSeed++),
         id: null,
         learningItemId: item.id!,
         reviewRound: 2,

@@ -80,6 +80,7 @@ class TopicsNotifier extends StateNotifier<TopicsState> {
         topic.id!,
         params,
         createdAt: topic.createdAt,
+        uuid: topic.uuid,
       );
       final list = await _useCase.getOverviews();
       state = state.copyWith(isLoading: false, overviews: list);

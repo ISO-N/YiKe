@@ -3,6 +3,8 @@
 /// 创建日期：2026-02-26
 library;
 
+import 'package:uuid/uuid.dart';
+
 import '../entities/learning_template.dart';
 import '../repositories/learning_template_repository.dart';
 
@@ -32,6 +34,8 @@ class ManageTemplateUseCase {
 
   final LearningTemplateRepository _repository;
 
+  static const Uuid _uuid = Uuid();
+
   /// 创建模板。
   ///
   /// 异常：
@@ -50,6 +54,7 @@ class ManageTemplateUseCase {
 
     final now = DateTime.now();
     final entity = LearningTemplateEntity(
+      uuid: _uuid.v4(),
       name: name,
       titlePattern: titlePattern,
       notePattern: params.notePattern?.trim().isEmpty == true
@@ -68,6 +73,7 @@ class ManageTemplateUseCase {
     int id,
     TemplateParams params, {
     required DateTime createdAt,
+    required String uuid,
   }) async {
     final name = params.name.trim();
     final titlePattern = params.titlePattern.trim();
@@ -82,6 +88,7 @@ class ManageTemplateUseCase {
     final now = DateTime.now();
     final entity = LearningTemplateEntity(
       id: id,
+      uuid: uuid,
       name: name,
       titlePattern: titlePattern,
       notePattern: params.notePattern?.trim().isEmpty == true

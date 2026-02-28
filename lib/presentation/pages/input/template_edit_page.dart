@@ -148,6 +148,7 @@ class _TemplateEditPageState extends ConsumerState<TemplateEditPage> {
     final preview = useCase.applyTemplate(
       LearningTemplateEntity(
         id: widget.template?.id,
+        uuid: widget.template?.uuid ?? 'preview',
         name: _nameController.text.trim().isEmpty
             ? '预览'
             : _nameController.text.trim(),

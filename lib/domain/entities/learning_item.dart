@@ -10,6 +10,7 @@ class LearningItemEntity {
   /// 构造函数。
   ///
   /// 参数：
+  /// - [uuid] 业务唯一标识（用于备份合并去重，稳定且跨设备）
   /// - [id] 数据库 ID（新建时可为 null）
   /// - [title] 标题（必填，≤50字）
   /// - [note] 备注（可选，v1.0 仅纯文本）
@@ -21,6 +22,7 @@ class LearningItemEntity {
   /// - [deletedAt] 停用时间（可空）
   /// 异常：无（校验由上层负责）。
   const LearningItemEntity({
+    required this.uuid,
     this.id,
     required this.title,
     this.note,
@@ -32,6 +34,13 @@ class LearningItemEntity {
     this.deletedAt,
     this.isMockData = false,
   });
+
+  /// 业务唯一标识（UUID v4）。
+  ///
+  /// 说明：
+  /// - 用于备份/恢复的合并去重与外键修复（uuid → id 映射）
+  /// - 不参与 UI 展示
+  final String uuid;
 
   final int? id;
   final String title;
@@ -51,6 +60,7 @@ class LearningItemEntity {
   final bool isMockData;
 
   LearningItemEntity copyWith({
+    String? uuid,
     int? id,
     String? title,
     String? note,
@@ -63,6 +73,7 @@ class LearningItemEntity {
     bool? isMockData,
   }) {
     return LearningItemEntity(
+      uuid: uuid ?? this.uuid,
       id: id ?? this.id,
       title: title ?? this.title,
       note: note ?? this.note,

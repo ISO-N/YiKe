@@ -10,6 +10,7 @@ import 'package:yike/data/repositories/learning_template_repository_impl.dart';
 import 'package:yike/domain/entities/learning_template.dart';
 
 import '../helpers/test_database.dart';
+import '../helpers/test_uuid.dart';
 
 void main() {
   late AppDatabase db;
@@ -27,6 +28,7 @@ void main() {
   test('create 会写入并回写 id/updatedAt', () async {
     final createdAt = DateTime(2026, 2, 26, 10);
     final input = LearningTemplateEntity(
+      uuid: testUuid(1),
       name: '  N  ',
       titlePattern: '{date}',
       notePattern: null,
@@ -46,6 +48,7 @@ void main() {
     final createdAt = DateTime(2026, 2, 26, 10);
     final a = await repo.create(
       LearningTemplateEntity(
+        uuid: testUuid(2),
         name: 'A',
         titlePattern: 'a',
         notePattern: 'n',
@@ -70,6 +73,7 @@ void main() {
 
   test('update: id 为空会抛 ArgumentError', () async {
     final entity = LearningTemplateEntity(
+      uuid: testUuid(3),
       name: 'A',
       titlePattern: 'a',
       tags: const [],
@@ -81,6 +85,7 @@ void main() {
   test('update: 行不存在会抛 StateError', () async {
     final entity = LearningTemplateEntity(
       id: 999,
+      uuid: testUuid(4),
       name: 'A',
       titlePattern: 'a',
       tags: const [],
@@ -93,6 +98,7 @@ void main() {
     final createdAt = DateTime(2026, 2, 26, 10);
     final created = await repo.create(
       LearningTemplateEntity(
+        uuid: testUuid(5),
         name: 'A',
         titlePattern: 'a',
         tags: const ['x'],
@@ -116,6 +122,7 @@ void main() {
   test('delete: 删除后 getById 返回 null', () async {
     final created = await repo.create(
       LearningTemplateEntity(
+        uuid: testUuid(6),
         name: 'A',
         titlePattern: 'a',
         tags: const [],
@@ -131,6 +138,7 @@ void main() {
   test('existsName / updateSortOrders: 透传到 DAO 并生效', () async {
     final a = await repo.create(
       LearningTemplateEntity(
+        uuid: testUuid(7),
         name: 'A',
         titlePattern: 'a',
         tags: const [],
@@ -140,6 +148,7 @@ void main() {
     );
     final b = await repo.create(
       LearningTemplateEntity(
+        uuid: testUuid(8),
         name: 'B',
         titlePattern: 'b',
         tags: const [],

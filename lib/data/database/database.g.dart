@@ -22,6 +22,20 @@ class $LearningItemsTable extends LearningItems
       'PRIMARY KEY AUTOINCREMENT',
     ),
   );
+  static const VerificationMeta _uuidMeta = const VerificationMeta('uuid');
+  @override
+  late final GeneratedColumn<String> uuid = GeneratedColumn<String>(
+    'uuid',
+    aliasedName,
+    false,
+    additionalChecks: GeneratedColumn.checkTextLength(
+      minTextLength: 1,
+      maxTextLength: 36,
+    ),
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    clientDefault: () => const Uuid().v4(),
+  );
   static const VerificationMeta _titleMeta = const VerificationMeta('title');
   @override
   late final GeneratedColumn<String> title = GeneratedColumn<String>(
@@ -132,6 +146,7 @@ class $LearningItemsTable extends LearningItems
   @override
   List<GeneratedColumn> get $columns => [
     id,
+    uuid,
     title,
     note,
     tags,
@@ -156,6 +171,12 @@ class $LearningItemsTable extends LearningItems
     final data = instance.toColumns(true);
     if (data.containsKey('id')) {
       context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('uuid')) {
+      context.handle(
+        _uuidMeta,
+        uuid.isAcceptableOrUnknown(data['uuid']!, _uuidMeta),
+      );
     }
     if (data.containsKey('title')) {
       context.handle(
@@ -234,6 +255,10 @@ class $LearningItemsTable extends LearningItems
         DriftSqlType.int,
         data['${effectivePrefix}id'],
       )!,
+      uuid: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}uuid'],
+      )!,
       title: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}title'],
@@ -283,6 +308,13 @@ class LearningItem extends DataClass implements Insertable<LearningItem> {
   /// 主键 ID。
   final int id;
 
+  /// 业务唯一标识（UUID v4）。
+  ///
+  /// 说明：
+  /// - 用于备份/恢复的“合并去重”与外键修复（uuid → id 映射）
+  /// - 迁移时会通过 SQL 为历史库补齐该列并回填为真实 UUID，再建立唯一索引
+  final String uuid;
+
   /// 学习内容标题（必填，≤50字）。
   final String title;
 
@@ -320,6 +352,7 @@ class LearningItem extends DataClass implements Insertable<LearningItem> {
   final bool isMockData;
   const LearningItem({
     required this.id,
+    required this.uuid,
     required this.title,
     this.note,
     required this.tags,
@@ -334,6 +367,7 @@ class LearningItem extends DataClass implements Insertable<LearningItem> {
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['id'] = Variable<int>(id);
+    map['uuid'] = Variable<String>(uuid);
     map['title'] = Variable<String>(title);
     if (!nullToAbsent || note != null) {
       map['note'] = Variable<String>(note);
@@ -355,6 +389,7 @@ class LearningItem extends DataClass implements Insertable<LearningItem> {
   LearningItemsCompanion toCompanion(bool nullToAbsent) {
     return LearningItemsCompanion(
       id: Value(id),
+      uuid: Value(uuid),
       title: Value(title),
       note: note == null && nullToAbsent ? const Value.absent() : Value(note),
       tags: Value(tags),
@@ -378,6 +413,7 @@ class LearningItem extends DataClass implements Insertable<LearningItem> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return LearningItem(
       id: serializer.fromJson<int>(json['id']),
+      uuid: serializer.fromJson<String>(json['uuid']),
       title: serializer.fromJson<String>(json['title']),
       note: serializer.fromJson<String?>(json['note']),
       tags: serializer.fromJson<String>(json['tags']),
@@ -394,6 +430,7 @@ class LearningItem extends DataClass implements Insertable<LearningItem> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
       'id': serializer.toJson<int>(id),
+      'uuid': serializer.toJson<String>(uuid),
       'title': serializer.toJson<String>(title),
       'note': serializer.toJson<String?>(note),
       'tags': serializer.toJson<String>(tags),
@@ -408,6 +445,7 @@ class LearningItem extends DataClass implements Insertable<LearningItem> {
 
   LearningItem copyWith({
     int? id,
+    String? uuid,
     String? title,
     Value<String?> note = const Value.absent(),
     String? tags,
@@ -419,6 +457,7 @@ class LearningItem extends DataClass implements Insertable<LearningItem> {
     bool? isMockData,
   }) => LearningItem(
     id: id ?? this.id,
+    uuid: uuid ?? this.uuid,
     title: title ?? this.title,
     note: note.present ? note.value : this.note,
     tags: tags ?? this.tags,
@@ -432,6 +471,7 @@ class LearningItem extends DataClass implements Insertable<LearningItem> {
   LearningItem copyWithCompanion(LearningItemsCompanion data) {
     return LearningItem(
       id: data.id.present ? data.id.value : this.id,
+      uuid: data.uuid.present ? data.uuid.value : this.uuid,
       title: data.title.present ? data.title.value : this.title,
       note: data.note.present ? data.note.value : this.note,
       tags: data.tags.present ? data.tags.value : this.tags,
@@ -452,6 +492,7 @@ class LearningItem extends DataClass implements Insertable<LearningItem> {
   String toString() {
     return (StringBuffer('LearningItem(')
           ..write('id: $id, ')
+          ..write('uuid: $uuid, ')
           ..write('title: $title, ')
           ..write('note: $note, ')
           ..write('tags: $tags, ')
@@ -468,6 +509,7 @@ class LearningItem extends DataClass implements Insertable<LearningItem> {
   @override
   int get hashCode => Object.hash(
     id,
+    uuid,
     title,
     note,
     tags,
@@ -483,6 +525,7 @@ class LearningItem extends DataClass implements Insertable<LearningItem> {
       identical(this, other) ||
       (other is LearningItem &&
           other.id == this.id &&
+          other.uuid == this.uuid &&
           other.title == this.title &&
           other.note == this.note &&
           other.tags == this.tags &&
@@ -496,6 +539,7 @@ class LearningItem extends DataClass implements Insertable<LearningItem> {
 
 class LearningItemsCompanion extends UpdateCompanion<LearningItem> {
   final Value<int> id;
+  final Value<String> uuid;
   final Value<String> title;
   final Value<String?> note;
   final Value<String> tags;
@@ -507,6 +551,7 @@ class LearningItemsCompanion extends UpdateCompanion<LearningItem> {
   final Value<bool> isMockData;
   const LearningItemsCompanion({
     this.id = const Value.absent(),
+    this.uuid = const Value.absent(),
     this.title = const Value.absent(),
     this.note = const Value.absent(),
     this.tags = const Value.absent(),
@@ -519,6 +564,7 @@ class LearningItemsCompanion extends UpdateCompanion<LearningItem> {
   });
   LearningItemsCompanion.insert({
     this.id = const Value.absent(),
+    this.uuid = const Value.absent(),
     required String title,
     this.note = const Value.absent(),
     this.tags = const Value.absent(),
@@ -532,6 +578,7 @@ class LearningItemsCompanion extends UpdateCompanion<LearningItem> {
        learningDate = Value(learningDate);
   static Insertable<LearningItem> custom({
     Expression<int>? id,
+    Expression<String>? uuid,
     Expression<String>? title,
     Expression<String>? note,
     Expression<String>? tags,
@@ -544,6 +591,7 @@ class LearningItemsCompanion extends UpdateCompanion<LearningItem> {
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
+      if (uuid != null) 'uuid': uuid,
       if (title != null) 'title': title,
       if (note != null) 'note': note,
       if (tags != null) 'tags': tags,
@@ -558,6 +606,7 @@ class LearningItemsCompanion extends UpdateCompanion<LearningItem> {
 
   LearningItemsCompanion copyWith({
     Value<int>? id,
+    Value<String>? uuid,
     Value<String>? title,
     Value<String?>? note,
     Value<String>? tags,
@@ -570,6 +619,7 @@ class LearningItemsCompanion extends UpdateCompanion<LearningItem> {
   }) {
     return LearningItemsCompanion(
       id: id ?? this.id,
+      uuid: uuid ?? this.uuid,
       title: title ?? this.title,
       note: note ?? this.note,
       tags: tags ?? this.tags,
@@ -587,6 +637,9 @@ class LearningItemsCompanion extends UpdateCompanion<LearningItem> {
     final map = <String, Expression>{};
     if (id.present) {
       map['id'] = Variable<int>(id.value);
+    }
+    if (uuid.present) {
+      map['uuid'] = Variable<String>(uuid.value);
     }
     if (title.present) {
       map['title'] = Variable<String>(title.value);
@@ -622,6 +675,7 @@ class LearningItemsCompanion extends UpdateCompanion<LearningItem> {
   String toString() {
     return (StringBuffer('LearningItemsCompanion(')
           ..write('id: $id, ')
+          ..write('uuid: $uuid, ')
           ..write('title: $title, ')
           ..write('note: $note, ')
           ..write('tags: $tags, ')
@@ -654,6 +708,20 @@ class $ReviewTasksTable extends ReviewTasks
     defaultConstraints: GeneratedColumn.constraintIsAlways(
       'PRIMARY KEY AUTOINCREMENT',
     ),
+  );
+  static const VerificationMeta _uuidMeta = const VerificationMeta('uuid');
+  @override
+  late final GeneratedColumn<String> uuid = GeneratedColumn<String>(
+    'uuid',
+    aliasedName,
+    false,
+    additionalChecks: GeneratedColumn.checkTextLength(
+      minTextLength: 1,
+      maxTextLength: 36,
+    ),
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    clientDefault: () => const Uuid().v4(),
   );
   static const VerificationMeta _learningItemIdMeta = const VerificationMeta(
     'learningItemId',
@@ -765,6 +833,7 @@ class $ReviewTasksTable extends ReviewTasks
   @override
   List<GeneratedColumn> get $columns => [
     id,
+    uuid,
     learningItemId,
     reviewRound,
     scheduledDate,
@@ -789,6 +858,12 @@ class $ReviewTasksTable extends ReviewTasks
     final data = instance.toColumns(true);
     if (data.containsKey('id')) {
       context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('uuid')) {
+      context.handle(
+        _uuidMeta,
+        uuid.isAcceptableOrUnknown(data['uuid']!, _uuidMeta),
+      );
     }
     if (data.containsKey('learning_item_id')) {
       context.handle(
@@ -878,6 +953,10 @@ class $ReviewTasksTable extends ReviewTasks
         DriftSqlType.int,
         data['${effectivePrefix}id'],
       )!,
+      uuid: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}uuid'],
+      )!,
       learningItemId: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}learning_item_id'],
@@ -927,6 +1006,13 @@ class ReviewTask extends DataClass implements Insertable<ReviewTask> {
   /// 主键 ID。
   final int id;
 
+  /// 业务唯一标识（UUID v4）。
+  ///
+  /// 说明：
+  /// - 用于备份/恢复的“合并去重”与外键修复（uuid → id 映射）
+  /// - 迁移时会通过 SQL 为历史库补齐该列并回填为真实 UUID，再建立唯一索引
+  final String uuid;
+
   /// 外键：关联的学习内容 ID（删除学习内容时级联删除）。
   final int learningItemId;
 
@@ -957,6 +1043,7 @@ class ReviewTask extends DataClass implements Insertable<ReviewTask> {
   final bool isMockData;
   const ReviewTask({
     required this.id,
+    required this.uuid,
     required this.learningItemId,
     required this.reviewRound,
     required this.scheduledDate,
@@ -971,6 +1058,7 @@ class ReviewTask extends DataClass implements Insertable<ReviewTask> {
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['id'] = Variable<int>(id);
+    map['uuid'] = Variable<String>(uuid);
     map['learning_item_id'] = Variable<int>(learningItemId);
     map['review_round'] = Variable<int>(reviewRound);
     map['scheduled_date'] = Variable<DateTime>(scheduledDate);
@@ -992,6 +1080,7 @@ class ReviewTask extends DataClass implements Insertable<ReviewTask> {
   ReviewTasksCompanion toCompanion(bool nullToAbsent) {
     return ReviewTasksCompanion(
       id: Value(id),
+      uuid: Value(uuid),
       learningItemId: Value(learningItemId),
       reviewRound: Value(reviewRound),
       scheduledDate: Value(scheduledDate),
@@ -1017,6 +1106,7 @@ class ReviewTask extends DataClass implements Insertable<ReviewTask> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return ReviewTask(
       id: serializer.fromJson<int>(json['id']),
+      uuid: serializer.fromJson<String>(json['uuid']),
       learningItemId: serializer.fromJson<int>(json['learningItemId']),
       reviewRound: serializer.fromJson<int>(json['reviewRound']),
       scheduledDate: serializer.fromJson<DateTime>(json['scheduledDate']),
@@ -1033,6 +1123,7 @@ class ReviewTask extends DataClass implements Insertable<ReviewTask> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
       'id': serializer.toJson<int>(id),
+      'uuid': serializer.toJson<String>(uuid),
       'learningItemId': serializer.toJson<int>(learningItemId),
       'reviewRound': serializer.toJson<int>(reviewRound),
       'scheduledDate': serializer.toJson<DateTime>(scheduledDate),
@@ -1047,6 +1138,7 @@ class ReviewTask extends DataClass implements Insertable<ReviewTask> {
 
   ReviewTask copyWith({
     int? id,
+    String? uuid,
     int? learningItemId,
     int? reviewRound,
     DateTime? scheduledDate,
@@ -1058,6 +1150,7 @@ class ReviewTask extends DataClass implements Insertable<ReviewTask> {
     bool? isMockData,
   }) => ReviewTask(
     id: id ?? this.id,
+    uuid: uuid ?? this.uuid,
     learningItemId: learningItemId ?? this.learningItemId,
     reviewRound: reviewRound ?? this.reviewRound,
     scheduledDate: scheduledDate ?? this.scheduledDate,
@@ -1071,6 +1164,7 @@ class ReviewTask extends DataClass implements Insertable<ReviewTask> {
   ReviewTask copyWithCompanion(ReviewTasksCompanion data) {
     return ReviewTask(
       id: data.id.present ? data.id.value : this.id,
+      uuid: data.uuid.present ? data.uuid.value : this.uuid,
       learningItemId: data.learningItemId.present
           ? data.learningItemId.value
           : this.learningItemId,
@@ -1097,6 +1191,7 @@ class ReviewTask extends DataClass implements Insertable<ReviewTask> {
   String toString() {
     return (StringBuffer('ReviewTask(')
           ..write('id: $id, ')
+          ..write('uuid: $uuid, ')
           ..write('learningItemId: $learningItemId, ')
           ..write('reviewRound: $reviewRound, ')
           ..write('scheduledDate: $scheduledDate, ')
@@ -1113,6 +1208,7 @@ class ReviewTask extends DataClass implements Insertable<ReviewTask> {
   @override
   int get hashCode => Object.hash(
     id,
+    uuid,
     learningItemId,
     reviewRound,
     scheduledDate,
@@ -1128,6 +1224,7 @@ class ReviewTask extends DataClass implements Insertable<ReviewTask> {
       identical(this, other) ||
       (other is ReviewTask &&
           other.id == this.id &&
+          other.uuid == this.uuid &&
           other.learningItemId == this.learningItemId &&
           other.reviewRound == this.reviewRound &&
           other.scheduledDate == this.scheduledDate &&
@@ -1141,6 +1238,7 @@ class ReviewTask extends DataClass implements Insertable<ReviewTask> {
 
 class ReviewTasksCompanion extends UpdateCompanion<ReviewTask> {
   final Value<int> id;
+  final Value<String> uuid;
   final Value<int> learningItemId;
   final Value<int> reviewRound;
   final Value<DateTime> scheduledDate;
@@ -1152,6 +1250,7 @@ class ReviewTasksCompanion extends UpdateCompanion<ReviewTask> {
   final Value<bool> isMockData;
   const ReviewTasksCompanion({
     this.id = const Value.absent(),
+    this.uuid = const Value.absent(),
     this.learningItemId = const Value.absent(),
     this.reviewRound = const Value.absent(),
     this.scheduledDate = const Value.absent(),
@@ -1164,6 +1263,7 @@ class ReviewTasksCompanion extends UpdateCompanion<ReviewTask> {
   });
   ReviewTasksCompanion.insert({
     this.id = const Value.absent(),
+    this.uuid = const Value.absent(),
     required int learningItemId,
     required int reviewRound,
     required DateTime scheduledDate,
@@ -1178,6 +1278,7 @@ class ReviewTasksCompanion extends UpdateCompanion<ReviewTask> {
        scheduledDate = Value(scheduledDate);
   static Insertable<ReviewTask> custom({
     Expression<int>? id,
+    Expression<String>? uuid,
     Expression<int>? learningItemId,
     Expression<int>? reviewRound,
     Expression<DateTime>? scheduledDate,
@@ -1190,6 +1291,7 @@ class ReviewTasksCompanion extends UpdateCompanion<ReviewTask> {
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
+      if (uuid != null) 'uuid': uuid,
       if (learningItemId != null) 'learning_item_id': learningItemId,
       if (reviewRound != null) 'review_round': reviewRound,
       if (scheduledDate != null) 'scheduled_date': scheduledDate,
@@ -1204,6 +1306,7 @@ class ReviewTasksCompanion extends UpdateCompanion<ReviewTask> {
 
   ReviewTasksCompanion copyWith({
     Value<int>? id,
+    Value<String>? uuid,
     Value<int>? learningItemId,
     Value<int>? reviewRound,
     Value<DateTime>? scheduledDate,
@@ -1216,6 +1319,7 @@ class ReviewTasksCompanion extends UpdateCompanion<ReviewTask> {
   }) {
     return ReviewTasksCompanion(
       id: id ?? this.id,
+      uuid: uuid ?? this.uuid,
       learningItemId: learningItemId ?? this.learningItemId,
       reviewRound: reviewRound ?? this.reviewRound,
       scheduledDate: scheduledDate ?? this.scheduledDate,
@@ -1233,6 +1337,9 @@ class ReviewTasksCompanion extends UpdateCompanion<ReviewTask> {
     final map = <String, Expression>{};
     if (id.present) {
       map['id'] = Variable<int>(id.value);
+    }
+    if (uuid.present) {
+      map['uuid'] = Variable<String>(uuid.value);
     }
     if (learningItemId.present) {
       map['learning_item_id'] = Variable<int>(learningItemId.value);
@@ -1268,6 +1375,7 @@ class ReviewTasksCompanion extends UpdateCompanion<ReviewTask> {
   String toString() {
     return (StringBuffer('ReviewTasksCompanion(')
           ..write('id: $id, ')
+          ..write('uuid: $uuid, ')
           ..write('learningItemId: $learningItemId, ')
           ..write('reviewRound: $reviewRound, ')
           ..write('scheduledDate: $scheduledDate, ')
@@ -1277,6 +1385,434 @@ class ReviewTasksCompanion extends UpdateCompanion<ReviewTask> {
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('isMockData: $isMockData')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $ReviewRecordsTable extends ReviewRecords
+    with TableInfo<$ReviewRecordsTable, ReviewRecord> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ReviewRecordsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _uuidMeta = const VerificationMeta('uuid');
+  @override
+  late final GeneratedColumn<String> uuid = GeneratedColumn<String>(
+    'uuid',
+    aliasedName,
+    false,
+    additionalChecks: GeneratedColumn.checkTextLength(
+      minTextLength: 1,
+      maxTextLength: 36,
+    ),
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    clientDefault: () => const Uuid().v4(),
+  );
+  static const VerificationMeta _reviewTaskIdMeta = const VerificationMeta(
+    'reviewTaskId',
+  );
+  @override
+  late final GeneratedColumn<int> reviewTaskId = GeneratedColumn<int>(
+    'review_task_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES review_tasks (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _actionMeta = const VerificationMeta('action');
+  @override
+  late final GeneratedColumn<String> action = GeneratedColumn<String>(
+    'action',
+    aliasedName,
+    false,
+    additionalChecks: GeneratedColumn.checkTextLength(
+      minTextLength: 1,
+      maxTextLength: 20,
+    ),
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _occurredAtMeta = const VerificationMeta(
+    'occurredAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> occurredAt = GeneratedColumn<DateTime>(
+    'occurred_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    uuid,
+    reviewTaskId,
+    action,
+    occurredAt,
+    createdAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'review_records';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<ReviewRecord> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('uuid')) {
+      context.handle(
+        _uuidMeta,
+        uuid.isAcceptableOrUnknown(data['uuid']!, _uuidMeta),
+      );
+    }
+    if (data.containsKey('review_task_id')) {
+      context.handle(
+        _reviewTaskIdMeta,
+        reviewTaskId.isAcceptableOrUnknown(
+          data['review_task_id']!,
+          _reviewTaskIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_reviewTaskIdMeta);
+    }
+    if (data.containsKey('action')) {
+      context.handle(
+        _actionMeta,
+        action.isAcceptableOrUnknown(data['action']!, _actionMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_actionMeta);
+    }
+    if (data.containsKey('occurred_at')) {
+      context.handle(
+        _occurredAtMeta,
+        occurredAt.isAcceptableOrUnknown(data['occurred_at']!, _occurredAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_occurredAtMeta);
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  ReviewRecord map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ReviewRecord(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      uuid: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}uuid'],
+      )!,
+      reviewTaskId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}review_task_id'],
+      )!,
+      action: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}action'],
+      )!,
+      occurredAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}occurred_at'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $ReviewRecordsTable createAlias(String alias) {
+    return $ReviewRecordsTable(attachedDatabase, alias);
+  }
+}
+
+class ReviewRecord extends DataClass implements Insertable<ReviewRecord> {
+  /// 主键 ID。
+  final int id;
+
+  /// 业务唯一标识（UUID v4）。
+  ///
+  /// 说明：用于备份/恢复合并去重（records 以 uuid 作为不可变事件标识）。
+  final String uuid;
+
+  /// 外键：关联复习任务 ID（删除任务时级联删除记录）。
+  final int reviewTaskId;
+
+  /// 行为类型。
+  ///
+  /// 取值建议：
+  /// - 'done'：完成
+  /// - 'skipped'：跳过
+  /// - 'undo'：撤销（done/skipped → pending）
+  final String action;
+
+  /// 行为发生时间（用于时间线/统计口径）。
+  final DateTime occurredAt;
+
+  /// 创建时间（写入数据库时间）。
+  final DateTime createdAt;
+  const ReviewRecord({
+    required this.id,
+    required this.uuid,
+    required this.reviewTaskId,
+    required this.action,
+    required this.occurredAt,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['uuid'] = Variable<String>(uuid);
+    map['review_task_id'] = Variable<int>(reviewTaskId);
+    map['action'] = Variable<String>(action);
+    map['occurred_at'] = Variable<DateTime>(occurredAt);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  ReviewRecordsCompanion toCompanion(bool nullToAbsent) {
+    return ReviewRecordsCompanion(
+      id: Value(id),
+      uuid: Value(uuid),
+      reviewTaskId: Value(reviewTaskId),
+      action: Value(action),
+      occurredAt: Value(occurredAt),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory ReviewRecord.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ReviewRecord(
+      id: serializer.fromJson<int>(json['id']),
+      uuid: serializer.fromJson<String>(json['uuid']),
+      reviewTaskId: serializer.fromJson<int>(json['reviewTaskId']),
+      action: serializer.fromJson<String>(json['action']),
+      occurredAt: serializer.fromJson<DateTime>(json['occurredAt']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'uuid': serializer.toJson<String>(uuid),
+      'reviewTaskId': serializer.toJson<int>(reviewTaskId),
+      'action': serializer.toJson<String>(action),
+      'occurredAt': serializer.toJson<DateTime>(occurredAt),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  ReviewRecord copyWith({
+    int? id,
+    String? uuid,
+    int? reviewTaskId,
+    String? action,
+    DateTime? occurredAt,
+    DateTime? createdAt,
+  }) => ReviewRecord(
+    id: id ?? this.id,
+    uuid: uuid ?? this.uuid,
+    reviewTaskId: reviewTaskId ?? this.reviewTaskId,
+    action: action ?? this.action,
+    occurredAt: occurredAt ?? this.occurredAt,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  ReviewRecord copyWithCompanion(ReviewRecordsCompanion data) {
+    return ReviewRecord(
+      id: data.id.present ? data.id.value : this.id,
+      uuid: data.uuid.present ? data.uuid.value : this.uuid,
+      reviewTaskId: data.reviewTaskId.present
+          ? data.reviewTaskId.value
+          : this.reviewTaskId,
+      action: data.action.present ? data.action.value : this.action,
+      occurredAt: data.occurredAt.present
+          ? data.occurredAt.value
+          : this.occurredAt,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ReviewRecord(')
+          ..write('id: $id, ')
+          ..write('uuid: $uuid, ')
+          ..write('reviewTaskId: $reviewTaskId, ')
+          ..write('action: $action, ')
+          ..write('occurredAt: $occurredAt, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(id, uuid, reviewTaskId, action, occurredAt, createdAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ReviewRecord &&
+          other.id == this.id &&
+          other.uuid == this.uuid &&
+          other.reviewTaskId == this.reviewTaskId &&
+          other.action == this.action &&
+          other.occurredAt == this.occurredAt &&
+          other.createdAt == this.createdAt);
+}
+
+class ReviewRecordsCompanion extends UpdateCompanion<ReviewRecord> {
+  final Value<int> id;
+  final Value<String> uuid;
+  final Value<int> reviewTaskId;
+  final Value<String> action;
+  final Value<DateTime> occurredAt;
+  final Value<DateTime> createdAt;
+  const ReviewRecordsCompanion({
+    this.id = const Value.absent(),
+    this.uuid = const Value.absent(),
+    this.reviewTaskId = const Value.absent(),
+    this.action = const Value.absent(),
+    this.occurredAt = const Value.absent(),
+    this.createdAt = const Value.absent(),
+  });
+  ReviewRecordsCompanion.insert({
+    this.id = const Value.absent(),
+    this.uuid = const Value.absent(),
+    required int reviewTaskId,
+    required String action,
+    required DateTime occurredAt,
+    this.createdAt = const Value.absent(),
+  }) : reviewTaskId = Value(reviewTaskId),
+       action = Value(action),
+       occurredAt = Value(occurredAt);
+  static Insertable<ReviewRecord> custom({
+    Expression<int>? id,
+    Expression<String>? uuid,
+    Expression<int>? reviewTaskId,
+    Expression<String>? action,
+    Expression<DateTime>? occurredAt,
+    Expression<DateTime>? createdAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (uuid != null) 'uuid': uuid,
+      if (reviewTaskId != null) 'review_task_id': reviewTaskId,
+      if (action != null) 'action': action,
+      if (occurredAt != null) 'occurred_at': occurredAt,
+      if (createdAt != null) 'created_at': createdAt,
+    });
+  }
+
+  ReviewRecordsCompanion copyWith({
+    Value<int>? id,
+    Value<String>? uuid,
+    Value<int>? reviewTaskId,
+    Value<String>? action,
+    Value<DateTime>? occurredAt,
+    Value<DateTime>? createdAt,
+  }) {
+    return ReviewRecordsCompanion(
+      id: id ?? this.id,
+      uuid: uuid ?? this.uuid,
+      reviewTaskId: reviewTaskId ?? this.reviewTaskId,
+      action: action ?? this.action,
+      occurredAt: occurredAt ?? this.occurredAt,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (uuid.present) {
+      map['uuid'] = Variable<String>(uuid.value);
+    }
+    if (reviewTaskId.present) {
+      map['review_task_id'] = Variable<int>(reviewTaskId.value);
+    }
+    if (action.present) {
+      map['action'] = Variable<String>(action.value);
+    }
+    if (occurredAt.present) {
+      map['occurred_at'] = Variable<DateTime>(occurredAt.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ReviewRecordsCompanion(')
+          ..write('id: $id, ')
+          ..write('uuid: $uuid, ')
+          ..write('reviewTaskId: $reviewTaskId, ')
+          ..write('action: $action, ')
+          ..write('occurredAt: $occurredAt, ')
+          ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
   }
@@ -1604,6 +2140,20 @@ class $LearningTemplatesTable extends LearningTemplates
       'PRIMARY KEY AUTOINCREMENT',
     ),
   );
+  static const VerificationMeta _uuidMeta = const VerificationMeta('uuid');
+  @override
+  late final GeneratedColumn<String> uuid = GeneratedColumn<String>(
+    'uuid',
+    aliasedName,
+    false,
+    additionalChecks: GeneratedColumn.checkTextLength(
+      minTextLength: 1,
+      maxTextLength: 36,
+    ),
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    clientDefault: () => const Uuid().v4(),
+  );
   static const VerificationMeta _nameMeta = const VerificationMeta('name');
   @override
   late final GeneratedColumn<String> name = GeneratedColumn<String>(
@@ -1691,6 +2241,7 @@ class $LearningTemplatesTable extends LearningTemplates
   @override
   List<GeneratedColumn> get $columns => [
     id,
+    uuid,
     name,
     titlePattern,
     notePattern,
@@ -1713,6 +2264,12 @@ class $LearningTemplatesTable extends LearningTemplates
     final data = instance.toColumns(true);
     if (data.containsKey('id')) {
       context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('uuid')) {
+      context.handle(
+        _uuidMeta,
+        uuid.isAcceptableOrUnknown(data['uuid']!, _uuidMeta),
+      );
     }
     if (data.containsKey('name')) {
       context.handle(
@@ -1779,6 +2336,10 @@ class $LearningTemplatesTable extends LearningTemplates
         DriftSqlType.int,
         data['${effectivePrefix}id'],
       )!,
+      uuid: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}uuid'],
+      )!,
       name: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}name'],
@@ -1821,6 +2382,13 @@ class LearningTemplate extends DataClass
   /// 主键 ID。
   final int id;
 
+  /// 业务唯一标识（UUID v4）。
+  ///
+  /// 说明：
+  /// - 用于备份/恢复的合并去重（避免 id 冲突）
+  /// - 迁移时会通过 SQL 为历史库补齐该列并回填为真实 UUID，再建立唯一索引
+  final String uuid;
+
   /// 模板名称（用户可读，≤30）。
   final String name;
 
@@ -1843,6 +2411,7 @@ class LearningTemplate extends DataClass
   final DateTime? updatedAt;
   const LearningTemplate({
     required this.id,
+    required this.uuid,
     required this.name,
     required this.titlePattern,
     this.notePattern,
@@ -1855,6 +2424,7 @@ class LearningTemplate extends DataClass
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['id'] = Variable<int>(id);
+    map['uuid'] = Variable<String>(uuid);
     map['name'] = Variable<String>(name);
     map['title_pattern'] = Variable<String>(titlePattern);
     if (!nullToAbsent || notePattern != null) {
@@ -1872,6 +2442,7 @@ class LearningTemplate extends DataClass
   LearningTemplatesCompanion toCompanion(bool nullToAbsent) {
     return LearningTemplatesCompanion(
       id: Value(id),
+      uuid: Value(uuid),
       name: Value(name),
       titlePattern: Value(titlePattern),
       notePattern: notePattern == null && nullToAbsent
@@ -1893,6 +2464,7 @@ class LearningTemplate extends DataClass
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return LearningTemplate(
       id: serializer.fromJson<int>(json['id']),
+      uuid: serializer.fromJson<String>(json['uuid']),
       name: serializer.fromJson<String>(json['name']),
       titlePattern: serializer.fromJson<String>(json['titlePattern']),
       notePattern: serializer.fromJson<String?>(json['notePattern']),
@@ -1907,6 +2479,7 @@ class LearningTemplate extends DataClass
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
       'id': serializer.toJson<int>(id),
+      'uuid': serializer.toJson<String>(uuid),
       'name': serializer.toJson<String>(name),
       'titlePattern': serializer.toJson<String>(titlePattern),
       'notePattern': serializer.toJson<String?>(notePattern),
@@ -1919,6 +2492,7 @@ class LearningTemplate extends DataClass
 
   LearningTemplate copyWith({
     int? id,
+    String? uuid,
     String? name,
     String? titlePattern,
     Value<String?> notePattern = const Value.absent(),
@@ -1928,6 +2502,7 @@ class LearningTemplate extends DataClass
     Value<DateTime?> updatedAt = const Value.absent(),
   }) => LearningTemplate(
     id: id ?? this.id,
+    uuid: uuid ?? this.uuid,
     name: name ?? this.name,
     titlePattern: titlePattern ?? this.titlePattern,
     notePattern: notePattern.present ? notePattern.value : this.notePattern,
@@ -1939,6 +2514,7 @@ class LearningTemplate extends DataClass
   LearningTemplate copyWithCompanion(LearningTemplatesCompanion data) {
     return LearningTemplate(
       id: data.id.present ? data.id.value : this.id,
+      uuid: data.uuid.present ? data.uuid.value : this.uuid,
       name: data.name.present ? data.name.value : this.name,
       titlePattern: data.titlePattern.present
           ? data.titlePattern.value
@@ -1957,6 +2533,7 @@ class LearningTemplate extends DataClass
   String toString() {
     return (StringBuffer('LearningTemplate(')
           ..write('id: $id, ')
+          ..write('uuid: $uuid, ')
           ..write('name: $name, ')
           ..write('titlePattern: $titlePattern, ')
           ..write('notePattern: $notePattern, ')
@@ -1971,6 +2548,7 @@ class LearningTemplate extends DataClass
   @override
   int get hashCode => Object.hash(
     id,
+    uuid,
     name,
     titlePattern,
     notePattern,
@@ -1984,6 +2562,7 @@ class LearningTemplate extends DataClass
       identical(this, other) ||
       (other is LearningTemplate &&
           other.id == this.id &&
+          other.uuid == this.uuid &&
           other.name == this.name &&
           other.titlePattern == this.titlePattern &&
           other.notePattern == this.notePattern &&
@@ -1995,6 +2574,7 @@ class LearningTemplate extends DataClass
 
 class LearningTemplatesCompanion extends UpdateCompanion<LearningTemplate> {
   final Value<int> id;
+  final Value<String> uuid;
   final Value<String> name;
   final Value<String> titlePattern;
   final Value<String?> notePattern;
@@ -2004,6 +2584,7 @@ class LearningTemplatesCompanion extends UpdateCompanion<LearningTemplate> {
   final Value<DateTime?> updatedAt;
   const LearningTemplatesCompanion({
     this.id = const Value.absent(),
+    this.uuid = const Value.absent(),
     this.name = const Value.absent(),
     this.titlePattern = const Value.absent(),
     this.notePattern = const Value.absent(),
@@ -2014,6 +2595,7 @@ class LearningTemplatesCompanion extends UpdateCompanion<LearningTemplate> {
   });
   LearningTemplatesCompanion.insert({
     this.id = const Value.absent(),
+    this.uuid = const Value.absent(),
     required String name,
     required String titlePattern,
     this.notePattern = const Value.absent(),
@@ -2025,6 +2607,7 @@ class LearningTemplatesCompanion extends UpdateCompanion<LearningTemplate> {
        titlePattern = Value(titlePattern);
   static Insertable<LearningTemplate> custom({
     Expression<int>? id,
+    Expression<String>? uuid,
     Expression<String>? name,
     Expression<String>? titlePattern,
     Expression<String>? notePattern,
@@ -2035,6 +2618,7 @@ class LearningTemplatesCompanion extends UpdateCompanion<LearningTemplate> {
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
+      if (uuid != null) 'uuid': uuid,
       if (name != null) 'name': name,
       if (titlePattern != null) 'title_pattern': titlePattern,
       if (notePattern != null) 'note_pattern': notePattern,
@@ -2047,6 +2631,7 @@ class LearningTemplatesCompanion extends UpdateCompanion<LearningTemplate> {
 
   LearningTemplatesCompanion copyWith({
     Value<int>? id,
+    Value<String>? uuid,
     Value<String>? name,
     Value<String>? titlePattern,
     Value<String?>? notePattern,
@@ -2057,6 +2642,7 @@ class LearningTemplatesCompanion extends UpdateCompanion<LearningTemplate> {
   }) {
     return LearningTemplatesCompanion(
       id: id ?? this.id,
+      uuid: uuid ?? this.uuid,
       name: name ?? this.name,
       titlePattern: titlePattern ?? this.titlePattern,
       notePattern: notePattern ?? this.notePattern,
@@ -2072,6 +2658,9 @@ class LearningTemplatesCompanion extends UpdateCompanion<LearningTemplate> {
     final map = <String, Expression>{};
     if (id.present) {
       map['id'] = Variable<int>(id.value);
+    }
+    if (uuid.present) {
+      map['uuid'] = Variable<String>(uuid.value);
     }
     if (name.present) {
       map['name'] = Variable<String>(name.value);
@@ -2101,6 +2690,7 @@ class LearningTemplatesCompanion extends UpdateCompanion<LearningTemplate> {
   String toString() {
     return (StringBuffer('LearningTemplatesCompanion(')
           ..write('id: $id, ')
+          ..write('uuid: $uuid, ')
           ..write('name: $name, ')
           ..write('titlePattern: $titlePattern, ')
           ..write('notePattern: $notePattern, ')
@@ -2131,6 +2721,20 @@ class $LearningTopicsTable extends LearningTopics
     defaultConstraints: GeneratedColumn.constraintIsAlways(
       'PRIMARY KEY AUTOINCREMENT',
     ),
+  );
+  static const VerificationMeta _uuidMeta = const VerificationMeta('uuid');
+  @override
+  late final GeneratedColumn<String> uuid = GeneratedColumn<String>(
+    'uuid',
+    aliasedName,
+    false,
+    additionalChecks: GeneratedColumn.checkTextLength(
+      minTextLength: 1,
+      maxTextLength: 36,
+    ),
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    clientDefault: () => const Uuid().v4(),
   );
   static const VerificationMeta _nameMeta = const VerificationMeta('name');
   @override
@@ -2182,6 +2786,7 @@ class $LearningTopicsTable extends LearningTopics
   @override
   List<GeneratedColumn> get $columns => [
     id,
+    uuid,
     name,
     description,
     createdAt,
@@ -2201,6 +2806,12 @@ class $LearningTopicsTable extends LearningTopics
     final data = instance.toColumns(true);
     if (data.containsKey('id')) {
       context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('uuid')) {
+      context.handle(
+        _uuidMeta,
+        uuid.isAcceptableOrUnknown(data['uuid']!, _uuidMeta),
+      );
     }
     if (data.containsKey('name')) {
       context.handle(
@@ -2244,6 +2855,10 @@ class $LearningTopicsTable extends LearningTopics
         DriftSqlType.int,
         data['${effectivePrefix}id'],
       )!,
+      uuid: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}uuid'],
+      )!,
       name: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}name'],
@@ -2273,6 +2888,13 @@ class LearningTopic extends DataClass implements Insertable<LearningTopic> {
   /// 主键 ID。
   final int id;
 
+  /// 业务唯一标识（UUID v4）。
+  ///
+  /// 说明：
+  /// - 用于备份/恢复的合并去重（避免 id 冲突）
+  /// - 迁移时会通过 SQL 为历史库补齐该列并回填为真实 UUID，再建立唯一索引
+  final String uuid;
+
   /// 主题名称（必填，≤50）。
   final String name;
 
@@ -2286,6 +2908,7 @@ class LearningTopic extends DataClass implements Insertable<LearningTopic> {
   final DateTime? updatedAt;
   const LearningTopic({
     required this.id,
+    required this.uuid,
     required this.name,
     this.description,
     required this.createdAt,
@@ -2295,6 +2918,7 @@ class LearningTopic extends DataClass implements Insertable<LearningTopic> {
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['id'] = Variable<int>(id);
+    map['uuid'] = Variable<String>(uuid);
     map['name'] = Variable<String>(name);
     if (!nullToAbsent || description != null) {
       map['description'] = Variable<String>(description);
@@ -2309,6 +2933,7 @@ class LearningTopic extends DataClass implements Insertable<LearningTopic> {
   LearningTopicsCompanion toCompanion(bool nullToAbsent) {
     return LearningTopicsCompanion(
       id: Value(id),
+      uuid: Value(uuid),
       name: Value(name),
       description: description == null && nullToAbsent
           ? const Value.absent()
@@ -2327,6 +2952,7 @@ class LearningTopic extends DataClass implements Insertable<LearningTopic> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return LearningTopic(
       id: serializer.fromJson<int>(json['id']),
+      uuid: serializer.fromJson<String>(json['uuid']),
       name: serializer.fromJson<String>(json['name']),
       description: serializer.fromJson<String?>(json['description']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
@@ -2338,6 +2964,7 @@ class LearningTopic extends DataClass implements Insertable<LearningTopic> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
       'id': serializer.toJson<int>(id),
+      'uuid': serializer.toJson<String>(uuid),
       'name': serializer.toJson<String>(name),
       'description': serializer.toJson<String?>(description),
       'createdAt': serializer.toJson<DateTime>(createdAt),
@@ -2347,12 +2974,14 @@ class LearningTopic extends DataClass implements Insertable<LearningTopic> {
 
   LearningTopic copyWith({
     int? id,
+    String? uuid,
     String? name,
     Value<String?> description = const Value.absent(),
     DateTime? createdAt,
     Value<DateTime?> updatedAt = const Value.absent(),
   }) => LearningTopic(
     id: id ?? this.id,
+    uuid: uuid ?? this.uuid,
     name: name ?? this.name,
     description: description.present ? description.value : this.description,
     createdAt: createdAt ?? this.createdAt,
@@ -2361,6 +2990,7 @@ class LearningTopic extends DataClass implements Insertable<LearningTopic> {
   LearningTopic copyWithCompanion(LearningTopicsCompanion data) {
     return LearningTopic(
       id: data.id.present ? data.id.value : this.id,
+      uuid: data.uuid.present ? data.uuid.value : this.uuid,
       name: data.name.present ? data.name.value : this.name,
       description: data.description.present
           ? data.description.value
@@ -2374,6 +3004,7 @@ class LearningTopic extends DataClass implements Insertable<LearningTopic> {
   String toString() {
     return (StringBuffer('LearningTopic(')
           ..write('id: $id, ')
+          ..write('uuid: $uuid, ')
           ..write('name: $name, ')
           ..write('description: $description, ')
           ..write('createdAt: $createdAt, ')
@@ -2383,12 +3014,14 @@ class LearningTopic extends DataClass implements Insertable<LearningTopic> {
   }
 
   @override
-  int get hashCode => Object.hash(id, name, description, createdAt, updatedAt);
+  int get hashCode =>
+      Object.hash(id, uuid, name, description, createdAt, updatedAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is LearningTopic &&
           other.id == this.id &&
+          other.uuid == this.uuid &&
           other.name == this.name &&
           other.description == this.description &&
           other.createdAt == this.createdAt &&
@@ -2397,12 +3030,14 @@ class LearningTopic extends DataClass implements Insertable<LearningTopic> {
 
 class LearningTopicsCompanion extends UpdateCompanion<LearningTopic> {
   final Value<int> id;
+  final Value<String> uuid;
   final Value<String> name;
   final Value<String?> description;
   final Value<DateTime> createdAt;
   final Value<DateTime?> updatedAt;
   const LearningTopicsCompanion({
     this.id = const Value.absent(),
+    this.uuid = const Value.absent(),
     this.name = const Value.absent(),
     this.description = const Value.absent(),
     this.createdAt = const Value.absent(),
@@ -2410,6 +3045,7 @@ class LearningTopicsCompanion extends UpdateCompanion<LearningTopic> {
   });
   LearningTopicsCompanion.insert({
     this.id = const Value.absent(),
+    this.uuid = const Value.absent(),
     required String name,
     this.description = const Value.absent(),
     this.createdAt = const Value.absent(),
@@ -2417,6 +3053,7 @@ class LearningTopicsCompanion extends UpdateCompanion<LearningTopic> {
   }) : name = Value(name);
   static Insertable<LearningTopic> custom({
     Expression<int>? id,
+    Expression<String>? uuid,
     Expression<String>? name,
     Expression<String>? description,
     Expression<DateTime>? createdAt,
@@ -2424,6 +3061,7 @@ class LearningTopicsCompanion extends UpdateCompanion<LearningTopic> {
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
+      if (uuid != null) 'uuid': uuid,
       if (name != null) 'name': name,
       if (description != null) 'description': description,
       if (createdAt != null) 'created_at': createdAt,
@@ -2433,6 +3071,7 @@ class LearningTopicsCompanion extends UpdateCompanion<LearningTopic> {
 
   LearningTopicsCompanion copyWith({
     Value<int>? id,
+    Value<String>? uuid,
     Value<String>? name,
     Value<String?>? description,
     Value<DateTime>? createdAt,
@@ -2440,6 +3079,7 @@ class LearningTopicsCompanion extends UpdateCompanion<LearningTopic> {
   }) {
     return LearningTopicsCompanion(
       id: id ?? this.id,
+      uuid: uuid ?? this.uuid,
       name: name ?? this.name,
       description: description ?? this.description,
       createdAt: createdAt ?? this.createdAt,
@@ -2452,6 +3092,9 @@ class LearningTopicsCompanion extends UpdateCompanion<LearningTopic> {
     final map = <String, Expression>{};
     if (id.present) {
       map['id'] = Variable<int>(id.value);
+    }
+    if (uuid.present) {
+      map['uuid'] = Variable<String>(uuid.value);
     }
     if (name.present) {
       map['name'] = Variable<String>(name.value);
@@ -2472,6 +3115,7 @@ class LearningTopicsCompanion extends UpdateCompanion<LearningTopic> {
   String toString() {
     return (StringBuffer('LearningTopicsCompanion(')
           ..write('id: $id, ')
+          ..write('uuid: $uuid, ')
           ..write('name: $name, ')
           ..write('description: $description, ')
           ..write('createdAt: $createdAt, ')
@@ -4581,6 +5225,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
   late final $LearningItemsTable learningItems = $LearningItemsTable(this);
   late final $ReviewTasksTable reviewTasks = $ReviewTasksTable(this);
+  late final $ReviewRecordsTable reviewRecords = $ReviewRecordsTable(this);
   late final $AppSettingsTableTable appSettingsTable = $AppSettingsTableTable(
     this,
   );
@@ -4624,6 +5269,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   List<DatabaseSchemaEntity> get allSchemaEntities => [
     learningItems,
     reviewTasks,
+    reviewRecords,
     appSettingsTable,
     learningTemplates,
     learningTopics,
@@ -4649,6 +5295,13 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     ),
     WritePropagation(
       on: TableUpdateQuery.onTableName(
+        'review_tasks',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('review_records', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
         'learning_topics',
         limitUpdateKind: UpdateKind.delete,
       ),
@@ -4667,6 +5320,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
 typedef $$LearningItemsTableCreateCompanionBuilder =
     LearningItemsCompanion Function({
       Value<int> id,
+      Value<String> uuid,
       required String title,
       Value<String?> note,
       Value<String> tags,
@@ -4680,6 +5334,7 @@ typedef $$LearningItemsTableCreateCompanionBuilder =
 typedef $$LearningItemsTableUpdateCompanionBuilder =
     LearningItemsCompanion Function({
       Value<int> id,
+      Value<String> uuid,
       Value<String> title,
       Value<String?> note,
       Value<String> tags,
@@ -4756,6 +5411,11 @@ class $$LearningItemsTableFilterComposer
   });
   ColumnFilters<int> get id => $composableBuilder(
     column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get uuid => $composableBuilder(
+    column: $table.uuid,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -4869,6 +5529,11 @@ class $$LearningItemsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get uuid => $composableBuilder(
+    column: $table.uuid,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get title => $composableBuilder(
     column: $table.title,
     builder: (column) => ColumnOrderings(column),
@@ -4926,6 +5591,9 @@ class $$LearningItemsTableAnnotationComposer
   });
   GeneratedColumn<int> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get uuid =>
+      $composableBuilder(column: $table.uuid, builder: (column) => column);
 
   GeneratedColumn<String> get title =>
       $composableBuilder(column: $table.title, builder: (column) => column);
@@ -5042,6 +5710,7 @@ class $$LearningItemsTableTableManager
           updateCompanionCallback:
               ({
                 Value<int> id = const Value.absent(),
+                Value<String> uuid = const Value.absent(),
                 Value<String> title = const Value.absent(),
                 Value<String?> note = const Value.absent(),
                 Value<String> tags = const Value.absent(),
@@ -5053,6 +5722,7 @@ class $$LearningItemsTableTableManager
                 Value<bool> isMockData = const Value.absent(),
               }) => LearningItemsCompanion(
                 id: id,
+                uuid: uuid,
                 title: title,
                 note: note,
                 tags: tags,
@@ -5066,6 +5736,7 @@ class $$LearningItemsTableTableManager
           createCompanionCallback:
               ({
                 Value<int> id = const Value.absent(),
+                Value<String> uuid = const Value.absent(),
                 required String title,
                 Value<String?> note = const Value.absent(),
                 Value<String> tags = const Value.absent(),
@@ -5077,6 +5748,7 @@ class $$LearningItemsTableTableManager
                 Value<bool> isMockData = const Value.absent(),
               }) => LearningItemsCompanion.insert(
                 id: id,
+                uuid: uuid,
                 title: title,
                 note: note,
                 tags: tags,
@@ -5176,6 +5848,7 @@ typedef $$LearningItemsTableProcessedTableManager =
 typedef $$ReviewTasksTableCreateCompanionBuilder =
     ReviewTasksCompanion Function({
       Value<int> id,
+      Value<String> uuid,
       required int learningItemId,
       required int reviewRound,
       required DateTime scheduledDate,
@@ -5189,6 +5862,7 @@ typedef $$ReviewTasksTableCreateCompanionBuilder =
 typedef $$ReviewTasksTableUpdateCompanionBuilder =
     ReviewTasksCompanion Function({
       Value<int> id,
+      Value<String> uuid,
       Value<int> learningItemId,
       Value<int> reviewRound,
       Value<DateTime> scheduledDate,
@@ -5225,6 +5899,27 @@ final class $$ReviewTasksTableReferences
       manager.$state.copyWith(prefetchedData: [item]),
     );
   }
+
+  static MultiTypedResultKey<$ReviewRecordsTable, List<ReviewRecord>>
+  _reviewRecordsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.reviewRecords,
+    aliasName: $_aliasNameGenerator(
+      db.reviewTasks.id,
+      db.reviewRecords.reviewTaskId,
+    ),
+  );
+
+  $$ReviewRecordsTableProcessedTableManager get reviewRecordsRefs {
+    final manager = $$ReviewRecordsTableTableManager(
+      $_db,
+      $_db.reviewRecords,
+    ).filter((f) => f.reviewTaskId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_reviewRecordsRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
 }
 
 class $$ReviewTasksTableFilterComposer
@@ -5238,6 +5933,11 @@ class $$ReviewTasksTableFilterComposer
   });
   ColumnFilters<int> get id => $composableBuilder(
     column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get uuid => $composableBuilder(
+    column: $table.uuid,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -5303,6 +6003,31 @@ class $$ReviewTasksTableFilterComposer
     );
     return composer;
   }
+
+  Expression<bool> reviewRecordsRefs(
+    Expression<bool> Function($$ReviewRecordsTableFilterComposer f) f,
+  ) {
+    final $$ReviewRecordsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.reviewRecords,
+      getReferencedColumn: (t) => t.reviewTaskId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ReviewRecordsTableFilterComposer(
+            $db: $db,
+            $table: $db.reviewRecords,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$ReviewTasksTableOrderingComposer
@@ -5316,6 +6041,11 @@ class $$ReviewTasksTableOrderingComposer
   });
   ColumnOrderings<int> get id => $composableBuilder(
     column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get uuid => $composableBuilder(
+    column: $table.uuid,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -5395,6 +6125,9 @@ class $$ReviewTasksTableAnnotationComposer
   GeneratedColumn<int> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
 
+  GeneratedColumn<String> get uuid =>
+      $composableBuilder(column: $table.uuid, builder: (column) => column);
+
   GeneratedColumn<int> get reviewRound => $composableBuilder(
     column: $table.reviewRound,
     builder: (column) => column,
@@ -5449,6 +6182,31 @@ class $$ReviewTasksTableAnnotationComposer
     );
     return composer;
   }
+
+  Expression<T> reviewRecordsRefs<T extends Object>(
+    Expression<T> Function($$ReviewRecordsTableAnnotationComposer a) f,
+  ) {
+    final $$ReviewRecordsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.reviewRecords,
+      getReferencedColumn: (t) => t.reviewTaskId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ReviewRecordsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.reviewRecords,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$ReviewTasksTableTableManager
@@ -5464,7 +6222,7 @@ class $$ReviewTasksTableTableManager
           $$ReviewTasksTableUpdateCompanionBuilder,
           (ReviewTask, $$ReviewTasksTableReferences),
           ReviewTask,
-          PrefetchHooks Function({bool learningItemId})
+          PrefetchHooks Function({bool learningItemId, bool reviewRecordsRefs})
         > {
   $$ReviewTasksTableTableManager(_$AppDatabase db, $ReviewTasksTable table)
     : super(
@@ -5480,6 +6238,7 @@ class $$ReviewTasksTableTableManager
           updateCompanionCallback:
               ({
                 Value<int> id = const Value.absent(),
+                Value<String> uuid = const Value.absent(),
                 Value<int> learningItemId = const Value.absent(),
                 Value<int> reviewRound = const Value.absent(),
                 Value<DateTime> scheduledDate = const Value.absent(),
@@ -5491,6 +6250,7 @@ class $$ReviewTasksTableTableManager
                 Value<bool> isMockData = const Value.absent(),
               }) => ReviewTasksCompanion(
                 id: id,
+                uuid: uuid,
                 learningItemId: learningItemId,
                 reviewRound: reviewRound,
                 scheduledDate: scheduledDate,
@@ -5504,6 +6264,7 @@ class $$ReviewTasksTableTableManager
           createCompanionCallback:
               ({
                 Value<int> id = const Value.absent(),
+                Value<String> uuid = const Value.absent(),
                 required int learningItemId,
                 required int reviewRound,
                 required DateTime scheduledDate,
@@ -5515,6 +6276,7 @@ class $$ReviewTasksTableTableManager
                 Value<bool> isMockData = const Value.absent(),
               }) => ReviewTasksCompanion.insert(
                 id: id,
+                uuid: uuid,
                 learningItemId: learningItemId,
                 reviewRound: reviewRound,
                 scheduledDate: scheduledDate,
@@ -5533,7 +6295,372 @@ class $$ReviewTasksTableTableManager
                 ),
               )
               .toList(),
-          prefetchHooksCallback: ({learningItemId = false}) {
+          prefetchHooksCallback:
+              ({learningItemId = false, reviewRecordsRefs = false}) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [
+                    if (reviewRecordsRefs) db.reviewRecords,
+                  ],
+                  addJoins:
+                      <
+                        T extends TableManagerState<
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic
+                        >
+                      >(state) {
+                        if (learningItemId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.learningItemId,
+                                    referencedTable:
+                                        $$ReviewTasksTableReferences
+                                            ._learningItemIdTable(db),
+                                    referencedColumn:
+                                        $$ReviewTasksTableReferences
+                                            ._learningItemIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+
+                        return state;
+                      },
+                  getPrefetchedDataCallback: (items) async {
+                    return [
+                      if (reviewRecordsRefs)
+                        await $_getPrefetchedData<
+                          ReviewTask,
+                          $ReviewTasksTable,
+                          ReviewRecord
+                        >(
+                          currentTable: table,
+                          referencedTable: $$ReviewTasksTableReferences
+                              ._reviewRecordsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$ReviewTasksTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).reviewRecordsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.reviewTaskId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                    ];
+                  },
+                );
+              },
+        ),
+      );
+}
+
+typedef $$ReviewTasksTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $ReviewTasksTable,
+      ReviewTask,
+      $$ReviewTasksTableFilterComposer,
+      $$ReviewTasksTableOrderingComposer,
+      $$ReviewTasksTableAnnotationComposer,
+      $$ReviewTasksTableCreateCompanionBuilder,
+      $$ReviewTasksTableUpdateCompanionBuilder,
+      (ReviewTask, $$ReviewTasksTableReferences),
+      ReviewTask,
+      PrefetchHooks Function({bool learningItemId, bool reviewRecordsRefs})
+    >;
+typedef $$ReviewRecordsTableCreateCompanionBuilder =
+    ReviewRecordsCompanion Function({
+      Value<int> id,
+      Value<String> uuid,
+      required int reviewTaskId,
+      required String action,
+      required DateTime occurredAt,
+      Value<DateTime> createdAt,
+    });
+typedef $$ReviewRecordsTableUpdateCompanionBuilder =
+    ReviewRecordsCompanion Function({
+      Value<int> id,
+      Value<String> uuid,
+      Value<int> reviewTaskId,
+      Value<String> action,
+      Value<DateTime> occurredAt,
+      Value<DateTime> createdAt,
+    });
+
+final class $$ReviewRecordsTableReferences
+    extends BaseReferences<_$AppDatabase, $ReviewRecordsTable, ReviewRecord> {
+  $$ReviewRecordsTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $ReviewTasksTable _reviewTaskIdTable(_$AppDatabase db) =>
+      db.reviewTasks.createAlias(
+        $_aliasNameGenerator(db.reviewRecords.reviewTaskId, db.reviewTasks.id),
+      );
+
+  $$ReviewTasksTableProcessedTableManager get reviewTaskId {
+    final $_column = $_itemColumn<int>('review_task_id')!;
+
+    final manager = $$ReviewTasksTableTableManager(
+      $_db,
+      $_db.reviewTasks,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_reviewTaskIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$ReviewRecordsTableFilterComposer
+    extends Composer<_$AppDatabase, $ReviewRecordsTable> {
+  $$ReviewRecordsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get uuid => $composableBuilder(
+    column: $table.uuid,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get action => $composableBuilder(
+    column: $table.action,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get occurredAt => $composableBuilder(
+    column: $table.occurredAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$ReviewTasksTableFilterComposer get reviewTaskId {
+    final $$ReviewTasksTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.reviewTaskId,
+      referencedTable: $db.reviewTasks,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ReviewTasksTableFilterComposer(
+            $db: $db,
+            $table: $db.reviewTasks,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$ReviewRecordsTableOrderingComposer
+    extends Composer<_$AppDatabase, $ReviewRecordsTable> {
+  $$ReviewRecordsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get uuid => $composableBuilder(
+    column: $table.uuid,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get action => $composableBuilder(
+    column: $table.action,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get occurredAt => $composableBuilder(
+    column: $table.occurredAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$ReviewTasksTableOrderingComposer get reviewTaskId {
+    final $$ReviewTasksTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.reviewTaskId,
+      referencedTable: $db.reviewTasks,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ReviewTasksTableOrderingComposer(
+            $db: $db,
+            $table: $db.reviewTasks,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$ReviewRecordsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $ReviewRecordsTable> {
+  $$ReviewRecordsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get uuid =>
+      $composableBuilder(column: $table.uuid, builder: (column) => column);
+
+  GeneratedColumn<String> get action =>
+      $composableBuilder(column: $table.action, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get occurredAt => $composableBuilder(
+    column: $table.occurredAt,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  $$ReviewTasksTableAnnotationComposer get reviewTaskId {
+    final $$ReviewTasksTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.reviewTaskId,
+      referencedTable: $db.reviewTasks,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ReviewTasksTableAnnotationComposer(
+            $db: $db,
+            $table: $db.reviewTasks,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$ReviewRecordsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $ReviewRecordsTable,
+          ReviewRecord,
+          $$ReviewRecordsTableFilterComposer,
+          $$ReviewRecordsTableOrderingComposer,
+          $$ReviewRecordsTableAnnotationComposer,
+          $$ReviewRecordsTableCreateCompanionBuilder,
+          $$ReviewRecordsTableUpdateCompanionBuilder,
+          (ReviewRecord, $$ReviewRecordsTableReferences),
+          ReviewRecord,
+          PrefetchHooks Function({bool reviewTaskId})
+        > {
+  $$ReviewRecordsTableTableManager(_$AppDatabase db, $ReviewRecordsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ReviewRecordsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$ReviewRecordsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$ReviewRecordsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> uuid = const Value.absent(),
+                Value<int> reviewTaskId = const Value.absent(),
+                Value<String> action = const Value.absent(),
+                Value<DateTime> occurredAt = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+              }) => ReviewRecordsCompanion(
+                id: id,
+                uuid: uuid,
+                reviewTaskId: reviewTaskId,
+                action: action,
+                occurredAt: occurredAt,
+                createdAt: createdAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> uuid = const Value.absent(),
+                required int reviewTaskId,
+                required String action,
+                required DateTime occurredAt,
+                Value<DateTime> createdAt = const Value.absent(),
+              }) => ReviewRecordsCompanion.insert(
+                id: id,
+                uuid: uuid,
+                reviewTaskId: reviewTaskId,
+                action: action,
+                occurredAt: occurredAt,
+                createdAt: createdAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$ReviewRecordsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({reviewTaskId = false}) {
             return PrefetchHooks(
               db: db,
               explicitlyWatchedTables: [],
@@ -5553,15 +6680,15 @@ class $$ReviewTasksTableTableManager
                       dynamic
                     >
                   >(state) {
-                    if (learningItemId) {
+                    if (reviewTaskId) {
                       state =
                           state.withJoin(
                                 currentTable: table,
-                                currentColumn: table.learningItemId,
-                                referencedTable: $$ReviewTasksTableReferences
-                                    ._learningItemIdTable(db),
-                                referencedColumn: $$ReviewTasksTableReferences
-                                    ._learningItemIdTable(db)
+                                currentColumn: table.reviewTaskId,
+                                referencedTable: $$ReviewRecordsTableReferences
+                                    ._reviewTaskIdTable(db),
+                                referencedColumn: $$ReviewRecordsTableReferences
+                                    ._reviewTaskIdTable(db)
                                     .id,
                               )
                               as T;
@@ -5578,19 +6705,19 @@ class $$ReviewTasksTableTableManager
       );
 }
 
-typedef $$ReviewTasksTableProcessedTableManager =
+typedef $$ReviewRecordsTableProcessedTableManager =
     ProcessedTableManager<
       _$AppDatabase,
-      $ReviewTasksTable,
-      ReviewTask,
-      $$ReviewTasksTableFilterComposer,
-      $$ReviewTasksTableOrderingComposer,
-      $$ReviewTasksTableAnnotationComposer,
-      $$ReviewTasksTableCreateCompanionBuilder,
-      $$ReviewTasksTableUpdateCompanionBuilder,
-      (ReviewTask, $$ReviewTasksTableReferences),
-      ReviewTask,
-      PrefetchHooks Function({bool learningItemId})
+      $ReviewRecordsTable,
+      ReviewRecord,
+      $$ReviewRecordsTableFilterComposer,
+      $$ReviewRecordsTableOrderingComposer,
+      $$ReviewRecordsTableAnnotationComposer,
+      $$ReviewRecordsTableCreateCompanionBuilder,
+      $$ReviewRecordsTableUpdateCompanionBuilder,
+      (ReviewRecord, $$ReviewRecordsTableReferences),
+      ReviewRecord,
+      PrefetchHooks Function({bool reviewTaskId})
     >;
 typedef $$AppSettingsTableTableCreateCompanionBuilder =
     AppSettingsTableCompanion Function({
@@ -5780,6 +6907,7 @@ typedef $$AppSettingsTableTableProcessedTableManager =
 typedef $$LearningTemplatesTableCreateCompanionBuilder =
     LearningTemplatesCompanion Function({
       Value<int> id,
+      Value<String> uuid,
       required String name,
       required String titlePattern,
       Value<String?> notePattern,
@@ -5791,6 +6919,7 @@ typedef $$LearningTemplatesTableCreateCompanionBuilder =
 typedef $$LearningTemplatesTableUpdateCompanionBuilder =
     LearningTemplatesCompanion Function({
       Value<int> id,
+      Value<String> uuid,
       Value<String> name,
       Value<String> titlePattern,
       Value<String?> notePattern,
@@ -5811,6 +6940,11 @@ class $$LearningTemplatesTableFilterComposer
   });
   ColumnFilters<int> get id => $composableBuilder(
     column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get uuid => $composableBuilder(
+    column: $table.uuid,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -5864,6 +6998,11 @@ class $$LearningTemplatesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get uuid => $composableBuilder(
+    column: $table.uuid,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get name => $composableBuilder(
     column: $table.name,
     builder: (column) => ColumnOrderings(column),
@@ -5911,6 +7050,9 @@ class $$LearningTemplatesTableAnnotationComposer
   });
   GeneratedColumn<int> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get uuid =>
+      $composableBuilder(column: $table.uuid, builder: (column) => column);
 
   GeneratedColumn<String> get name =>
       $composableBuilder(column: $table.name, builder: (column) => column);
@@ -5979,6 +7121,7 @@ class $$LearningTemplatesTableTableManager
           updateCompanionCallback:
               ({
                 Value<int> id = const Value.absent(),
+                Value<String> uuid = const Value.absent(),
                 Value<String> name = const Value.absent(),
                 Value<String> titlePattern = const Value.absent(),
                 Value<String?> notePattern = const Value.absent(),
@@ -5988,6 +7131,7 @@ class $$LearningTemplatesTableTableManager
                 Value<DateTime?> updatedAt = const Value.absent(),
               }) => LearningTemplatesCompanion(
                 id: id,
+                uuid: uuid,
                 name: name,
                 titlePattern: titlePattern,
                 notePattern: notePattern,
@@ -5999,6 +7143,7 @@ class $$LearningTemplatesTableTableManager
           createCompanionCallback:
               ({
                 Value<int> id = const Value.absent(),
+                Value<String> uuid = const Value.absent(),
                 required String name,
                 required String titlePattern,
                 Value<String?> notePattern = const Value.absent(),
@@ -6008,6 +7153,7 @@ class $$LearningTemplatesTableTableManager
                 Value<DateTime?> updatedAt = const Value.absent(),
               }) => LearningTemplatesCompanion.insert(
                 id: id,
+                uuid: uuid,
                 name: name,
                 titlePattern: titlePattern,
                 notePattern: notePattern,
@@ -6048,6 +7194,7 @@ typedef $$LearningTemplatesTableProcessedTableManager =
 typedef $$LearningTopicsTableCreateCompanionBuilder =
     LearningTopicsCompanion Function({
       Value<int> id,
+      Value<String> uuid,
       required String name,
       Value<String?> description,
       Value<DateTime> createdAt,
@@ -6056,6 +7203,7 @@ typedef $$LearningTopicsTableCreateCompanionBuilder =
 typedef $$LearningTopicsTableUpdateCompanionBuilder =
     LearningTopicsCompanion Function({
       Value<int> id,
+      Value<String> uuid,
       Value<String> name,
       Value<String?> description,
       Value<DateTime> createdAt,
@@ -6106,6 +7254,11 @@ class $$LearningTopicsTableFilterComposer
   });
   ColumnFilters<int> get id => $composableBuilder(
     column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get uuid => $composableBuilder(
+    column: $table.uuid,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -6169,6 +7322,11 @@ class $$LearningTopicsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get uuid => $composableBuilder(
+    column: $table.uuid,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get name => $composableBuilder(
     column: $table.name,
     builder: (column) => ColumnOrderings(column),
@@ -6201,6 +7359,9 @@ class $$LearningTopicsTableAnnotationComposer
   });
   GeneratedColumn<int> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get uuid =>
+      $composableBuilder(column: $table.uuid, builder: (column) => column);
 
   GeneratedColumn<String> get name =>
       $composableBuilder(column: $table.name, builder: (column) => column);
@@ -6274,12 +7435,14 @@ class $$LearningTopicsTableTableManager
           updateCompanionCallback:
               ({
                 Value<int> id = const Value.absent(),
+                Value<String> uuid = const Value.absent(),
                 Value<String> name = const Value.absent(),
                 Value<String?> description = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime?> updatedAt = const Value.absent(),
               }) => LearningTopicsCompanion(
                 id: id,
+                uuid: uuid,
                 name: name,
                 description: description,
                 createdAt: createdAt,
@@ -6288,12 +7451,14 @@ class $$LearningTopicsTableTableManager
           createCompanionCallback:
               ({
                 Value<int> id = const Value.absent(),
+                Value<String> uuid = const Value.absent(),
                 required String name,
                 Value<String?> description = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime?> updatedAt = const Value.absent(),
               }) => LearningTopicsCompanion.insert(
                 id: id,
+                uuid: uuid,
                 name: name,
                 description: description,
                 createdAt: createdAt,
@@ -7614,6 +8779,8 @@ class $AppDatabaseManager {
       $$LearningItemsTableTableManager(_db, _db.learningItems);
   $$ReviewTasksTableTableManager get reviewTasks =>
       $$ReviewTasksTableTableManager(_db, _db.reviewTasks);
+  $$ReviewRecordsTableTableManager get reviewRecords =>
+      $$ReviewRecordsTableTableManager(_db, _db.reviewRecords);
   $$AppSettingsTableTableTableManager get appSettingsTable =>
       $$AppSettingsTableTableTableManager(_db, _db.appSettingsTable);
   $$LearningTemplatesTableTableManager get learningTemplates =>
