@@ -17,6 +17,7 @@ import '../../presentation/pages/input/templates_page.dart';
 import '../../presentation/pages/debug/mock_data_generator_page.dart';
 import '../../presentation/pages/learning_item/learning_item_detail_page.dart';
 import '../../presentation/pages/tasks/task_hub_page.dart';
+import '../../presentation/pages/tasks/task_detail_sheet.dart';
 import '../../presentation/pages/settings/export_page.dart';
 import '../../presentation/pages/settings/settings_page.dart';
 import '../../presentation/pages/settings/sync_settings_page.dart';
@@ -70,6 +71,22 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/help',
         redirect: (context, state) => '/settings/help',
+      ),
+      GoRoute(
+        path: '/tasks/detail/:learningItemId',
+        pageBuilder: (context, state) {
+          final id = int.tryParse(state.pathParameters['learningItemId'] ?? '');
+          if (id == null) {
+            return const MaterialPage(child: TaskHubPage());
+          }
+          return _bottomSheetPageIfDesktop(
+            context,
+            TaskDetailSheet(learningItemId: id),
+            fallback: MaterialPage(child: TaskDetailSheet(learningItemId: id)),
+            dialogSize: const Size(760, 780),
+            heightFactor: 0.88,
+          );
+        },
       ),
       GoRoute(
         path: '/input',
@@ -210,6 +227,55 @@ Page<dynamic> _dialogPageIfDesktop(
       return FadeTransition(
         opacity: fade,
         child: ScaleTransition(scale: scale, child: child),
+      );
+    },
+  );
+}
+
+Page<dynamic> _bottomSheetPageIfDesktop(
+  BuildContext context,
+  Widget child, {
+  required Page<dynamic> fallback,
+  Size dialogSize = const Size(600, 500),
+  double heightFactor = 0.86,
+}) {
+  final isDesktop =
+      MediaQuery.of(context).size.width >= ResponsiveBreakpoints.desktop;
+  if (isDesktop) {
+    return _dialogPageIfDesktop(
+      context,
+      child,
+      fallback: fallback,
+      dialogSize: dialogSize,
+    );
+  }
+
+  return CustomTransitionPage(
+    opaque: false,
+    barrierDismissible: true,
+    barrierColor: Colors.black54,
+    transitionDuration: const Duration(milliseconds: 220),
+    child: Align(
+      alignment: Alignment.bottomCenter,
+      child: FractionallySizedBox(
+        heightFactor: heightFactor,
+        widthFactor: 1,
+        child: Material(
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
+          clipBehavior: Clip.antiAlias,
+          child: child,
+        ),
+      ),
+    ),
+    transitionsBuilder: (context, animation, secondaryAnimation, child) {
+      final curve = CurvedAnimation(parent: animation, curve: Curves.easeOut);
+      final offset = Tween<Offset>(
+        begin: const Offset(0, 0.08),
+        end: Offset.zero,
+      ).animate(curve);
+      return FadeTransition(
+        opacity: curve,
+        child: SlideTransition(position: offset, child: child),
       );
     },
   );
