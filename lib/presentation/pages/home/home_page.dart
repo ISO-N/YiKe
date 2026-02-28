@@ -21,12 +21,15 @@ import '../../../domain/entities/review_task.dart';
 import '../../widgets/glass_card.dart';
 import '../../widgets/gradient_background.dart';
 import '../../providers/home_tasks_provider.dart';
+import '../../providers/home_task_filter_provider.dart';
 import '../../providers/notification_permission_provider.dart';
 import '../../providers/search_provider.dart';
 import '../../providers/settings_provider.dart';
 import '../../providers/sync_provider.dart';
+import '../../providers/task_filter_provider.dart';
 import '../../widgets/review_progress.dart';
 import '../../widgets/search_bar.dart';
+import '../../widgets/task_filter_bar.dart';
 
 class HomePage extends ConsumerStatefulWidget {
   /// 首页（今日复习）。
@@ -50,9 +53,63 @@ class _HomePageState extends ConsumerState<HomePage> {
 
     final state = ref.watch(homeTasksProvider);
     final notifier = ref.read(homeTasksProvider.notifier);
+    final homeFilter = ref.watch(homeTaskFilterProvider);
     final settingsState = ref.watch(settingsProvider);
     final permissionAsync = ref.watch(notificationPermissionProvider);
     final syncUi = ref.watch(syncControllerProvider);
+
+    final statusCounts = TaskStatusCounts(
+      all:
+          state.todayPending.length +
+          state.overduePending.length +
+          state.todayCompleted.length +
+          state.todaySkipped.length,
+      pending: state.todayPending.length + state.overduePending.length,
+      done: state.todayCompleted.length,
+      skipped: state.todaySkipped.length,
+    );
+
+    // 首页仅对“待复习”提供批量选择能力，已完成/已跳过列表默认禁止批量操作。
+    final effectiveSelectionMode =
+        homeFilter == ReviewTaskFilter.pending ? state.isSelectionMode : false;
+
+    void showSnack(String text) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
+    }
+
+    void runAction(Future<void> Function() action, {required String ok}) {
+      action()
+          .then((_) => showSnack(ok))
+          .catchError((e) => showSnack('操作失败：$e'));
+    }
+
+    Future<void> confirmUndo(int taskId) async {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) {
+          return AlertDialog(
+            title: const Text('撤销任务状态？'),
+            content: const Text(
+              '该任务将恢复为待复习状态。此操作可能影响今日统计和连续打卡天数，是否确认撤销？',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('取消'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                child: const Text('确认撤销'),
+              ),
+            ],
+          );
+        },
+      );
+
+      if (confirmed != true) return;
+      runAction(() => notifier.undoTaskStatus(taskId), ok: '已撤销');
+    }
 
     final searchQuery = ref.watch(learningSearchQueryProvider);
     final searchQueryNotifier = ref.read(learningSearchQueryProvider.notifier);
@@ -110,8 +167,11 @@ class _HomePageState extends ConsumerState<HomePage> {
             icon: const Icon(Icons.refresh),
           ),
           TextButton(
-            onPressed: () => notifier.toggleSelectionMode(),
-            child: Text(state.isSelectionMode ? '完成' : '批量'),
+            onPressed:
+                state.isLoading || homeFilter != ReviewTaskFilter.pending
+                    ? null
+                    : () => notifier.toggleSelectionMode(),
+            child: Text(effectiveSelectionMode ? '完成' : '批量'),
           ),
         ],
       ),
@@ -146,6 +206,14 @@ class _HomePageState extends ConsumerState<HomePage> {
                 const SizedBox(height: AppSpacing.lg),
                 const ReviewProgressWidget(),
                 const SizedBox(height: AppSpacing.lg),
+                TaskFilterBar(
+                  filter: homeFilter,
+                  counts: statusCounts,
+                  onChanged: (next) {
+                    ref.read(homeTaskFilterProvider.notifier).state = next;
+                  },
+                ),
+                const SizedBox(height: AppSpacing.lg),
                 if (state.errorMessage != null) ...[
                   GlassCard(
                     child: Padding(
@@ -166,8 +234,10 @@ class _HomePageState extends ConsumerState<HomePage> {
                     ),
                   ),
                 ] else ...[
-                  if (state.todayPending.length + state.overduePending.length >
-                      20) ...[
+                  if ((homeFilter == ReviewTaskFilter.pending ||
+                          homeFilter == ReviewTaskFilter.all) &&
+                      state.todayPending.length + state.overduePending.length >
+                          20) ...[
                     GlassCard(
                       child: Padding(
                         padding: const EdgeInsets.all(AppSpacing.lg),
@@ -190,45 +260,206 @@ class _HomePageState extends ConsumerState<HomePage> {
                     ),
                     const SizedBox(height: AppSpacing.lg),
                   ],
-                  if (state.overduePending.isNotEmpty) ...[
+                  if (homeFilter == ReviewTaskFilter.pending) ...[
+                    if (state.overduePending.isNotEmpty) ...[
+                      _SectionHeader(
+                        title: '逾期任务',
+                        subtitle: '优先处理红色逾期任务，避免堆积',
+                        color: AppColors.warning,
+                      ),
+                      const SizedBox(height: AppSpacing.sm),
+                      _TaskGrid(
+                        tasks: state.overduePending,
+                        isOverdue: true,
+                        selectionMode: effectiveSelectionMode,
+                        selectedTaskIds: state.selectedTaskIds,
+                        onToggleSelected: notifier.toggleSelected,
+                        onComplete:
+                            (id) => runAction(
+                              () => notifier.completeTask(id),
+                              ok: '已完成',
+                            ),
+                        onSkip:
+                            (id) => runAction(
+                              () => notifier.skipTask(id),
+                              ok: '已跳过',
+                            ),
+                      ),
+                      const SizedBox(height: AppSpacing.lg),
+                    ],
                     _SectionHeader(
-                      title: '逾期任务',
-                      subtitle: '优先处理红色逾期任务，避免堆积',
+                      title: '今日待复习',
+                      subtitle:
+                          state.todayPending.isEmpty ? '今天没有待复习任务' : null,
+                      color: primary,
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    if (state.todayPending.isEmpty &&
+                        state.overduePending.isEmpty)
+                      const _EmptyState()
+                    else if (state.todayPending.isEmpty)
+                      const _EmptySectionHint(text: AppStrings.emptyTodayTasks)
+                    else
+                      _TaskGrid(
+                        tasks: state.todayPending,
+                        isOverdue: false,
+                        selectionMode: effectiveSelectionMode,
+                        selectedTaskIds: state.selectedTaskIds,
+                        onToggleSelected: notifier.toggleSelected,
+                        onComplete:
+                            (id) => runAction(
+                              () => notifier.completeTask(id),
+                              ok: '已完成',
+                            ),
+                        onSkip:
+                            (id) => runAction(
+                              () => notifier.skipTask(id),
+                              ok: '已跳过',
+                            ),
+                      ),
+                  ] else if (homeFilter == ReviewTaskFilter.done) ...[
+                    _SectionHeader(
+                      title: '今日已完成',
+                      subtitle:
+                          state.todayCompleted.isEmpty ? '今天还没有完成任务' : null,
+                      color: AppColors.success,
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    if (state.todayCompleted.isEmpty)
+                      const _EmptySectionHint(text: '暂无今日已完成任务')
+                    else
+                      _TaskGrid(
+                        tasks: state.todayCompleted,
+                        isOverdue: false,
+                        selectionMode: false,
+                        selectedTaskIds: const {},
+                        onToggleSelected: (_) {},
+                        onComplete: (_) {},
+                        onSkip: (_) {},
+                        onUndo: (id) => confirmUndo(id),
+                      ),
+                  ] else if (homeFilter == ReviewTaskFilter.skipped) ...[
+                    _SectionHeader(
+                      title: '今日已跳过',
+                      subtitle:
+                          state.todaySkipped.isEmpty ? '今天还没有跳过任务' : null,
                       color: AppColors.warning,
                     ),
                     const SizedBox(height: AppSpacing.sm),
-                    _TaskGrid(
-                      tasks: state.overduePending,
-                      isOverdue: true,
-                      selectionMode: state.isSelectionMode,
-                      selectedTaskIds: state.selectedTaskIds,
-                      onToggleSelected: notifier.toggleSelected,
-                      onComplete: notifier.completeTask,
-                      onSkip: notifier.skipTask,
-                    ),
-                    const SizedBox(height: AppSpacing.lg),
+                    if (state.todaySkipped.isEmpty)
+                      const _EmptySectionHint(text: '暂无今日已跳过任务')
+                    else
+                      _TaskGrid(
+                        tasks: state.todaySkipped,
+                        isOverdue: false,
+                        selectionMode: false,
+                        selectedTaskIds: const {},
+                        onToggleSelected: (_) {},
+                        onComplete: (_) {},
+                        onSkip: (_) {},
+                        onUndo: (id) => confirmUndo(id),
+                      ),
+                  ] else ...[
+                    if (statusCounts.all == 0) ...[
+                      const _EmptyState(),
+                    ] else ...[
+                      if (state.overduePending.isNotEmpty) ...[
+                        _SectionHeader(
+                          title: '逾期任务',
+                          subtitle: '优先处理红色逾期任务，避免堆积',
+                          color: AppColors.warning,
+                        ),
+                        const SizedBox(height: AppSpacing.sm),
+                        _TaskGrid(
+                          tasks: state.overduePending,
+                          isOverdue: true,
+                          selectionMode: false,
+                          selectedTaskIds: const {},
+                          onToggleSelected: (_) {},
+                          onComplete:
+                              (id) => runAction(
+                                () => notifier.completeTask(id),
+                                ok: '已完成',
+                              ),
+                          onSkip:
+                              (id) => runAction(
+                                () => notifier.skipTask(id),
+                                ok: '已跳过',
+                              ),
+                        ),
+                        const SizedBox(height: AppSpacing.lg),
+                      ],
+                      _SectionHeader(
+                        title: '今日待复习',
+                        subtitle:
+                            state.todayPending.isEmpty ? '今天没有待复习任务' : null,
+                        color: primary,
+                      ),
+                      const SizedBox(height: AppSpacing.sm),
+                      if (state.todayPending.isEmpty)
+                        const _EmptySectionHint(text: AppStrings.emptyTodayTasks)
+                      else
+                        _TaskGrid(
+                          tasks: state.todayPending,
+                          isOverdue: false,
+                          selectionMode: false,
+                          selectedTaskIds: const {},
+                          onToggleSelected: (_) {},
+                          onComplete:
+                              (id) => runAction(
+                                () => notifier.completeTask(id),
+                                ok: '已完成',
+                              ),
+                          onSkip:
+                              (id) => runAction(
+                                () => notifier.skipTask(id),
+                                ok: '已跳过',
+                              ),
+                        ),
+                      const SizedBox(height: AppSpacing.lg),
+                      _SectionHeader(
+                        title: '今日已完成',
+                        subtitle:
+                            state.todayCompleted.isEmpty ? '今天还没有完成任务' : null,
+                        color: AppColors.success,
+                      ),
+                      const SizedBox(height: AppSpacing.sm),
+                      if (state.todayCompleted.isEmpty)
+                        const _EmptySectionHint(text: '暂无今日已完成任务')
+                      else
+                        _TaskGrid(
+                          tasks: state.todayCompleted,
+                          isOverdue: false,
+                          selectionMode: false,
+                          selectedTaskIds: const {},
+                          onToggleSelected: (_) {},
+                          onComplete: (_) {},
+                          onSkip: (_) {},
+                          onUndo: (id) => confirmUndo(id),
+                        ),
+                      const SizedBox(height: AppSpacing.lg),
+                      _SectionHeader(
+                        title: '今日已跳过',
+                        subtitle:
+                            state.todaySkipped.isEmpty ? '今天还没有跳过任务' : null,
+                        color: AppColors.warning,
+                      ),
+                      const SizedBox(height: AppSpacing.sm),
+                      if (state.todaySkipped.isEmpty)
+                        const _EmptySectionHint(text: '暂无今日已跳过任务')
+                      else
+                        _TaskGrid(
+                          tasks: state.todaySkipped,
+                          isOverdue: false,
+                          selectionMode: false,
+                          selectedTaskIds: const {},
+                          onToggleSelected: (_) {},
+                          onComplete: (_) {},
+                          onSkip: (_) {},
+                          onUndo: (id) => confirmUndo(id),
+                        ),
+                    ],
                   ],
-                  _SectionHeader(
-                    title: '今日待复习',
-                    subtitle: state.todayPending.isEmpty ? '今天没有待复习任务' : null,
-                    color: primary,
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                  if (state.todayPending.isEmpty &&
-                      state.overduePending.isEmpty)
-                    const _EmptyState()
-                  else if (state.todayPending.isEmpty)
-                    const _EmptySectionHint(text: AppStrings.emptyTodayTasks)
-                  else
-                    _TaskGrid(
-                      tasks: state.todayPending,
-                      isOverdue: false,
-                      selectionMode: state.isSelectionMode,
-                      selectedTaskIds: state.selectedTaskIds,
-                      onToggleSelected: notifier.toggleSelected,
-                      onComplete: notifier.completeTask,
-                      onSkip: notifier.skipTask,
-                    ),
                   const SizedBox(height: 96),
                 ],
               ],
@@ -236,15 +467,15 @@ class _HomePageState extends ConsumerState<HomePage> {
           ),
         ),
       ),
-      bottomNavigationBar: state.isSelectionMode
+      bottomNavigationBar: effectiveSelectionMode
           ? _BatchActionBar(
               selectedCount: state.selectedTaskIds.length,
               onCompleteSelected: state.selectedTaskIds.isEmpty
                   ? null
-                  : notifier.completeSelected,
+                  : () => runAction(notifier.completeSelected, ok: '已完成所选任务'),
               onSkipSelected: state.selectedTaskIds.isEmpty
                   ? null
-                  : notifier.skipSelected,
+                  : () => runAction(notifier.skipSelected, ok: '已跳过所选任务'),
             )
           : null,
     );
@@ -596,6 +827,7 @@ class _TaskGrid extends StatelessWidget {
     required this.onToggleSelected,
     required this.onComplete,
     required this.onSkip,
+    this.onUndo,
   });
 
   final List<ReviewTaskViewEntity> tasks;
@@ -605,6 +837,7 @@ class _TaskGrid extends StatelessWidget {
   final void Function(int taskId) onToggleSelected;
   final void Function(int taskId) onComplete;
   final void Function(int taskId) onSkip;
+  final void Function(int taskId)? onUndo;
 
   @override
   Widget build(BuildContext context) {
@@ -623,12 +856,16 @@ class _TaskGrid extends StatelessWidget {
                   tags: t.tags,
                   reviewRound: t.reviewRound,
                   scheduledDate: t.scheduledDate,
+                  status: t.status,
+                  completedAt: t.completedAt,
+                  skippedAt: t.skippedAt,
                   isOverdue: isOverdue,
                   selectionMode: selectionMode,
                   selected: selectedTaskIds.contains(t.taskId),
                   onToggleSelected: () => onToggleSelected(t.taskId),
                   onComplete: () => onComplete(t.taskId),
                   onSkip: () => onSkip(t.taskId),
+                  onUndo: onUndo == null ? null : () => onUndo!(t.taskId),
                 ),
               ),
             )
@@ -656,6 +893,9 @@ class _TaskGrid extends StatelessWidget {
           tags: t.tags,
           reviewRound: t.reviewRound,
           scheduledDate: t.scheduledDate,
+          status: t.status,
+          completedAt: t.completedAt,
+          skippedAt: t.skippedAt,
           isOverdue: isOverdue,
           selectionMode: selectionMode,
           selected: selectedTaskIds.contains(t.taskId),
@@ -663,6 +903,7 @@ class _TaskGrid extends StatelessWidget {
           onToggleSelected: () => onToggleSelected(t.taskId),
           onComplete: () => onComplete(t.taskId),
           onSkip: () => onSkip(t.taskId),
+          onUndo: onUndo == null ? null : () => onUndo!(t.taskId),
         );
       },
     );
@@ -676,6 +917,9 @@ class _TaskCard extends StatelessWidget {
     required this.tags,
     required this.reviewRound,
     required this.scheduledDate,
+    required this.status,
+    required this.completedAt,
+    required this.skippedAt,
     required this.isOverdue,
     required this.selectionMode,
     required this.selected,
@@ -683,6 +927,7 @@ class _TaskCard extends StatelessWidget {
     required this.onToggleSelected,
     required this.onComplete,
     required this.onSkip,
+    required this.onUndo,
   });
 
   final int taskId;
@@ -690,6 +935,9 @@ class _TaskCard extends StatelessWidget {
   final List<String> tags;
   final int reviewRound;
   final DateTime scheduledDate;
+  final ReviewTaskStatus status;
+  final DateTime? completedAt;
+  final DateTime? skippedAt;
   final bool isOverdue;
   final bool selectionMode;
   final bool selected;
@@ -697,6 +945,7 @@ class _TaskCard extends StatelessWidget {
   final VoidCallback onToggleSelected;
   final VoidCallback onComplete;
   final VoidCallback onSkip;
+  final VoidCallback? onUndo;
 
   @override
   Widget build(BuildContext context) {
@@ -708,8 +957,23 @@ class _TaskCard extends StatelessWidget {
         Theme.of(context).textTheme.bodySmall?.color ?? AppColors.textSecondary;
     final primary = isDark ? AppColors.primaryLight : AppColors.primary;
 
-    final borderColor = isOverdue ? AppColors.warning : normalBorderColor;
-    final dueText = _dueText();
+    final borderColor =
+        status == ReviewTaskStatus.pending && isOverdue
+            ? AppColors.warning
+            : normalBorderColor;
+    final subtitleText = _subtitleText(context);
+
+    final statusTag = switch (status) {
+      ReviewTaskStatus.done => const _StatusTag(
+        label: '已完成',
+        color: AppColors.success,
+      ),
+      ReviewTaskStatus.skipped => const _StatusTag(
+        label: '已跳过',
+        color: AppColors.warning,
+      ),
+      ReviewTaskStatus.pending => null,
+    };
 
     final card = GlassCard(
       child: DecoratedBox(
@@ -717,97 +981,129 @@ class _TaskCard extends StatelessWidget {
           border: Border.all(color: borderColor),
           borderRadius: BorderRadius.circular(16),
         ),
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.lg),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (selectionMode)
-                Padding(
-                  padding: const EdgeInsets.only(top: 2),
-                  child: Checkbox(
-                    value: selected,
-                    onChanged: (_) => onToggleSelected(),
-                  ),
-                )
-              else
-                Icon(
-                  isOverdue ? Icons.error_outline : Icons.circle_outlined,
-                  color: isOverdue ? AppColors.warning : secondaryText,
-                  size: 22,
-                ),
-              const SizedBox(width: AppSpacing.md),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '$title（第$reviewRound次）',
-                      style: AppTypography.body(
-                        context,
-                      ).copyWith(fontWeight: FontWeight.w700),
-                    ),
-                    const SizedBox(height: AppSpacing.xs),
-                    Text(dueText, style: AppTypography.bodySecondary(context)),
-                    if (tags.isNotEmpty) ...[
-                      const SizedBox(height: AppSpacing.sm),
-                      Wrap(
-                        spacing: 6,
-                        runSpacing: 6,
-                        children: tags
-                            .take(3)
-                            .map(
-                              (t) => Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 10,
-                                  vertical: 4,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: primary.withValues(alpha: 0.18),
-                                  borderRadius: BorderRadius.circular(999),
-                                  border: Border.all(
-                                    color: primary.withValues(alpha: 0.35),
-                                  ),
-                                ),
-                                child: Text(
-                                  t,
-                                  style: AppTypography.bodySecondary(
-                                    context,
-                                  ).copyWith(fontSize: 12),
-                                ),
-                              ),
-                            )
-                            .toList(),
+        child: Stack(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (selectionMode)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 2),
+                      child: Checkbox(
+                        value: selected,
+                        onChanged: (_) => onToggleSelected(),
                       ),
-                    ],
-                  ],
-                ),
+                    )
+                  else
+                    Icon(
+                      switch (status) {
+                        ReviewTaskStatus.pending => isOverdue
+                            ? Icons.error_outline
+                            : Icons.circle_outlined,
+                        ReviewTaskStatus.done => Icons.check_circle_outline,
+                        ReviewTaskStatus.skipped => Icons.not_interested_outlined,
+                      },
+                      color: switch (status) {
+                        ReviewTaskStatus.pending =>
+                          isOverdue ? AppColors.warning : secondaryText,
+                        ReviewTaskStatus.done => AppColors.success,
+                        ReviewTaskStatus.skipped => secondaryText,
+                      },
+                      size: 22,
+                    ),
+                  const SizedBox(width: AppSpacing.md),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '$title（第$reviewRound次）',
+                          style: AppTypography.body(
+                            context,
+                          ).copyWith(fontWeight: FontWeight.w700),
+                        ),
+                        const SizedBox(height: AppSpacing.xs),
+                        Text(
+                          subtitleText,
+                          style: AppTypography.bodySecondary(context),
+                        ),
+                        if (tags.isNotEmpty) ...[
+                          const SizedBox(height: AppSpacing.sm),
+                          Wrap(
+                            spacing: 6,
+                            runSpacing: 6,
+                            children: tags
+                                .take(3)
+                                .map(
+                                  (t) => Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                      vertical: 4,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: primary.withValues(alpha: 0.18),
+                                      borderRadius: BorderRadius.circular(999),
+                                      border: Border.all(
+                                        color: primary.withValues(alpha: 0.35),
+                                      ),
+                                    ),
+                                    child: Text(
+                                      t,
+                                      style: AppTypography.bodySecondary(
+                                        context,
+                                      ).copyWith(fontSize: 12),
+                                    ),
+                                  ),
+                                )
+                                .toList(),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.md),
+                  if (!selectionMode)
+                    Column(
+                      children: [
+                        if (status == ReviewTaskStatus.pending) ...[
+                          IconButton(
+                            tooltip: isOverdue ? '补做' : '完成',
+                            onPressed: onComplete,
+                            icon: const Icon(Icons.check_circle_outline),
+                            color: AppColors.success,
+                          ),
+                          IconButton(
+                            tooltip: '跳过',
+                            onPressed: onSkip,
+                            icon: const Icon(Icons.not_interested_outlined),
+                            color: secondaryText,
+                          ),
+                        ] else ...[
+                          IconButton(
+                            tooltip: '撤销',
+                            onPressed: onUndo,
+                            icon: const Icon(Icons.undo),
+                          ),
+                        ],
+                      ],
+                    ),
+                ],
               ),
-              const SizedBox(width: AppSpacing.md),
-              if (!selectionMode)
-                Column(
-                  children: [
-                    IconButton(
-                      tooltip: isOverdue ? '补做' : '完成',
-                      onPressed: onComplete,
-                      icon: const Icon(Icons.check_circle_outline),
-                      color: AppColors.success,
-                    ),
-                    IconButton(
-                      tooltip: '跳过',
-                      onPressed: onSkip,
-                      icon: const Icon(Icons.not_interested_outlined),
-                      color: secondaryText,
-                    ),
-                  ],
-                ),
-            ],
-          ),
+            ),
+            if (statusTag != null)
+              Positioned(right: 12, top: 12, child: statusTag),
+          ],
         ),
       ),
     );
 
-    if (selectionMode || !enableSwipe) return card;
+    if (selectionMode ||
+        !enableSwipe ||
+        status != ReviewTaskStatus.pending) {
+      return card;
+    }
 
     return Dismissible(
       key: ValueKey('task_$taskId'),
@@ -839,6 +1135,23 @@ class _TaskCard extends StatelessWidget {
     );
   }
 
+  String _subtitleText(BuildContext context) {
+    switch (status) {
+      case ReviewTaskStatus.pending:
+        return _dueText();
+      case ReviewTaskStatus.done:
+        final time = completedAt;
+        if (time == null) return '已完成';
+        final formatted = TimeOfDay.fromDateTime(time).format(context);
+        return '完成于 $formatted';
+      case ReviewTaskStatus.skipped:
+        final time = skippedAt;
+        if (time == null) return '已跳过';
+        final formatted = TimeOfDay.fromDateTime(time).format(context);
+        return '跳过于 $formatted';
+    }
+  }
+
   String _dueText() {
     final todayStart = DateTime(
       DateTime.now().year,
@@ -853,6 +1166,31 @@ class _TaskCard extends StatelessWidget {
     final diffDays = todayStart.difference(scheduledStart).inDays;
     if (diffDays <= 0) return '今日待复习';
     return '逾期 $diffDays 天';
+  }
+}
+
+class _StatusTag extends StatelessWidget {
+  const _StatusTag({required this.label, required this.color});
+
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withAlpha(26),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: color.withAlpha(120)),
+      ),
+      child: Text(
+        label,
+        style: AppTypography.bodySecondary(
+          context,
+        ).copyWith(color: color, fontWeight: FontWeight.w700, fontSize: 12),
+      ),
+    );
   }
 }
 

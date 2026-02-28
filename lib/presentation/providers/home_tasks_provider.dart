@@ -8,6 +8,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../di/providers.dart';
 import '../../domain/entities/review_task.dart';
 import '../../infrastructure/widget/widget_service.dart';
+import 'calendar_provider.dart';
+import 'statistics_provider.dart';
 
 /// 首页任务状态。
 class HomeTasksState {
@@ -15,6 +17,8 @@ class HomeTasksState {
   const HomeTasksState({
     required this.isLoading,
     required this.todayPending,
+    required this.todayCompleted,
+    required this.todaySkipped,
     required this.overduePending,
     required this.completedCount,
     required this.totalCount,
@@ -26,6 +30,8 @@ class HomeTasksState {
 
   final bool isLoading;
   final List<ReviewTaskViewEntity> todayPending;
+  final List<ReviewTaskViewEntity> todayCompleted;
+  final List<ReviewTaskViewEntity> todaySkipped;
   final List<ReviewTaskViewEntity> overduePending;
   final int completedCount;
   final int totalCount;
@@ -41,6 +47,8 @@ class HomeTasksState {
   factory HomeTasksState.initial() => const HomeTasksState(
     isLoading: true,
     todayPending: [],
+    todayCompleted: [],
+    todaySkipped: [],
     overduePending: [],
     completedCount: 0,
     totalCount: 0,
@@ -52,6 +60,8 @@ class HomeTasksState {
   HomeTasksState copyWith({
     bool? isLoading,
     List<ReviewTaskViewEntity>? todayPending,
+    List<ReviewTaskViewEntity>? todayCompleted,
+    List<ReviewTaskViewEntity>? todaySkipped,
     List<ReviewTaskViewEntity>? overduePending,
     int? completedCount,
     int? totalCount,
@@ -63,6 +73,8 @@ class HomeTasksState {
     return HomeTasksState(
       isLoading: isLoading ?? this.isLoading,
       todayPending: todayPending ?? this.todayPending,
+      todayCompleted: todayCompleted ?? this.todayCompleted,
+      todaySkipped: todaySkipped ?? this.todaySkipped,
       overduePending: overduePending ?? this.overduePending,
       completedCount: completedCount ?? this.completedCount,
       totalCount: totalCount ?? this.totalCount,
@@ -89,13 +101,24 @@ class HomeTasksNotifier extends StateNotifier<HomeTasksState> {
     state = state.copyWith(isLoading: true, errorMessage: null);
     try {
       final useCase = _ref.read(getHomeTasksUseCaseProvider);
-      final result = await useCase.execute();
+      final completedUseCase = _ref.read(getTodayCompletedTasksUseCaseProvider);
+      final skippedUseCase = _ref.read(getTodaySkippedTasksUseCaseProvider);
+
+      final resultFuture = useCase.execute();
+      final completedFuture = completedUseCase.execute();
+      final skippedFuture = skippedUseCase.execute();
+
+      final result = await resultFuture;
+      final todayCompleted = await completedFuture;
+      final todaySkipped = await skippedFuture;
 
       final topicId = state.topicFilterId;
       if (topicId == null) {
         state = state.copyWith(
           isLoading: false,
           todayPending: result.todayPending,
+          todayCompleted: todayCompleted,
+          todaySkipped: todaySkipped,
           overduePending: result.overduePending,
           completedCount: result.completedCount,
           totalCount: result.totalCount,
@@ -111,24 +134,31 @@ class HomeTasksNotifier extends StateNotifier<HomeTasksState> {
         final overdue = result.overduePending
             .where((t) => itemIds.contains(t.learningItemId))
             .toList();
+        final completedTasks = todayCompleted
+            .where((t) => itemIds.contains(t.learningItemId))
+            .toList();
+        final skippedTasks =
+            todaySkipped.where((t) => itemIds.contains(t.learningItemId)).toList();
 
         // 进度统计：重新按主题口径统计今日完成率（done/(done+pending)）。
         final repo = _ref.read(reviewTaskRepositoryProvider);
         final all = await repo.getTasksByDate(DateTime.now());
         final filtered = all.where((t) => itemIds.contains(t.learningItemId));
-        final completed = filtered
+        final completedCount = filtered
             .where((t) => t.status == ReviewTaskStatus.done)
             .length;
-        final total = filtered
+        final totalCount = filtered
             .where((t) => t.status != ReviewTaskStatus.skipped)
             .length;
 
         state = state.copyWith(
           isLoading: false,
           todayPending: today,
+          todayCompleted: completedTasks,
+          todaySkipped: skippedTasks,
           overduePending: overdue,
-          completedCount: completed,
-          totalCount: total,
+          completedCount: completedCount,
+          totalCount: totalCount,
         );
       }
 
@@ -169,6 +199,7 @@ class HomeTasksNotifier extends StateNotifier<HomeTasksState> {
   Future<void> completeTask(int taskId) async {
     final useCase = _ref.read(completeReviewTaskUseCaseProvider);
     await useCase.execute(taskId);
+    _invalidateRelatedPages();
     await load();
   }
 
@@ -176,6 +207,7 @@ class HomeTasksNotifier extends StateNotifier<HomeTasksState> {
   Future<void> skipTask(int taskId) async {
     final useCase = _ref.read(skipReviewTaskUseCaseProvider);
     await useCase.execute(taskId);
+    _invalidateRelatedPages();
     await load();
   }
 
@@ -186,6 +218,7 @@ class HomeTasksNotifier extends StateNotifier<HomeTasksState> {
     final useCase = _ref.read(completeReviewTaskUseCaseProvider);
     await useCase.executeBatch(ids);
     state = state.copyWith(isSelectionMode: false, selectedTaskIds: <int>{});
+    _invalidateRelatedPages();
     await load();
   }
 
@@ -196,7 +229,22 @@ class HomeTasksNotifier extends StateNotifier<HomeTasksState> {
     final useCase = _ref.read(skipReviewTaskUseCaseProvider);
     await useCase.executeBatch(ids);
     state = state.copyWith(isSelectionMode: false, selectedTaskIds: <int>{});
+    _invalidateRelatedPages();
     await load();
+  }
+
+  /// 撤销任务状态（done/skipped → pending）。
+  Future<void> undoTaskStatus(int taskId) async {
+    final useCase = _ref.read(undoTaskStatusUseCaseProvider);
+    await useCase.execute(taskId);
+    _invalidateRelatedPages();
+    await load();
+  }
+
+  void _invalidateRelatedPages() {
+    // 撤销/完成/跳过会影响日历圆点与统计口径，因此需要主动刷新相关页面状态。
+    _ref.invalidate(calendarProvider);
+    _ref.invalidate(statisticsProvider);
   }
 
   Future<void> _syncWidget() async {
