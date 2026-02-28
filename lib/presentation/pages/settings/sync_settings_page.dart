@@ -4,6 +4,7 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/app_spacing.dart';
@@ -55,6 +56,17 @@ class SyncSettingsPage extends ConsumerWidget {
                       onChanged: (v) => controller.setAutoSyncEnabled(v),
                     ),
                     const Divider(height: 1),
+                    if (kDebugMode) ...[
+                      SwitchListTile(
+                        title: const Text('同步模拟数据（仅调试）'),
+                        subtitle: const Text(
+                          '开启后会将 isMockData=true 的模拟数据也纳入同步',
+                        ),
+                        value: state.includeMockData,
+                        onChanged: (v) => controller.setIncludeMockData(v),
+                      ),
+                      const Divider(height: 1),
+                    ],
                     SwitchListTile(
                       title: const Text('仅 Wi-Fi 下同步'),
                       subtitle: const Text('开启后将尝试仅在 Wi-Fi/有线网络下进行同步'),

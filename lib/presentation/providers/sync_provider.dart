@@ -7,6 +7,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:drift/drift.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
@@ -104,6 +105,7 @@ class SyncUiState {
     required this.state,
     required this.isMaster,
     required this.autoSyncEnabled,
+    required this.includeMockData,
     required this.wifiOnly,
     required this.allowCellular,
     required this.discoveredDevices,
@@ -116,6 +118,13 @@ class SyncUiState {
   final SyncState state;
   final bool isMaster;
   final bool autoSyncEnabled;
+
+  /// 是否允许同步 Debug 模拟数据（isMockData=true）。
+  ///
+  /// 说明：
+  /// - 仅用于开发联调（例如：用一键生成数据测试跨设备同步）
+  /// - release 环境下默认为 false
+  final bool includeMockData;
   final bool wifiOnly;
   final bool allowCellular;
   final List<DiscoveredDevice> discoveredDevices;
@@ -128,6 +137,7 @@ class SyncUiState {
     state: SyncState.disconnected,
     isMaster: false,
     autoSyncEnabled: false,
+    includeMockData: false,
     wifiOnly: true,
     allowCellular: false,
     discoveredDevices: [],
@@ -140,6 +150,7 @@ class SyncUiState {
     SyncState? state,
     bool? isMaster,
     bool? autoSyncEnabled,
+    bool? includeMockData,
     bool? wifiOnly,
     bool? allowCellular,
     List<DiscoveredDevice>? discoveredDevices,
@@ -152,6 +163,7 @@ class SyncUiState {
       state: state ?? this.state,
       isMaster: isMaster ?? this.isMaster,
       autoSyncEnabled: autoSyncEnabled ?? this.autoSyncEnabled,
+      includeMockData: includeMockData ?? this.includeMockData,
       wifiOnly: wifiOnly ?? this.wifiOnly,
       allowCellular: allowCellular ?? this.allowCellular,
       discoveredDevices: discoveredDevices ?? this.discoveredDevices,
@@ -198,6 +210,7 @@ class SyncController extends StateNotifier<SyncUiState> {
 
   static const String _prefIsMaster = 'sync_is_master';
   static const String _prefAutoSyncEnabled = 'sync_auto_sync_enabled';
+  static const String _prefIncludeMockData = 'sync_include_mock_data';
   static const String _prefWifiOnly = 'sync_wifi_only';
   static const String _prefAllowCellular = 'sync_allow_cellular';
 
@@ -285,6 +298,12 @@ class SyncController extends StateNotifier<SyncUiState> {
     state = state.copyWith(autoSyncEnabled: enabled);
     await _writePrefBool(_prefAutoSyncEnabled, enabled);
     _maybeStartAutoSyncTimer();
+  }
+
+  /// 是否允许同步 Debug 模拟数据（isMockData=true）。
+  Future<void> setIncludeMockData(bool enabled) async {
+    state = state.copyWith(includeMockData: enabled);
+    await _writePrefBool(_prefIncludeMockData, enabled);
   }
 
   /// Wi-Fi 下自动同步（若无法识别网络类型，则按“允许”处理）。
@@ -418,7 +437,9 @@ class SyncController extends StateNotifier<SyncUiState> {
       _refreshTrayStatus();
 
       final syncService = _buildSyncService();
-      await syncService.ensureLocalSnapshotLogs();
+      await syncService.ensureLocalSnapshotLogs(
+        includeMockData: state.includeMockData,
+      );
 
       if (state.isMaster) {
         await _syncAsMaster(syncService);
@@ -676,11 +697,13 @@ class SyncController extends StateNotifier<SyncUiState> {
 
     final isMaster = await readBool(_prefIsMaster, false);
     final autoSync = await readBool(_prefAutoSyncEnabled, false);
+    final includeMock = await readBool(_prefIncludeMockData, kDebugMode);
     final wifiOnly = await readBool(_prefWifiOnly, true);
     final allowCellular = await readBool(_prefAllowCellular, false);
     state = state.copyWith(
       isMaster: isMaster,
       autoSyncEnabled: autoSync,
+      includeMockData: includeMock,
       wifiOnly: wifiOnly,
       allowCellular: allowCellular,
     );
