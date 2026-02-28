@@ -29,7 +29,7 @@ enum SyncState {
   /// 连接中（发现/配对/交换）。
   connecting,
 
-  /// 已连接（可同步）。
+  /// 已配对（可同步）。
   connected,
 
   /// 同步中。
@@ -556,7 +556,11 @@ class SyncController extends StateNotifier<SyncUiState> {
         .updateIp(request.fromDeviceId, peer.address);
 
     final syncService = _buildSyncService();
-    return syncService.handleExchangeRequest(request, isMaster: state.isMaster);
+    return syncService.handleExchangeRequest(
+      request,
+      isMaster: state.isMaster,
+      includeMockData: state.includeMockData,
+    );
   }
 
   Future<void> _syncAsClient(SyncService syncService) async {

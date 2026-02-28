@@ -406,11 +406,11 @@ class SettingsPage extends ConsumerWidget {
   String _syncSubtitle(SyncState state) {
     switch (state) {
       case SyncState.disconnected:
-        return '未连接（可配对并同步）';
+        return '未配对（可配对并同步）';
       case SyncState.connecting:
         return '连接中…';
       case SyncState.connected:
-        return '已连接';
+        return '已配对';
       case SyncState.syncing:
         return '同步中…';
       case SyncState.synced:

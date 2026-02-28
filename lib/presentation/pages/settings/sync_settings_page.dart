@@ -133,9 +133,9 @@ class _StatusCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (icon, label, color) = switch (state.state) {
-      SyncState.disconnected => (Icons.cloud_off, '未连接', Colors.grey),
+      SyncState.disconnected => (Icons.cloud_off, '未配对', Colors.grey),
       SyncState.connecting => (Icons.sync, '连接中', Colors.blue),
-      SyncState.connected => (Icons.cloud_done, '已连接', Colors.green),
+      SyncState.connected => (Icons.cloud_done, '已配对', Colors.green),
       SyncState.syncing => (Icons.sync, '同步中', Colors.blue),
       SyncState.synced => (Icons.check_circle, '同步完成', Colors.green),
       SyncState.error => (Icons.error_outline, '同步失败', Colors.red),
@@ -341,15 +341,15 @@ class _ConnectedDevicesCard extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('已连接的设备', style: AppTypography.h2(context)),
+            Text('已配对的设备', style: AppTypography.h2(context)),
             const SizedBox(height: AppSpacing.sm),
             Text(
-              state.connectedDevices.isEmpty ? '暂无已连接设备' : '可断开设备或查看最近同步时间。',
+              state.connectedDevices.isEmpty ? '暂无已配对设备' : '可断开设备或查看最近同步时间。',
               style: AppTypography.bodySecondary(context),
             ),
             const SizedBox(height: AppSpacing.md),
             if (state.connectedDevices.isEmpty)
-              Text('未连接', style: AppTypography.bodySecondary(context))
+              Text('未配对', style: AppTypography.bodySecondary(context))
             else
               ...state.connectedDevices.map((d) {
                 final lastSyncText = d.lastSyncMs == null
