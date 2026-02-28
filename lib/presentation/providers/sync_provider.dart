@@ -145,8 +145,8 @@ class SyncUiState {
     List<DiscoveredDevice>? discoveredDevices,
     List<ConnectedDevice>? connectedDevices,
     List<PendingPairing>? pendingPairings,
-    OutgoingPairing? outgoingPairing,
-    String? errorMessage,
+    Object? outgoingPairing = _unset,
+    Object? errorMessage = _unset,
   }) {
     return SyncUiState(
       state: state ?? this.state,
@@ -157,11 +157,22 @@ class SyncUiState {
       discoveredDevices: discoveredDevices ?? this.discoveredDevices,
       connectedDevices: connectedDevices ?? this.connectedDevices,
       pendingPairings: pendingPairings ?? this.pendingPairings,
-      outgoingPairing: outgoingPairing,
-      errorMessage: errorMessage,
+      // 说明：outgoingPairing/errorMessage 需要支持三态：
+      // 1) 不传参：保持原值
+      // 2) 显式传 null：清空
+      // 3) 传入非空值：更新
+      outgoingPairing: identical(outgoingPairing, _unset)
+          ? this.outgoingPairing
+          : outgoingPairing as OutgoingPairing?,
+      errorMessage: identical(errorMessage, _unset)
+          ? this.errorMessage
+          : errorMessage as String?,
     );
   }
 }
+
+/// copyWith 三态参数哨兵：用于区分“未传参”和“显式传 null”。
+const Object _unset = Object();
 
 /// 同步控制器 Provider。
 final syncControllerProvider =
