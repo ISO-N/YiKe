@@ -6,7 +6,7 @@
 - 作者：YiKe 团队
 - 创建日期：2026-02-28
 - 变更类型：功能增强
-- 版本：v1.3（最终版）
+- 版本：v1.4（排序口径调整版）
 
 ---
 
@@ -41,8 +41,8 @@
 | 实际完成时间 | `completedAt` | 用户点击"完成"时的时间戳 |
 | 实际跳过时间 | `skippedAt` | 用户点击"跳过"时的时间戳 |
 
-**「按时间倒序浏览历史任务」的语义**：
-- 按任务的「发生时间」排序，即：
+**「按时间正序浏览历史任务」的语义**：
+- 按任务的「发生时间」排序（从早到晚），即：
   - 待复习(pending)：使用 `scheduledDate`
   - 已完成(done)：使用 `completedAt`
   - 已跳过(skipped)：使用 `skippedAt`
@@ -101,7 +101,7 @@
 
 | 策略 | 说明 |
 |------|------|
-| 新增「任务中心」页面 | 提供全局任务视图，按「发生时间」倒序展示所有任务 |
+| 新增「任务中心」页面 | 提供全局任务视图，按「发生时间」正序展示所有任务 |
 | 首页状态过滤 | 首页增加「显示已完成/已跳过」的筛选开关 |
 | 任务可逆操作 | 已完成/已跳过任务支持「撤销」操作 |
 | 二次确认 | 撤销操作需要弹窗确认（因副作用较重） |
@@ -219,7 +219,7 @@
 | 特性 | 说明 |
 |------|------|
 | 入口 | 底部导航栏「任务」Tab |
-| 时间线展示 | 按「发生时间」倒序（见 2.1 定义） |
+| 时间线展示 | 按「发生时间」正序（见 2.1 定义） |
 | 日期分组 | 同一天的任务归为一块，显示日期标题（如「今天」「昨天」「2月25日」） |
 | 游标分页 | 每次滚动到底部加载下一页，避免 offset 性能问题 |
 | 状态筛选 | 顶部提供筛选器：全部/待复习/已完成/已跳过（单选） |
@@ -269,8 +269,8 @@
 #### 4.2.5 游标分页设计
 
 **排序规则**：
-- 一级排序：按「发生时间」倒序
-- 二级排序：同一 occurredAt 内按 `taskId` 倒序（确保稳定排序）
+- 一级排序：按「发生时间」正序
+- 二级排序：同一 occurredAt 内按 `taskId` 正序（确保稳定排序）
 
 **游标定义**（二元组）：
 ```
@@ -282,13 +282,13 @@ cursor = (occurredAt, taskId)
 **下一页查询条件**（采用方案1）：
 ```sql
 WHERE (occurredAt, taskId) > (cursor.occurredAt, cursor.taskId)
-ORDER BY occurredAt DESC, taskId DESC
+ORDER BY occurredAt ASC, taskId ASC
 LIMIT 20
 ```
 
 **边界条件**：
 - 首页查询：`occurredAt = 今天` 的任务
-- 向历史查询：`occurredAt > cursor.occurredAt` 或 `occurredAt = cursor.occurredAt AND taskId > cursor.taskId`
+- 向后查询：`occurredAt > cursor.occurredAt` 或 `occurredAt = cursor.occurredAt AND taskId > cursor.taskId`
 
 ---
 
@@ -415,7 +415,7 @@ void _onTap(BuildContext context, int index) {
 |------|--------|----------|
 | AC2.1 | 底部导航栏第4个 Tab 改为「任务」入口 | 检查导航栏 |
 | AC2.2 | 点击「任务」进入任务中心页面 | 点击导航，验证页面跳转 |
-| AC2.3 | 任务按「发生时间」倒序排列：pending 用 scheduledDate，done 用 completedAt，skipped 用 skippedAt | 完成/跳过任务后，检查列表排序 |
+| AC2.3 | 任务按「发生时间」正序排列：pending 用 scheduledDate，done 用 completedAt，skipped 用 skippedAt | 完成/跳过任务后，检查列表排序 |
 | AC2.4 | 日期分组显示（如「今天」「昨天」「2月25日」） | 查看列表，验证分组正确 |
 | AC2.5 | 顶部筛选器（单选）可切换状态筛选 | 选择不同筛选项，验证列表更新 |
 | AC2.6 | 滚动到底部自动加载更多任务（游标分页） | 滚动列表，验证分页加载 |
@@ -482,3 +482,4 @@ void _onTap(BuildContext context, int index) {
 | v1.1 | 2026-02-28 | 补充口径定义、修正筛选设计为单选、定稿底部导航方案、明确游标分页 |
 | v1.2 | 2026-02-28 | 明确首页筛选器状态独立、补充首页「全部」范围定义、严格化游标分页二元组定义、补充数据库性能说明和边界条件（completedAt/skippedAt 空值回退）、修正文案错误、统一路由方案 |
 | v1.3 | 2026-02-28 | 修复游标分页排序与查询条件不匹配（改为DESC+DESC）、明确/help重定向到/settings/help、写死连续打卡按scheduledDate计算 |
+| v1.4 | 2026-02-28 | 任务中心排序口径调整为发生时间正序（ASC+ASC），并同步更新游标分页口径与验收点 |
