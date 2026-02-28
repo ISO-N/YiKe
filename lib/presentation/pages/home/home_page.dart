@@ -70,8 +70,9 @@ class _HomePageState extends ConsumerState<HomePage> {
     );
 
     // 首页仅对“待复习”提供批量选择能力，已完成/已跳过列表默认禁止批量操作。
-    final effectiveSelectionMode =
-        homeFilter == ReviewTaskFilter.pending ? state.isSelectionMode : false;
+    final effectiveSelectionMode = homeFilter == ReviewTaskFilter.pending
+        ? state.isSelectionMode
+        : false;
 
     void showSnack(String text) {
       if (!context.mounted) return;
@@ -165,10 +166,9 @@ class _HomePageState extends ConsumerState<HomePage> {
             icon: const Icon(Icons.refresh),
           ),
           TextButton(
-            onPressed:
-                state.isLoading || homeFilter != ReviewTaskFilter.pending
-                    ? null
-                    : () => notifier.toggleSelectionMode(),
+            onPressed: state.isLoading || homeFilter != ReviewTaskFilter.pending
+                ? null
+                : () => notifier.toggleSelectionMode(),
             child: Text(effectiveSelectionMode ? '完成' : '批量'),
           ),
         ],
@@ -274,23 +274,18 @@ class _HomePageState extends ConsumerState<HomePage> {
                         expandedTaskIds: state.expandedTaskIds,
                         onToggleSelected: notifier.toggleSelected,
                         onToggleExpanded: notifier.toggleExpanded,
-                        onComplete:
-                            (id) => runAction(
-                              () => notifier.completeTask(id),
-                              ok: '已完成',
-                            ),
-                        onSkip:
-                            (id) => runAction(
-                              () => notifier.skipTask(id),
-                              ok: '已跳过',
-                            ),
+                        onComplete: (id) => runAction(
+                          () => notifier.completeTask(id),
+                          ok: '已完成',
+                        ),
+                        onSkip: (id) =>
+                            runAction(() => notifier.skipTask(id), ok: '已跳过'),
                       ),
                       const SizedBox(height: AppSpacing.lg),
                     ],
                     _SectionHeader(
                       title: '今日待复习',
-                      subtitle:
-                          state.todayPending.isEmpty ? '今天没有待复习任务' : null,
+                      subtitle: state.todayPending.isEmpty ? '今天没有待复习任务' : null,
                       color: primary,
                     ),
                     const SizedBox(height: AppSpacing.sm),
@@ -308,22 +303,19 @@ class _HomePageState extends ConsumerState<HomePage> {
                         expandedTaskIds: state.expandedTaskIds,
                         onToggleSelected: notifier.toggleSelected,
                         onToggleExpanded: notifier.toggleExpanded,
-                        onComplete:
-                            (id) => runAction(
-                              () => notifier.completeTask(id),
-                              ok: '已完成',
-                            ),
-                        onSkip:
-                            (id) => runAction(
-                              () => notifier.skipTask(id),
-                              ok: '已跳过',
-                            ),
+                        onComplete: (id) => runAction(
+                          () => notifier.completeTask(id),
+                          ok: '已完成',
+                        ),
+                        onSkip: (id) =>
+                            runAction(() => notifier.skipTask(id), ok: '已跳过'),
                       ),
                   ] else if (homeFilter == ReviewTaskFilter.done) ...[
                     _SectionHeader(
                       title: '今日已完成',
-                      subtitle:
-                          state.todayCompleted.isEmpty ? '今天还没有完成任务' : null,
+                      subtitle: state.todayCompleted.isEmpty
+                          ? '今天还没有完成任务'
+                          : null,
                       color: AppColors.success,
                     ),
                     const SizedBox(height: AppSpacing.sm),
@@ -345,8 +337,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                   ] else if (homeFilter == ReviewTaskFilter.skipped) ...[
                     _SectionHeader(
                       title: '今日已跳过',
-                      subtitle:
-                          state.todaySkipped.isEmpty ? '今天还没有跳过任务' : null,
+                      subtitle: state.todaySkipped.isEmpty ? '今天还没有跳过任务' : null,
                       color: AppColors.warning,
                     ),
                     const SizedBox(height: AppSpacing.sm),
@@ -384,28 +375,27 @@ class _HomePageState extends ConsumerState<HomePage> {
                           expandedTaskIds: state.expandedTaskIds,
                           onToggleSelected: (_) {},
                           onToggleExpanded: notifier.toggleExpanded,
-                          onComplete:
-                              (id) => runAction(
-                                () => notifier.completeTask(id),
-                                ok: '已完成',
-                              ),
-                          onSkip:
-                              (id) => runAction(
-                                () => notifier.skipTask(id),
-                                ok: '已跳过',
-                              ),
+                          onComplete: (id) => runAction(
+                            () => notifier.completeTask(id),
+                            ok: '已完成',
+                          ),
+                          onSkip: (id) =>
+                              runAction(() => notifier.skipTask(id), ok: '已跳过'),
                         ),
                         const SizedBox(height: AppSpacing.lg),
                       ],
                       _SectionHeader(
                         title: '今日待复习',
-                        subtitle:
-                            state.todayPending.isEmpty ? '今天没有待复习任务' : null,
+                        subtitle: state.todayPending.isEmpty
+                            ? '今天没有待复习任务'
+                            : null,
                         color: primary,
                       ),
                       const SizedBox(height: AppSpacing.sm),
                       if (state.todayPending.isEmpty)
-                        const _EmptySectionHint(text: AppStrings.emptyTodayTasks)
+                        const _EmptySectionHint(
+                          text: AppStrings.emptyTodayTasks,
+                        )
                       else
                         _TaskGrid(
                           tasks: state.todayPending,
@@ -415,22 +405,19 @@ class _HomePageState extends ConsumerState<HomePage> {
                           expandedTaskIds: state.expandedTaskIds,
                           onToggleSelected: (_) {},
                           onToggleExpanded: notifier.toggleExpanded,
-                          onComplete:
-                              (id) => runAction(
-                                () => notifier.completeTask(id),
-                                ok: '已完成',
-                              ),
-                          onSkip:
-                              (id) => runAction(
-                                () => notifier.skipTask(id),
-                                ok: '已跳过',
-                              ),
+                          onComplete: (id) => runAction(
+                            () => notifier.completeTask(id),
+                            ok: '已完成',
+                          ),
+                          onSkip: (id) =>
+                              runAction(() => notifier.skipTask(id), ok: '已跳过'),
                         ),
                       const SizedBox(height: AppSpacing.lg),
                       _SectionHeader(
                         title: '今日已完成',
-                        subtitle:
-                            state.todayCompleted.isEmpty ? '今天还没有完成任务' : null,
+                        subtitle: state.todayCompleted.isEmpty
+                            ? '今天还没有完成任务'
+                            : null,
                         color: AppColors.success,
                       ),
                       const SizedBox(height: AppSpacing.sm),
@@ -452,8 +439,9 @@ class _HomePageState extends ConsumerState<HomePage> {
                       const SizedBox(height: AppSpacing.lg),
                       _SectionHeader(
                         title: '今日已跳过',
-                        subtitle:
-                            state.todaySkipped.isEmpty ? '今天还没有跳过任务' : null,
+                        subtitle: state.todaySkipped.isEmpty
+                            ? '今天还没有跳过任务'
+                            : null,
                         color: AppColors.warning,
                       ),
                       const SizedBox(height: AppSpacing.sm),
@@ -987,20 +975,21 @@ class _TaskCard extends StatelessWidget {
         Theme.of(context).textTheme.bodySmall?.color ?? AppColors.textSecondary;
     final primary = isDark ? AppColors.primaryLight : AppColors.primary;
 
-    final borderColor =
-        status == ReviewTaskStatus.pending && isOverdue
-            ? AppColors.warning
-            : normalBorderColor;
+    final borderColor = status == ReviewTaskStatus.pending && isOverdue
+        ? AppColors.warning
+        : normalBorderColor;
     final subtitleText = _subtitleText(context);
 
     final statusTag = switch (status) {
-      ReviewTaskStatus.done => const _StatusTag(
+      ReviewTaskStatus.done => _StatusTag(
         label: '已完成',
         color: AppColors.success,
+        onTap: onUndo,
       ),
-      ReviewTaskStatus.skipped => const _StatusTag(
+      ReviewTaskStatus.skipped => _StatusTag(
         label: '已跳过',
         color: AppColors.warning,
+        onTap: onUndo,
       ),
       ReviewTaskStatus.pending => null,
     };
@@ -1021,123 +1010,147 @@ class _TaskCard extends StatelessWidget {
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                  if (selectionMode)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 2),
-                      child: Checkbox(
-                        value: selected,
-                        onChanged: (_) => onToggleSelected(),
+                    if (selectionMode)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 2),
+                        child: Checkbox(
+                          value: selected,
+                          onChanged: (_) => onToggleSelected(),
+                        ),
+                      )
+                    else
+                      Icon(
+                        switch (status) {
+                          ReviewTaskStatus.pending =>
+                            isOverdue
+                                ? Icons.error_outline
+                                : Icons.circle_outlined,
+                          ReviewTaskStatus.done => Icons.check_circle_outline,
+                          ReviewTaskStatus.skipped =>
+                            Icons.not_interested_outlined,
+                        },
+                        color: switch (status) {
+                          ReviewTaskStatus.pending =>
+                            isOverdue ? AppColors.warning : secondaryText,
+                          ReviewTaskStatus.done => AppColors.success,
+                          ReviewTaskStatus.skipped => secondaryText,
+                        },
+                        size: 22,
                       ),
-                    )
-                  else
-                    Icon(
-                      switch (status) {
-                        ReviewTaskStatus.pending => isOverdue
-                            ? Icons.error_outline
-                            : Icons.circle_outlined,
-                        ReviewTaskStatus.done => Icons.check_circle_outline,
-                        ReviewTaskStatus.skipped => Icons.not_interested_outlined,
-                      },
-                      color: switch (status) {
-                        ReviewTaskStatus.pending =>
-                          isOverdue ? AppColors.warning : secondaryText,
-                        ReviewTaskStatus.done => AppColors.success,
-                        ReviewTaskStatus.skipped => secondaryText,
-                      },
-                      size: 22,
-                    ),
-                  const SizedBox(width: AppSpacing.md),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '$title（第$reviewRound次）',
-                          style: AppTypography.body(
-                            context,
-                          ).copyWith(fontWeight: FontWeight.w700),
-                        ),
-                        const SizedBox(height: AppSpacing.xs),
-                        Text(
-                          subtitleText,
-                          style: AppTypography.bodySecondary(context),
-                        ),
-                        if (tags.isNotEmpty) ...[
-                          const SizedBox(height: AppSpacing.sm),
-                          Wrap(
-                            spacing: 6,
-                            runSpacing: 6,
-                            children: tags
-                                .take(3)
-                                .map(
-                                  (t) => Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 10,
-                                      vertical: 4,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: primary.withValues(alpha: 0.18),
-                                      borderRadius: BorderRadius.circular(999),
-                                      border: Border.all(
-                                        color: primary.withValues(alpha: 0.35),
+                    const SizedBox(width: AppSpacing.md),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // 关键布局：已完成/已跳过的“撤销入口”改为点击状态标签，
+                          // 因此将状态标签放入标题行内，避免与标题/按钮产生覆盖（窄屏更明显）。
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  '$title（第$reviewRound次）',
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: AppTypography.body(
+                                    context,
+                                  ).copyWith(fontWeight: FontWeight.w700),
+                                ),
+                              ),
+                              if (statusTag != null) ...[
+                                const SizedBox(width: AppSpacing.sm),
+                                statusTag,
+                              ],
+                            ],
+                          ),
+                          const SizedBox(height: AppSpacing.xs),
+                          Text(
+                            subtitleText,
+                            style: AppTypography.bodySecondary(context),
+                          ),
+                          if (tags.isNotEmpty) ...[
+                            const SizedBox(height: AppSpacing.sm),
+                            Wrap(
+                              spacing: 6,
+                              runSpacing: 6,
+                              children: tags
+                                  .take(3)
+                                  .map(
+                                    (t) => Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 10,
+                                        vertical: 4,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: primary.withValues(alpha: 0.18),
+                                        borderRadius: BorderRadius.circular(
+                                          999,
+                                        ),
+                                        border: Border.all(
+                                          color: primary.withValues(
+                                            alpha: 0.35,
+                                          ),
+                                        ),
+                                      ),
+                                      child: Text(
+                                        t,
+                                        style: AppTypography.bodySecondary(
+                                          context,
+                                        ).copyWith(fontSize: 12),
                                       ),
                                     ),
-                                    child: Text(
-                                      t,
+                                  )
+                                  .toList(),
+                            ),
+                          ],
+                          AnimatedCrossFade(
+                            crossFadeState: expanded
+                                ? CrossFadeState.showSecond
+                                : CrossFadeState.showFirst,
+                            duration: const Duration(milliseconds: 160),
+                            firstChild: const SizedBox.shrink(),
+                            secondChild: Padding(
+                              padding: const EdgeInsets.only(
+                                top: AppSpacing.md,
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  if (note?.trim().isNotEmpty ?? false) ...[
+                                    Text(
+                                      '备注',
+                                      style: AppTypography.h2(
+                                        context,
+                                      ).copyWith(fontSize: 14),
+                                    ),
+                                    const SizedBox(height: 6),
+                                    Text(
+                                      note!.trim(),
                                       style: AppTypography.bodySecondary(
                                         context,
-                                      ).copyWith(fontSize: 12),
+                                      ),
+                                    ),
+                                    const SizedBox(height: AppSpacing.sm),
+                                  ],
+                                  Text(
+                                    '点击卡片可收起详情',
+                                    style: TextStyle(
+                                      color: secondaryText,
+                                      fontSize: 12,
                                     ),
                                   ),
-                                )
-                                .toList(),
-                          ),
-                        ],
-                        AnimatedCrossFade(
-                          crossFadeState:
-                              expanded
-                                  ? CrossFadeState.showSecond
-                                  : CrossFadeState.showFirst,
-                          duration: const Duration(milliseconds: 160),
-                          firstChild: const SizedBox.shrink(),
-                          secondChild: Padding(
-                            padding: const EdgeInsets.only(top: AppSpacing.md),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                if (note?.trim().isNotEmpty ?? false) ...[
-                                  Text(
-                                    '备注',
-                                    style: AppTypography.h2(
-                                      context,
-                                    ).copyWith(fontSize: 14),
-                                  ),
-                                  const SizedBox(height: 6),
-                                  Text(
-                                    note!.trim(),
-                                    style: AppTypography.bodySecondary(context),
-                                  ),
-                                  const SizedBox(height: AppSpacing.sm),
                                 ],
-                                Text(
-                                  '点击卡片可收起详情',
-                                  style: TextStyle(
-                                    color: secondaryText,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ],
+                              ),
                             ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: AppSpacing.md),
-                  if (!selectionMode)
-                    Column(
-                      children: [
-                        if (status == ReviewTaskStatus.pending) ...[
+                    if (!selectionMode &&
+                        status == ReviewTaskStatus.pending) ...[
+                      const SizedBox(width: AppSpacing.md),
+                      Column(
+                        children: [
                           IconButton(
                             tooltip: isOverdue ? '补做' : '完成',
                             onPressed: onComplete,
@@ -1150,25 +1163,11 @@ class _TaskCard extends StatelessWidget {
                             icon: const Icon(Icons.not_interested_outlined),
                             color: secondaryText,
                           ),
-                        ] else ...[
-                          IconButton(
-                            tooltip: '撤销',
-                            onPressed: onUndo,
-                            icon: const Icon(Icons.undo),
-                          ),
                         ],
-                      ],
-                    ),
-                ],
-              ),
-            ),
-            if (statusTag != null)
-              // 关键布局：已完成/已跳过时右侧会出现“撤销”按钮（IconButton），
-              // 若状态标签仍贴右上角会与按钮区域重叠；因此向左预留一个按钮宽度（48）+ 边距（12）。
-              Positioned(
-                right: selectionMode ? 12 : 60,
-                top: 12,
-                child: statusTag,
+                      ),
+                    ],
+                  ],
+                ),
               ),
             ],
           ),
@@ -1176,9 +1175,7 @@ class _TaskCard extends StatelessWidget {
       ),
     );
 
-    if (selectionMode ||
-        !enableSwipe ||
-        status != ReviewTaskStatus.pending) {
+    if (selectionMode || !enableSwipe || status != ReviewTaskStatus.pending) {
       return card;
     }
 
@@ -1247,14 +1244,15 @@ class _TaskCard extends StatelessWidget {
 }
 
 class _StatusTag extends StatelessWidget {
-  const _StatusTag({required this.label, required this.color});
+  const _StatusTag({required this.label, required this.color, this.onTap});
 
   final String label;
   final Color color;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    final chip = Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
         color: color.withAlpha(26),
@@ -1266,6 +1264,19 @@ class _StatusTag extends StatelessWidget {
         style: AppTypography.bodySecondary(
           context,
         ).copyWith(color: color, fontWeight: FontWeight.w700, fontSize: 12),
+      ),
+    );
+
+    if (onTap == null) return chip;
+
+    // 交互说明：点击“已完成/已跳过”状态标签弹出撤销确认框，替代右侧撤销按钮，
+    // 以避免窄屏下按钮与标题/状态区的布局冲突。
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: chip,
       ),
     );
   }
