@@ -30,7 +30,7 @@ class NonUiCoverageConfig {
   ];
 
   /// 覆盖率阈值（百分比）。
-  static const double minLineCoveragePercent = 90.0;
+  static const double minLineCoveragePercent = 95.0;
 }
 
 /// LCOV 单个源文件的汇总结果。
