@@ -102,13 +102,11 @@ class DiscoveryService {
   Future<void> start() async {
     if (_socket != null) return;
     try {
-      _socket = await RawDatagramSocket.bind(
-        InternetAddress.anyIPv4,
-        discoveryPort,
-        reuseAddress: true,
-        // Windows 平台不支持 reusePort（会触发底层断言并输出错误日志）。
-        reusePort: !Platform.isWindows,
-      );
+      // 说明：reusePort 在不同平台上的支持情况并不一致。
+      // - Windows 明确不支持（已有说明）
+      // - 部分 Android 设备/系统也可能不支持（会抛异常或输出 Dart Socket ERROR）
+      // 因此这里采用“优先尝试 + 失败降级”的策略，避免发现服务直接不可用。
+      _socket = await _bindSocketWithFallback();
       _socket!.broadcastEnabled = true;
 
       _socket!.listen((event) {
@@ -129,6 +127,31 @@ class DiscoveryService {
       _socket = null;
       _broadcastTimer?.cancel();
       _broadcastTimer = null;
+    }
+  }
+
+  /// 绑定 UDP Socket（带降级逻辑）。
+  ///
+  /// 返回值：已绑定的 RawDatagramSocket。
+  /// 异常：两次尝试都失败时向上抛出。
+  Future<RawDatagramSocket> _bindSocketWithFallback() async {
+    // 首选：在支持的平台上开启 reusePort，允许多个监听者共用同一端口（便于调试/多实例）。
+    final preferReusePort = !Platform.isWindows;
+    try {
+      return await RawDatagramSocket.bind(
+        InternetAddress.anyIPv4,
+        discoveryPort,
+        reuseAddress: true,
+        reusePort: preferReusePort,
+      );
+    } catch (_) {
+      // 降级：关闭 reusePort，兼容不支持的系统实现（例如部分 Android）。
+      return await RawDatagramSocket.bind(
+        InternetAddress.anyIPv4,
+        discoveryPort,
+        reuseAddress: true,
+        reusePort: false,
+      );
     }
   }
 

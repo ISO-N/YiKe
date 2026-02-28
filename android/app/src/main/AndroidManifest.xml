@@ -1,4 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- v3.0：局域网同步（F12）需要使用本地 HTTP/UDP，与桌面端进行配对与数据交换 -->
+    <uses-permission android:name="android.permission.INTERNET" />
     <!-- v1.0 MVP：Android 13+ 通知权限 -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- v2.1：语音输入（麦克风） -->
@@ -9,7 +11,8 @@
     <application
         android:label="yike"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:usesCleartextTraffic="true">
         <activity
             android:name=".MainActivity"
             android:exported="true"

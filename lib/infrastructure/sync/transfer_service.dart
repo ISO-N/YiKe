@@ -249,6 +249,28 @@ class TransferService {
     _server = null;
   }
 
+  /// 探测对端是否在线（HTTP /ping）。
+  ///
+  /// 返回值：
+  /// - true：对端服务可访问且返回 200
+  /// - false：超时/拒绝连接/非 200 等均视为离线
+  Future<bool> ping({required String ipAddress}) async {
+    final client = HttpClient();
+    try {
+      client.connectionTimeout = const Duration(seconds: 2);
+      final url = Uri.parse('http://$ipAddress:$transferPort/ping');
+      final httpReq = await client.getUrl(url);
+      final httpResp = await httpReq.close();
+      // 读取响应体以确保连接完整关闭（避免 socket 复用导致资源占用）。
+      await utf8.decoder.bind(httpResp).drain();
+      return httpResp.statusCode == HttpStatus.ok;
+    } catch (_) {
+      return false;
+    } finally {
+      client.close(force: true);
+    }
+  }
+
   Future<void> dispose() async {
     await stopServer();
   }

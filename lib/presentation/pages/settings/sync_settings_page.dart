@@ -4,6 +4,7 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/app_spacing.dart';
@@ -55,6 +56,17 @@ class SyncSettingsPage extends ConsumerWidget {
                       onChanged: (v) => controller.setAutoSyncEnabled(v),
                     ),
                     const Divider(height: 1),
+                    if (kDebugMode) ...[
+                      SwitchListTile(
+                        title: const Text('同步模拟数据（仅调试）'),
+                        subtitle: const Text(
+                          '开启后会将 isMockData=true 的模拟数据也纳入同步',
+                        ),
+                        value: state.includeMockData,
+                        onChanged: (v) => controller.setIncludeMockData(v),
+                      ),
+                      const Divider(height: 1),
+                    ],
                     SwitchListTile(
                       title: const Text('仅 Wi-Fi 下同步'),
                       subtitle: const Text('开启后将尝试仅在 Wi-Fi/有线网络下进行同步'),
@@ -76,10 +88,7 @@ class SyncSettingsPage extends ConsumerWidget {
                     ListTile(
                       title: const Text('手动同步'),
                       subtitle: const Text('立即执行一次双向同步'),
-                      trailing: FilledButton(
-                        onPressed: () => controller.syncNow(),
-                        child: const Text('立即同步'),
-                      ),
+                      trailing: _ManualSyncButton(state: state),
                     ),
                   ],
                 ),
@@ -120,14 +129,25 @@ class _StatusCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final onlineCount = state.connectedDevices.where((e) => e.isOnline).length;
+    final pairedCount = state.connectedDevices.length;
+
     final (icon, label, color) = switch (state.state) {
-      SyncState.disconnected => (Icons.cloud_off, '未连接', Colors.grey),
+      SyncState.disconnected => (Icons.cloud_off, '未配对', Colors.grey),
       SyncState.connecting => (Icons.sync, '连接中', Colors.blue),
-      SyncState.connected => (Icons.cloud_done, '已连接', Colors.green),
+      SyncState.connected => (Icons.cloud_done, '已配对', Colors.green),
       SyncState.syncing => (Icons.sync, '同步中', Colors.blue),
       SyncState.synced => (Icons.check_circle, '同步完成', Colors.green),
       SyncState.error => (Icons.error_outline, '同步失败', Colors.red),
     };
+
+    final statusText =
+        (state.state == SyncState.connected ||
+                state.state == SyncState.synced ||
+                state.state == SyncState.syncing) &&
+            pairedCount > 0
+        ? '$label（在线 $onlineCount/$pairedCount）'
+        : label;
 
     return GlassCard(
       child: Padding(
@@ -142,7 +162,7 @@ class _StatusCard extends StatelessWidget {
                 children: [
                   Text('同步状态', style: AppTypography.h2(context)),
                   const SizedBox(height: AppSpacing.xs),
-                  Text(label, style: AppTypography.bodySecondary(context)),
+                  Text(statusText, style: AppTypography.bodySecondary(context)),
                 ],
               ),
             ),
@@ -153,7 +173,7 @@ class _StatusCard extends StatelessWidget {
                 borderRadius: BorderRadius.circular(999),
                 border: Border.all(color: color.withAlpha(80)),
               ),
-              child: Text(label, style: TextStyle(color: color)),
+              child: Text(statusText, style: TextStyle(color: color)),
             ),
           ],
         ),
@@ -254,12 +274,17 @@ class _DiscoveredDevicesCard extends ConsumerWidget {
                       ? const SizedBox.shrink()
                       : FilledButton(
                           onPressed: () async {
-                            await controller.requestPairing(d);
-                            if (!context.mounted) return;
-                            await _showPairingCodeDialog(
-                              context: context,
-                              ref: ref,
-                            );
+                            try {
+                              await controller.requestPairing(d);
+                              if (!context.mounted) return;
+                              await _showPairingCodeDialog(
+                                context: context,
+                                ref: ref,
+                              );
+                            } catch (_) {
+                              // 说明：失败原因会写入 SyncUiState.errorMessage 并在页面下方展示。
+                              // 这里不再弹出“输入配对码”对话框，避免无效操作。
+                            }
                           },
                           child: const Text('配对'),
                         ),
@@ -317,6 +342,8 @@ class _ConnectedDevicesCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final controller = ref.read(syncControllerProvider.notifier);
+    final onlineCount = state.connectedDevices.where((e) => e.isOnline).length;
+    final pairedCount = state.connectedDevices.length;
 
     return GlassCard(
       child: Padding(
@@ -324,15 +351,17 @@ class _ConnectedDevicesCard extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('已连接的设备', style: AppTypography.h2(context)),
+            Text('已配对的设备', style: AppTypography.h2(context)),
             const SizedBox(height: AppSpacing.sm),
             Text(
-              state.connectedDevices.isEmpty ? '暂无已连接设备' : '可断开设备或查看最近同步时间。',
+              state.connectedDevices.isEmpty
+                  ? '暂无已配对设备'
+                  : '在线 $onlineCount/$pairedCount · 可断开设备或查看最近同步时间。',
               style: AppTypography.bodySecondary(context),
             ),
             const SizedBox(height: AppSpacing.md),
             if (state.connectedDevices.isEmpty)
-              Text('未连接', style: AppTypography.bodySecondary(context))
+              Text('未配对', style: AppTypography.bodySecondary(context))
             else
               ...state.connectedDevices.map((d) {
                 final lastSyncText = d.lastSyncMs == null
@@ -340,12 +369,17 @@ class _ConnectedDevicesCard extends ConsumerWidget {
                     : DateTime.fromMillisecondsSinceEpoch(
                         d.lastSyncMs!,
                       ).toLocal().toString().split('.').first;
+                final onlineText = d.isOnline ? '在线' : '离线';
+                final onlineColor = d.isOnline ? Colors.green : Colors.grey;
                 return ListTile(
                   contentPadding: EdgeInsets.zero,
-                  leading: Icon(d.isMaster ? Icons.hub : Icons.devices),
+                  leading: Icon(
+                    d.isMaster ? Icons.hub : Icons.devices,
+                    color: onlineColor,
+                  ),
                   title: Text(d.deviceName),
                   subtitle: Text(
-                    '${d.deviceType} · ${d.ipAddress ?? '-'} · $lastSyncText',
+                    '$onlineText · ${d.deviceType} · ${d.ipAddress ?? '-'} · $lastSyncText',
                   ),
                   trailing: TextButton(
                     onPressed: () => controller.disconnectDevice(d.deviceId),
@@ -355,6 +389,38 @@ class _ConnectedDevicesCard extends ConsumerWidget {
               }),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// 手动同步按钮：仅在存在在线同步目标时可点击。
+///
+/// 说明：
+/// - 主机：至少存在 1 台在线从机
+/// - 从机：主机设备需在线
+class _ManualSyncButton extends ConsumerWidget {
+  const _ManualSyncButton({required this.state});
+
+  final SyncUiState state;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final controller = ref.read(syncControllerProvider.notifier);
+
+    final hasOnlineTarget = state.isMaster
+        ? state.connectedDevices.any((d) => !d.isMaster && d.isOnline)
+        : state.connectedDevices.any((d) => d.isMaster && d.isOnline);
+
+    final reason = state.connectedDevices.isEmpty
+        ? '暂无已配对设备'
+        : (state.isMaster ? '暂无在线从机' : '主机离线');
+
+    return Tooltip(
+      message: hasOnlineTarget ? '立即执行一次同步' : '不可同步：$reason',
+      child: FilledButton(
+        onPressed: hasOnlineTarget ? () => controller.syncNow() : null,
+        child: const Text('立即同步'),
       ),
     );
   }
