@@ -8,6 +8,7 @@ import 'package:drift/drift.dart';
 import '../../../core/utils/date_utils.dart';
 import '../../../domain/entities/task_day_stats.dart';
 import '../../models/review_task_with_item_model.dart';
+import '../../models/review_task_timeline_model.dart';
 import '../database.dart';
 
 /// 复习任务 DAO。
@@ -177,6 +178,216 @@ class ReviewTaskDao {
       onlyPending: true,
       onlyOverdue: true,
     );
+  }
+
+  /// 查询今日已完成任务（done，completedAt=今日）。
+  ///
+  /// 说明：按 completedAt 的自然日口径统计，不受 scheduledDate 影响。
+  Future<List<ReviewTaskWithItemModel>> getTodayCompletedTasksWithItem({
+    DateTime? today,
+  }) async {
+    final now = today ?? DateTime.now();
+    final start = YikeDateUtils.atStartOfDay(now);
+    final end = start.add(const Duration(days: 1));
+
+    final task = db.reviewTasks;
+    final item = db.learningItems;
+
+    final query =
+        db.select(task).join([
+            innerJoin(item, item.id.equalsExp(task.learningItemId)),
+          ])
+          ..where(task.status.equals('done'))
+          ..where(task.completedAt.isBetweenValues(start, end))
+          ..orderBy([
+            OrderingTerm.desc(task.completedAt),
+            OrderingTerm.desc(task.id),
+          ]);
+
+    final rows = await query.get();
+    return rows
+        .map(
+          (row) => ReviewTaskWithItemModel(
+            task: row.readTable(task),
+            item: row.readTable(item),
+          ),
+        )
+        .toList();
+  }
+
+  /// 查询今日已跳过任务（skipped，skippedAt=今日）。
+  ///
+  /// 说明：按 skippedAt 的自然日口径统计，不受 scheduledDate 影响。
+  Future<List<ReviewTaskWithItemModel>> getTodaySkippedTasksWithItem({
+    DateTime? today,
+  }) async {
+    final now = today ?? DateTime.now();
+    final start = YikeDateUtils.atStartOfDay(now);
+    final end = start.add(const Duration(days: 1));
+
+    final task = db.reviewTasks;
+    final item = db.learningItems;
+
+    final query =
+        db.select(task).join([
+            innerJoin(item, item.id.equalsExp(task.learningItemId)),
+          ])
+          ..where(task.status.equals('skipped'))
+          ..where(task.skippedAt.isBetweenValues(start, end))
+          ..orderBy([OrderingTerm.desc(task.skippedAt), OrderingTerm.desc(task.id)]);
+
+    final rows = await query.get();
+    return rows
+        .map(
+          (row) => ReviewTaskWithItemModel(
+            task: row.readTable(task),
+            item: row.readTable(item),
+          ),
+        )
+        .toList();
+  }
+
+  /// 撤销任务状态（done/skipped → pending）。
+  ///
+  /// 规则：
+  /// - status 设置为 pending
+  /// - completedAt/skippedAt 清空（两者都清空，避免历史脏数据影响口径）
+  /// 返回值：更新行数。
+  Future<int> undoTaskStatus(int id) {
+    final now = DateTime.now();
+    return (db.update(db.reviewTasks)..where((t) => t.id.equals(id))).write(
+      ReviewTasksCompanion(
+        status: const Value('pending'),
+        completedAt: const Value(null),
+        skippedAt: const Value(null),
+        updatedAt: Value(now),
+      ),
+    );
+  }
+
+  /// 获取全量任务状态计数（用于任务中心筛选栏展示）。
+  ///
+  /// 返回值：(all, pending, done, skipped)。
+  Future<(int all, int pending, int done, int skipped)>
+  getGlobalTaskStatusCounts() async {
+    final allExp = db.reviewTasks.id.count();
+    final pendingExp = db.reviewTasks.id.count(
+      filter: db.reviewTasks.status.equals('pending'),
+    );
+    final doneExp = db.reviewTasks.id.count(
+      filter: db.reviewTasks.status.equals('done'),
+    );
+    final skippedExp = db.reviewTasks.id.count(
+      filter: db.reviewTasks.status.equals('skipped'),
+    );
+
+    final row =
+        await (db.selectOnly(db.reviewTasks)
+              ..addColumns([allExp, pendingExp, doneExp, skippedExp]))
+            .getSingle();
+
+    return (
+      row.read(allExp) ?? 0,
+      row.read(pendingExp) ?? 0,
+      row.read(doneExp) ?? 0,
+      row.read(skippedExp) ?? 0,
+    );
+  }
+
+  /// 按“发生时间”倒序获取任务时间线分页数据（用于任务中心）。
+  ///
+  /// 说明：
+  /// - pending：occurredAt = scheduled_date
+  /// - done：occurredAt = COALESCE(completed_at, scheduled_date)
+  /// - skipped：occurredAt = COALESCE(skipped_at, scheduled_date)
+  /// - 排序：occurredAt DESC, taskId DESC（稳定排序）
+  /// - 游标：下一页取“当前页最后一条”，查询条件为 (occurredAt < cursor) OR (occurredAt = cursor AND taskId < cursorId)
+  Future<List<ReviewTaskTimelineModel>> getTaskTimelinePageWithItem({
+    String? status,
+    DateTime? cursorOccurredAt,
+    int? cursorTaskId,
+    int limit = 20,
+  }) async {
+    final where = StringBuffer();
+    final variables = <Variable<Object?>>[];
+
+    where.write('1=1');
+    if (status != null) {
+      where.write(' AND rt.status = ?');
+      variables.add(Variable<String>(status));
+    }
+
+    const occurredSql = '''
+CASE rt.status
+  WHEN 'pending' THEN rt.scheduled_date
+  WHEN 'done' THEN COALESCE(rt.completed_at, rt.scheduled_date)
+  WHEN 'skipped' THEN COALESCE(rt.skipped_at, rt.scheduled_date)
+  ELSE rt.scheduled_date
+END
+''';
+
+    final cursorWhere = StringBuffer();
+    final cursorVars = <Variable<Object?>>[];
+    if (cursorOccurredAt != null && cursorTaskId != null) {
+      cursorWhere.write(
+        'WHERE (t.occurred_at < ? OR (t.occurred_at = ? AND t."rt.id" < ?))',
+      );
+      cursorVars.add(Variable<DateTime>(cursorOccurredAt));
+      cursorVars.add(Variable<DateTime>(cursorOccurredAt));
+      cursorVars.add(Variable<int>(cursorTaskId));
+    }
+
+    final sql = '''
+SELECT * FROM (
+  SELECT
+    rt.id AS "rt.id",
+    rt.learning_item_id AS "rt.learning_item_id",
+    rt.review_round AS "rt.review_round",
+    rt.scheduled_date AS "rt.scheduled_date",
+    rt.status AS "rt.status",
+    rt.completed_at AS "rt.completed_at",
+    rt.skipped_at AS "rt.skipped_at",
+    rt.created_at AS "rt.created_at",
+    rt.updated_at AS "rt.updated_at",
+    rt.is_mock_data AS "rt.is_mock_data",
+
+    li.id AS "li.id",
+    li.title AS "li.title",
+    li.note AS "li.note",
+    li.tags AS "li.tags",
+    li.learning_date AS "li.learning_date",
+    li.created_at AS "li.created_at",
+    li.updated_at AS "li.updated_at",
+    li.is_mock_data AS "li.is_mock_data",
+
+    $occurredSql AS occurred_at
+  FROM review_tasks rt
+  INNER JOIN learning_items li ON li.id = rt.learning_item_id
+  WHERE ${where.toString()}
+) t
+${cursorWhere.toString()}
+ORDER BY t.occurred_at DESC, t."rt.id" DESC
+LIMIT ?
+''';
+
+    final rows =
+        await db.customSelect(
+          sql,
+          variables: [...variables, ...cursorVars, Variable<int>(limit)],
+          readsFrom: {db.reviewTasks, db.learningItems},
+        ).get();
+
+    return rows
+        .map((row) {
+          final task = db.reviewTasks.map(row.data, tablePrefix: 'rt');
+          final item = db.learningItems.map(row.data, tablePrefix: 'li');
+          final occurredAt = row.read<DateTime>('occurred_at')!;
+          return ReviewTaskTimelineModel(
+            model: ReviewTaskWithItemModel(task: task, item: item),
+            occurredAt: occurredAt,
+          );
+        })
+        .toList();
   }
 
   /// 查询学习内容关联的所有复习任务。

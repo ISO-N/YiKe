@@ -13,6 +13,8 @@ import 'learning_items_table.dart';
 @TableIndex(name: 'idx_scheduled_date', columns: {#scheduledDate})
 @TableIndex(name: 'idx_status', columns: {#status})
 @TableIndex(name: 'idx_learning_item_id', columns: {#learningItemId})
+@TableIndex(name: 'idx_completed_at_status', columns: {#completedAt, #status})
+@TableIndex(name: 'idx_skipped_at_status', columns: {#skippedAt, #status})
 class ReviewTasks extends Table {
   /// 主键 ID。
   IntColumn get id => integer().autoIncrement()();

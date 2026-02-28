@@ -9,8 +9,10 @@ import 'package:drift/drift.dart';
 
 import '../../domain/entities/review_task.dart';
 import '../../domain/entities/task_day_stats.dart';
+import '../../domain/entities/task_timeline.dart';
 import '../../domain/repositories/review_task_repository.dart';
 import '../models/review_task_with_item_model.dart';
+import '../models/review_task_timeline_model.dart';
 import '../database/daos/review_task_dao.dart';
 import '../database/database.dart';
 import '../sync/sync_log_writer.dart';
@@ -104,6 +106,18 @@ class ReviewTaskRepositoryImpl implements ReviewTaskRepository {
   }
 
   @override
+  Future<List<ReviewTaskViewEntity>> getTodayCompletedTasks() async {
+    final rows = await dao.getTodayCompletedTasksWithItem();
+    return rows.map(_toViewEntity).toList();
+  }
+
+  @override
+  Future<List<ReviewTaskViewEntity>> getTodaySkippedTasks() async {
+    final rows = await dao.getTodaySkippedTasksWithItem();
+    return rows.map(_toViewEntity).toList();
+  }
+
+  @override
   Future<List<ReviewTaskViewEntity>> getTasksByDate(DateTime date) async {
     final rows = await dao.getTasksByDateWithItem(date);
     return rows.map(_toViewEntity).toList();
@@ -135,6 +149,12 @@ class ReviewTaskRepositoryImpl implements ReviewTaskRepository {
     for (final id in ids) {
       await _logTaskUpdateById(id);
     }
+  }
+
+  @override
+  Future<void> undoTaskStatus(int id) async {
+    await dao.undoTaskStatus(id);
+    await _logTaskUpdateById(id);
   }
 
   @override
@@ -187,6 +207,51 @@ class ReviewTaskRepositoryImpl implements ReviewTaskRepository {
           ),
         )
         .toList();
+  }
+
+  @override
+  Future<(int all, int pending, int done, int skipped)>
+  getGlobalTaskStatusCounts() {
+    return dao.getGlobalTaskStatusCounts();
+  }
+
+  @override
+  Future<TaskTimelinePageEntity> getTaskTimelinePage({
+    ReviewTaskStatus? status,
+    TaskTimelineCursorEntity? cursor,
+    int limit = 20,
+  }) async {
+    // 取 limit+1 判断是否还有下一页，避免 UI 误判“已到底”。
+    final fetchSize = limit + 1;
+    final rows = await dao.getTaskTimelinePageWithItem(
+      status: status?.toDbValue(),
+      cursorOccurredAt: cursor?.occurredAt,
+      cursorTaskId: cursor?.taskId,
+      limit: fetchSize,
+    );
+
+    final hasMore = rows.length > limit;
+    final pageRows = hasMore ? rows.take(limit).toList() : rows;
+
+    final items = pageRows
+        .map(
+          (r) => ReviewTaskTimelineItemEntity(
+            task: _toViewEntity(r.model),
+            occurredAt: r.occurredAt,
+          ),
+        )
+        .toList();
+
+    TaskTimelineCursorEntity? nextCursor;
+    if (hasMore && items.isNotEmpty) {
+      final last = items.last;
+      nextCursor = TaskTimelineCursorEntity(
+        occurredAt: last.occurredAt,
+        taskId: last.task.taskId,
+      );
+    }
+
+    return TaskTimelinePageEntity(items: items, nextCursor: nextCursor);
   }
 
   ReviewTaskViewEntity _toViewEntity(ReviewTaskWithItemModel model) {

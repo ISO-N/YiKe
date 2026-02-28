@@ -63,7 +63,7 @@ class AppDatabase extends _$AppDatabase {
   }
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -120,6 +120,16 @@ class AppDatabase extends _$AppDatabase {
         if (!existing.contains('sync_entity_mappings')) {
           await migrator.createTable(syncEntityMappings);
         }
+      }
+
+      // v3.3：为任务历史/任务中心新增索引（提升 completedAt/skippedAt 查询性能）。
+      if (from < 6) {
+        await customStatement(
+          'CREATE INDEX IF NOT EXISTS idx_completed_at_status ON review_tasks (completed_at, status)',
+        );
+        await customStatement(
+          'CREATE INDEX IF NOT EXISTS idx_skipped_at_status ON review_tasks (skipped_at, status)',
+        );
       }
     },
     beforeOpen: (details) async {

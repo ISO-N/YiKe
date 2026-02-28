@@ -5,6 +5,7 @@ library;
 
 import '../entities/review_task.dart';
 import '../entities/task_day_stats.dart';
+import '../entities/task_timeline.dart';
 
 /// 复习任务仓储接口。
 abstract class ReviewTaskRepository {
@@ -20,6 +21,16 @@ abstract class ReviewTaskRepository {
   /// 获取逾期待复习任务（pending，scheduledDate < 今日）。
   Future<List<ReviewTaskViewEntity>> getOverduePendingTasks();
 
+  /// 获取今日已完成任务（completedAt = 今天）。
+  ///
+  /// 说明：按“完成时间”口径，而非 scheduledDate。
+  Future<List<ReviewTaskViewEntity>> getTodayCompletedTasks();
+
+  /// 获取今日已跳过任务（skippedAt = 今天）。
+  ///
+  /// 说明：按“跳过时间”口径，而非 scheduledDate。
+  Future<List<ReviewTaskViewEntity>> getTodaySkippedTasks();
+
   /// 获取指定日期的全部任务（包含完成/跳过），用于小组件与通知内容生成。
   Future<List<ReviewTaskViewEntity>> getTasksByDate(DateTime date);
 
@@ -34,6 +45,13 @@ abstract class ReviewTaskRepository {
 
   /// 批量标记跳过。
   Future<void> skipTasks(List<int> ids);
+
+  /// 撤销任务状态（done/skipped → pending）。
+  ///
+  /// 规则：
+  /// - status 置为 pending
+  /// - completedAt/skippedAt 清空（两者都清空，避免历史脏数据影响口径）
+  Future<void> undoTaskStatus(int id);
 
   /// 获取指定日期统计（completed/total）。
   Future<(int completed, int total)> getTaskStats(DateTime date);
@@ -76,4 +94,23 @@ abstract class ReviewTaskRepository {
 
   /// F8：获取全部复习任务（用于数据导出）。
   Future<List<ReviewTaskEntity>> getAllTasks();
+
+  /// 获取全量任务状态计数（用于任务中心筛选栏展示）。
+  ///
+  /// 返回值：(all, pending, done, skipped)。
+  Future<(int all, int pending, int done, int skipped)> getGlobalTaskStatusCounts();
+
+  /// 按“发生时间”倒序获取任务时间线分页数据（用于任务中心）。
+  ///
+  /// 参数：
+  /// - [status] 状态筛选；为空表示全部
+  /// - [cursor] 游标；为空表示首页
+  /// - [limit] 每页条数（建议 20）
+  ///
+  /// 返回值：分页结果（包含下一页游标）。
+  Future<TaskTimelinePageEntity> getTaskTimelinePage({
+    ReviewTaskStatus? status,
+    TaskTimelineCursorEntity? cursor,
+    int limit = 20,
+  });
 }
