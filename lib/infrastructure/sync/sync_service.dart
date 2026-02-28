@@ -52,9 +52,15 @@ class SyncService {
   /// 说明：
   /// - v3.0 引入跨设备实体映射机制：本方法仅为“本机作为 origin 的记录”生成 create 日志
   /// - 对于从其他设备同步过来的记录，其对应事件会在接收时写入 sync_logs，因此无需重复生成
-  Future<void> ensureLocalSnapshotLogs() async {
-    await _snapshotLearningItems();
-    await _snapshotReviewTasks();
+  /// 参数：
+  /// - [includeMockData] 是否包含 Debug 模拟数据（isMockData=true）。
+  ///
+  /// 说明：
+  /// - 默认不包含模拟数据，避免调试数据污染真实同步结果
+  /// - 若需要用模拟数据测试同步链路，可在调试设置中开启
+  Future<void> ensureLocalSnapshotLogs({bool includeMockData = false}) async {
+    await _snapshotLearningItems(includeMockData: includeMockData);
+    await _snapshotReviewTasks(includeMockData: includeMockData);
     await _snapshotTemplates();
     await _snapshotTopics();
     await _snapshotTopicItemRelations();
@@ -227,6 +233,7 @@ class SyncService {
     if (title.isEmpty) return;
 
     final note = event.data['note'] as String?;
+    final isMockData = (event.data['is_mock_data'] as bool?) ?? false;
     final tags =
         (event.data['tags'] as List?)?.whereType<String>().toList() ?? const [];
     final learningDate = _parseDateTime(event.data['learning_date']);
@@ -246,6 +253,7 @@ class SyncService {
               learningDate: learningDate ?? DateTime.now(),
               createdAt: Value(createdAt),
               updatedAt: Value(updatedAt ?? createdAt),
+              isMockData: Value(isMockData),
             ),
           );
 
@@ -267,6 +275,7 @@ class SyncService {
         tags: Value(jsonEncode(tags)),
         learningDate: Value(learningDate ?? DateTime.now()),
         updatedAt: Value(updatedAt ?? DateTime.now()),
+        isMockData: Value(isMockData),
       ),
     );
 
@@ -317,6 +326,7 @@ class SyncService {
     final scheduledDate =
         _parseDateTime(event.data['scheduled_date']) ?? DateTime.now();
     final status = (event.data['status'] as String?) ?? 'pending';
+    final isMockData = (event.data['is_mock_data'] as bool?) ?? false;
     final completedAt = _parseDateTime(event.data['completed_at']);
     final skippedAt = _parseDateTime(event.data['skipped_at']);
     final createdAt =
@@ -337,6 +347,7 @@ class SyncService {
               skippedAt: Value(skippedAt),
               createdAt: Value(createdAt),
               updatedAt: Value(updatedAt ?? createdAt),
+              isMockData: Value(isMockData),
             ),
           );
 
@@ -360,6 +371,7 @@ class SyncService {
         completedAt: Value(completedAt),
         skippedAt: Value(skippedAt),
         updatedAt: Value(updatedAt ?? DateTime.now()),
+        isMockData: Value(isMockData),
       ),
     );
 
@@ -681,11 +693,11 @@ class SyncService {
     return null;
   }
 
-  Future<void> _snapshotLearningItems() async {
+  Future<void> _snapshotLearningItems({required bool includeMockData}) async {
     final rows = await db.select(db.learningItems).get();
     for (final row in rows) {
-      // v3.1：Mock 数据不参与同步。
-      if (row.isMockData) continue;
+      // v3.1：Mock 数据默认不参与同步（可在调试开关中允许）。
+      if (row.isMockData && !includeMockData) continue;
 
       final mapping = await syncEntityMappingDao.getByLocalEntityId(
         entityType: entityLearningItem,
@@ -713,6 +725,8 @@ class SyncService {
         'learning_date': row.learningDate.toIso8601String(),
         'created_at': row.createdAt.toIso8601String(),
         'updated_at': (row.updatedAt ?? row.createdAt).toIso8601String(),
+        // 调试字段：用于保持模拟数据在跨设备同步后仍可一键清理。
+        'is_mock_data': row.isMockData,
       };
 
       await syncLogDao.insertLog(
@@ -729,11 +743,11 @@ class SyncService {
     }
   }
 
-  Future<void> _snapshotReviewTasks() async {
+  Future<void> _snapshotReviewTasks({required bool includeMockData}) async {
     final rows = await db.select(db.reviewTasks).get();
     for (final row in rows) {
-      // v3.1：Mock 数据不参与同步。
-      if (row.isMockData) continue;
+      // v3.1：Mock 数据默认不参与同步（可在调试开关中允许）。
+      if (row.isMockData && !includeMockData) continue;
 
       final mapping = await syncEntityMappingDao.getByLocalEntityId(
         entityType: entityReviewTask,
@@ -770,6 +784,8 @@ class SyncService {
         'skipped_at': row.skippedAt?.toIso8601String(),
         'created_at': row.createdAt.toIso8601String(),
         'updated_at': updatedAt.toIso8601String(),
+        // 调试字段：用于保持模拟数据在跨设备同步后仍可一键清理。
+        'is_mock_data': row.isMockData,
       };
 
       await syncLogDao.insertLog(
