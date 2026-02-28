@@ -83,4 +83,21 @@ void main() {
     final k2 = await service.getOrCreateSettingsKeyBase64();
     expect(k2, k1);
   });
+
+  test('readString/writeString/delete 在插件不可用时会使用内存兜底', () async {
+    // 说明：通过让 MethodChannel 全部抛异常来模拟“插件未注册/不可用”的测试环境。
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(channel, (call) async {
+          throw PlatformException(code: 'no_plugin');
+        });
+
+    final service = SecureStorageService();
+    const key = 'kv_key';
+
+    await service.writeString(key, 'v1');
+    expect(await service.readString(key), 'v1');
+
+    await service.delete(key);
+    expect(await service.readString(key), null);
+  });
 }
