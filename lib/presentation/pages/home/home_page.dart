@@ -1163,7 +1163,13 @@ class _TaskCard extends StatelessWidget {
               ),
             ),
             if (statusTag != null)
-              Positioned(right: 12, top: 12, child: statusTag),
+              // 关键布局：已完成/已跳过时右侧会出现“撤销”按钮（IconButton），
+              // 若状态标签仍贴右上角会与按钮区域重叠；因此向左预留一个按钮宽度（48）+ 边距（12）。
+              Positioned(
+                right: selectionMode ? 12 : 60,
+                top: 12,
+                child: statusTag,
+              ),
             ],
           ),
         ),
