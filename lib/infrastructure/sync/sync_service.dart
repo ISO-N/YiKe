@@ -138,9 +138,20 @@ class SyncService {
   Future<SyncExchangeResponse> handleExchangeRequest(
     SyncExchangeRequest request, {
     required bool isMaster,
+    required bool includeMockData,
   }) async {
     await persistIncomingEvents(request.events);
     await applyIncomingEvents(request.events, isMaster: isMaster);
+
+    // 关键逻辑：当对端首次同步（sinceMs=0）时，需要确保本端“快照日志”已生成。
+    //
+    // 背景：此前仅在“发起同步的一方”调用 ensureLocalSnapshotLogs，导致：
+    // - A 点“立即同步”时，B 作为响应方不会返回自己的存量数据（sync_logs 为空）
+    // - 体验上就像“立即同步是单向的”
+    // 因此这里在首次交换时做一次兜底生成，保证一轮 exchange 即可实现双向同步。
+    if (request.sinceMs == 0) {
+      await ensureLocalSnapshotLogs(includeMockData: includeMockData);
+    }
 
     final outgoing = await buildOutgoingEventsSince(
       request.sinceMs,
