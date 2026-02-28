@@ -132,6 +132,9 @@ class _StatusCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final onlineCount = state.connectedDevices.where((e) => e.isOnline).length;
+    final pairedCount = state.connectedDevices.length;
+
     final (icon, label, color) = switch (state.state) {
       SyncState.disconnected => (Icons.cloud_off, '未配对', Colors.grey),
       SyncState.connecting => (Icons.sync, '连接中', Colors.blue),
@@ -140,6 +143,14 @@ class _StatusCard extends StatelessWidget {
       SyncState.synced => (Icons.check_circle, '同步完成', Colors.green),
       SyncState.error => (Icons.error_outline, '同步失败', Colors.red),
     };
+
+    final statusText =
+        (state.state == SyncState.connected ||
+                state.state == SyncState.synced ||
+                state.state == SyncState.syncing) &&
+            pairedCount > 0
+        ? '$label（在线 $onlineCount/$pairedCount）'
+        : label;
 
     return GlassCard(
       child: Padding(
@@ -154,7 +165,7 @@ class _StatusCard extends StatelessWidget {
                 children: [
                   Text('同步状态', style: AppTypography.h2(context)),
                   const SizedBox(height: AppSpacing.xs),
-                  Text(label, style: AppTypography.bodySecondary(context)),
+                  Text(statusText, style: AppTypography.bodySecondary(context)),
                 ],
               ),
             ),
@@ -165,7 +176,7 @@ class _StatusCard extends StatelessWidget {
                 borderRadius: BorderRadius.circular(999),
                 border: Border.all(color: color.withAlpha(80)),
               ),
-              child: Text(label, style: TextStyle(color: color)),
+              child: Text(statusText, style: TextStyle(color: color)),
             ),
           ],
         ),
@@ -334,6 +345,8 @@ class _ConnectedDevicesCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final controller = ref.read(syncControllerProvider.notifier);
+    final onlineCount = state.connectedDevices.where((e) => e.isOnline).length;
+    final pairedCount = state.connectedDevices.length;
 
     return GlassCard(
       child: Padding(
@@ -344,7 +357,9 @@ class _ConnectedDevicesCard extends ConsumerWidget {
             Text('已配对的设备', style: AppTypography.h2(context)),
             const SizedBox(height: AppSpacing.sm),
             Text(
-              state.connectedDevices.isEmpty ? '暂无已配对设备' : '可断开设备或查看最近同步时间。',
+              state.connectedDevices.isEmpty
+                  ? '暂无已配对设备'
+                  : '在线 $onlineCount/$pairedCount · 可断开设备或查看最近同步时间。',
               style: AppTypography.bodySecondary(context),
             ),
             const SizedBox(height: AppSpacing.md),
@@ -357,12 +372,17 @@ class _ConnectedDevicesCard extends ConsumerWidget {
                     : DateTime.fromMillisecondsSinceEpoch(
                         d.lastSyncMs!,
                       ).toLocal().toString().split('.').first;
+                final onlineText = d.isOnline ? '在线' : '离线';
+                final onlineColor = d.isOnline ? Colors.green : Colors.grey;
                 return ListTile(
                   contentPadding: EdgeInsets.zero,
-                  leading: Icon(d.isMaster ? Icons.hub : Icons.devices),
+                  leading: Icon(
+                    d.isMaster ? Icons.hub : Icons.devices,
+                    color: onlineColor,
+                  ),
                   title: Text(d.deviceName),
                   subtitle: Text(
-                    '${d.deviceType} · ${d.ipAddress ?? '-'} · $lastSyncText',
+                    '$onlineText · ${d.deviceType} · ${d.ipAddress ?? '-'} · $lastSyncText',
                   ),
                   trailing: TextButton(
                     onPressed: () => controller.disconnectDevice(d.deviceId),
