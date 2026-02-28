@@ -15,6 +15,7 @@ import 'di/injection.dart';
 import 'infrastructure/desktop/tray_service.dart';
 import 'infrastructure/notification/background_task_service.dart';
 import 'infrastructure/notification/notification_service.dart';
+import 'infrastructure/storage/backup_storage.dart';
 import 'infrastructure/widget/widget_service.dart';
 
 Future<void> main() async {
@@ -29,6 +30,9 @@ Future<void> main() async {
   // 初始化通知与后台任务（v1.0 MVP：允许 ±30 分钟误差）。
   await NotificationService.instance.initialize();
   await BackgroundTaskService.initialize();
+
+  // v1.5：备份恢复 - 清理上次中断遗留的临时文件（*.tmp），避免备份历史出现半成品。
+  await const BackupStorage().cleanupTempFiles();
 
   // 初始化小组件通道（Android/iOS 小组件数据共享）。
   await WidgetService.initialize();
