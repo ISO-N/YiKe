@@ -51,6 +51,8 @@ class ConnectedDevice {
     required this.ipAddress,
     required this.isMaster,
     required this.lastSyncMs,
+    required this.isOnline,
+    required this.lastSeenAtMs,
   });
 
   final String deviceId;
@@ -59,6 +61,12 @@ class ConnectedDevice {
   final String? ipAddress;
   final bool isMaster;
   final int? lastSyncMs;
+
+  /// 是否在线（基于 UDP 发现/HTTP ping 的综合判定）。
+  final bool isOnline;
+
+  /// 最近一次“在线可见”的时间戳（毫秒，来自发现或 ping）。
+  final int? lastSeenAtMs;
 }
 
 /// 主机侧待处理配对请求。
@@ -202,11 +210,22 @@ class SyncController extends StateNotifier<SyncUiState> {
   StreamSubscription<List<DiscoveredDevice>>? _discoverySub;
   StreamSubscription<List<SyncDevice>>? _devicesSub;
   Timer? _autoSyncTimer;
+  Timer? _presenceTimer;
   bool _initialized = false;
   bool _syncing = false;
 
   final TransferService _transfer = TransferService();
   final Map<String, PendingPairing> _pendingBySessionId = {};
+
+  // 说明：在线状态为“内存态”，不持久化到数据库。
+  // - 设备是否在线会频繁变动，不适合写库；
+  // - UI 需要的是近实时展示，因此放在控制器内存里即可。
+  List<SyncDevice> _pairedRows = const [];
+  final Map<String, int> _lastSeenByDeviceId = {};
+  final Map<String, int> _lastPingOkByDeviceId = {};
+
+  /// 在线判定 TTL：超过该时间未发现/未 ping 成功即视为离线。
+  static const Duration _onlineTtl = Duration(seconds: 12);
 
   static const String _prefIsMaster = 'sync_is_master';
   static const String _prefAutoSyncEnabled = 'sync_auto_sync_enabled';
@@ -236,31 +255,28 @@ class SyncController extends StateNotifier<SyncUiState> {
     await _discovery!.start();
     _discoverySub = _discovery!.devicesStream.listen((list) {
       state = state.copyWith(discoveredDevices: list);
+
+      // 将“发现到的设备”写入在线缓存，并尽量更新已配对设备的 IP（方便后续 ping/同步）。
+      final now = DateTime.now().millisecondsSinceEpoch;
+      for (final d in list) {
+        _lastSeenByDeviceId[d.deviceId] = d.lastSeenAtMs;
+      }
+      _refreshOnlineState(nowMs: now, allowDbIpUpdate: true);
     });
 
     // 监听已配对设备列表（来自数据库）。
     final syncDeviceDao = _ref.read(syncDeviceDaoProvider);
     _devicesSub = syncDeviceDao.watchAll().listen((List<SyncDevice> rows) {
-      final devices = rows
-          .map(
-            (d) => ConnectedDevice(
-              deviceId: d.deviceId,
-              deviceName: d.deviceName,
-              deviceType: d.deviceType,
-              ipAddress: d.ipAddress,
-              isMaster: d.isMaster,
-              lastSyncMs: d.lastSyncMs,
-            ),
-          )
-          .toList();
+      _pairedRows = rows;
 
-      final connected = devices.isNotEmpty
+      final connected = rows.isNotEmpty
           ? SyncState.connected
           : SyncState.disconnected;
       state = state.copyWith(
         state: state.state == SyncState.syncing ? state.state : connected,
-        connectedDevices: devices,
       );
+
+      _refreshOnlineState(nowMs: DateTime.now().millisecondsSinceEpoch);
       _refreshTrayStatus();
     });
 
@@ -272,6 +288,7 @@ class SyncController extends StateNotifier<SyncUiState> {
     await _transfer.startServer();
 
     _maybeStartAutoSyncTimer();
+    _maybeStartPresenceTimer();
   }
 
   /// 刷新发现（主动广播一次）。
@@ -675,6 +692,91 @@ class SyncController extends StateNotifier<SyncUiState> {
     );
   }
 
+  void _maybeStartPresenceTimer() {
+    _presenceTimer?.cancel();
+    _presenceTimer = null;
+
+    // 在线探测节奏：5 秒一次，与发现广播周期保持一致。
+    _presenceTimer = Timer.periodic(const Duration(seconds: 5), (_) async {
+      final now = DateTime.now().millisecondsSinceEpoch;
+      await _probePairedDevicesOnline(nowMs: now);
+      _refreshOnlineState(nowMs: now);
+    });
+  }
+
+  Future<void> _probePairedDevicesOnline({required int nowMs}) async {
+    // 说明：仅对“已配对且有 IP”的设备做 ping，避免无谓的网络请求。
+    final targets = _pairedRows
+        .where((d) => d.ipAddress != null && d.ipAddress!.trim().isNotEmpty)
+        .toList();
+    if (targets.isEmpty) return;
+
+    // 并发 ping（每个请求都有超时），避免串行阻塞 UI 线程。
+    await Future.wait(
+      targets.map((d) async {
+        final ip = d.ipAddress!.trim();
+        final ok = await _transfer.ping(ipAddress: ip);
+        if (ok) {
+          _lastPingOkByDeviceId[d.deviceId] = nowMs;
+        }
+      }),
+    );
+  }
+
+  void _refreshOnlineState({required int nowMs, bool allowDbIpUpdate = false}) {
+    // 在线判定：最近被发现(UDP) 或 最近 ping 成功(HTTP) 之一满足 TTL 即在线。
+    bool isOnlineByDeviceId(String deviceId) {
+      final lastSeen = _lastSeenByDeviceId[deviceId];
+      final lastPing = _lastPingOkByDeviceId[deviceId];
+      final seenOnline =
+          lastSeen != null && (nowMs - lastSeen) <= _onlineTtl.inMilliseconds;
+      final pingOnline =
+          lastPing != null && (nowMs - lastPing) <= _onlineTtl.inMilliseconds;
+      return seenOnline || pingOnline;
+    }
+
+    int? lastOnlineAtMs(String deviceId) {
+      final lastSeen = _lastSeenByDeviceId[deviceId];
+      final lastPing = _lastPingOkByDeviceId[deviceId];
+      if (lastSeen == null) return lastPing;
+      if (lastPing == null) return lastSeen;
+      return lastSeen > lastPing ? lastSeen : lastPing;
+    }
+
+    // 尝试用发现到的 IP 覆盖数据库 IP（仅对已配对设备，且允许写库时执行）。
+    if (allowDbIpUpdate) {
+      final dao = _ref.read(syncDeviceDaoProvider);
+      for (final d in state.discoveredDevices) {
+        final paired = _pairedRows
+            .where((p) => p.deviceId == d.deviceId)
+            .toList();
+        if (paired.isEmpty) continue;
+        final existingIp = paired.first.ipAddress?.trim();
+        if (existingIp == d.ipAddress.trim()) continue;
+        // 异步写库：不等待返回，避免阻塞发现刷新。
+        // ignore: discarded_futures
+        dao.updateIp(d.deviceId, d.ipAddress.trim());
+      }
+    }
+
+    final devices = _pairedRows
+        .map(
+          (d) => ConnectedDevice(
+            deviceId: d.deviceId,
+            deviceName: d.deviceName,
+            deviceType: d.deviceType,
+            ipAddress: d.ipAddress,
+            isMaster: d.isMaster,
+            lastSyncMs: d.lastSyncMs,
+            isOnline: isOnlineByDeviceId(d.deviceId),
+            lastSeenAtMs: lastOnlineAtMs(d.deviceId),
+          ),
+        )
+        .toList();
+
+    state = state.copyWith(connectedDevices: devices);
+  }
+
   Future<void> _loadPrefs() async {
     final crypto = SettingsCrypto(
       secureStorageService: _ref.read(secureStorageServiceProvider),
@@ -801,6 +903,7 @@ class SyncController extends StateNotifier<SyncUiState> {
   @override
   Future<void> dispose() async {
     _autoSyncTimer?.cancel();
+    _presenceTimer?.cancel();
     await _discoverySub?.cancel();
     await _devicesSub?.cancel();
     await _discovery?.dispose();
