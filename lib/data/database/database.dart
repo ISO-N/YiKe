@@ -176,6 +176,7 @@ class AppDatabase extends _$AppDatabase {
         }
 
         // Drift 会通过重建表的方式应用约束差异（移除 CHECK 约束）。
+        // ignore: experimental_member_use
         await migrator.alterTable(TableMigration(reviewTasks));
 
         await customStatement(
