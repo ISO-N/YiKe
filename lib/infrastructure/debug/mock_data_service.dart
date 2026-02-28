@@ -8,6 +8,7 @@ import 'dart:math';
 import 'package:drift/drift.dart';
 import 'package:flutter/foundation.dart';
 
+import '../../core/utils/ebbinghaus_utils.dart';
 import '../../data/database/daos/learning_item_dao.dart';
 import '../../data/database/daos/review_task_dao.dart';
 import '../../data/database/database.dart';
@@ -70,20 +71,26 @@ class MockDataGenerateResult {
 /// - 仅 Debug 模式下可用（release 下调用会抛出异常）
 /// - 生成的数据统一标记 isMockData=true，便于隔离同步/导出与一键清理
 class MockDataService {
+  /// 构造函数。
+  ///
+  /// 参数：
+  /// - [db] 数据库实例
+  /// - [learningItemDao] 学习内容 DAO
+  /// - [reviewTaskDao] 复习任务 DAO
+  /// - [random] 随机数生成器（可选；用于测试注入固定种子）
   MockDataService({
     required this.db,
     required LearningItemDao learningItemDao,
     required ReviewTaskDao reviewTaskDao,
+    Random? random,
   }) : _learningItemDao = learningItemDao,
        _reviewTaskDao = reviewTaskDao,
-       _random = Random();
+       _random = random ?? Random();
 
   final AppDatabase db;
   final LearningItemDao _learningItemDao;
   final ReviewTaskDao _reviewTaskDao;
   final Random _random;
-
-  static const _intervalByRound = <int, int>{1: 1, 2: 2, 3: 4, 4: 7, 5: 15};
 
   /// 生成模拟数据（学习内容 + 复习任务）。
   ///
@@ -91,13 +98,20 @@ class MockDataService {
   /// 异常：
   /// - 非 Debug 模式下调用会抛出 [StateError]
   /// - 参数不合法时抛出 [ArgumentError]
-  Future<MockDataGenerateResult> generate(MockDataConfig config) async {
+  ///
+  /// 额外说明：
+  /// - v1.4 规格增强后，默认复习间隔扩展至 10 轮（见 [EbbinghausUtils]）
+  /// - 生成器会以“学习日期 + 轮次间隔”的口径推导 scheduledDate，避免生成不符合业务语义的数据
+  Future<MockDataGenerateResult> generate(
+    MockDataConfig config, {
+    DateTime? nowOverride,
+  }) async {
     if (!kDebugMode) {
       throw StateError('MockDataService 仅允许在 Debug 模式下使用');
     }
     _validateConfig(config);
 
-    final now = DateTime.now();
+    final now = nowOverride ?? DateTime.now();
     final todayStart = DateTime(now.year, now.month, now.day);
 
     // 复习日期范围：最近 N 天（包含今天）。
@@ -106,14 +120,38 @@ class MockDataService {
     );
     final scheduledEndExclusive = todayStart.add(const Duration(days: 1));
 
-    // 为了让 scheduledDate = learningDate + interval 仍能落在范围内，
-    // learningDate 的随机范围需要向前扩展 maxInterval（15 天）。
-    final earliestLearningDay = scheduledStart.subtract(
-      const Duration(days: 15),
-    );
-    final latestLearningDay = scheduledEndExclusive.subtract(
+    final intervalsDays = EbbinghausUtils.defaultIntervalsDays;
+    final maxRound = intervalsDays.length;
+
+    // 生成学习日期时优先覆盖前 5 轮（兼容 v1.0 的“常用间隔”），以提升“最近 N 天”范围内可生成任务的密度。
+    // 当 daysRange 较小时，无法保证所有前 5 轮都能落在范围内，此时会退化为更宽的学习日期取值范围。
+    final coverageRounds = min(5, maxRound);
+    final coverageMaxIntervalDays = intervalsDays[coverageRounds - 1];
+
+    // 优先策略：让 round=1..coverageRounds 尽可能落在“最近 N 天（包含今天）”范围内：
+    // - 对 round=1：learningDay >= scheduledStart - 1
+    // - 对 round=coverageMax：learningDay <= todayStart - coverageMaxIntervalDays
+    final preferredEarliestLearningDay = scheduledStart.subtract(
       const Duration(days: 1),
     );
+    final preferredLatestLearningDay = todayStart.subtract(
+      Duration(days: coverageMaxIntervalDays),
+    );
+
+    // 兜底策略：当 daysRange 太小导致 preferred 区间为空时，放宽 learningDay 范围，但仍禁止 learningDay=今天（避免生成“未来任务”）。
+    final fallbackEarliestLearningDay = scheduledStart.subtract(
+      Duration(days: coverageMaxIntervalDays),
+    );
+    final fallbackLatestLearningDay = todayStart.subtract(
+      const Duration(days: 1),
+    );
+
+    final (
+      earliestLearningDay,
+      latestLearningDay,
+    ) = !preferredEarliestLearningDay.isAfter(preferredLatestLearningDay)
+        ? (preferredEarliestLearningDay, preferredLatestLearningDay)
+        : (fallbackEarliestLearningDay, fallbackLatestLearningDay);
 
     final items = <({int id, DateTime learningDay})>[];
 
@@ -142,63 +180,47 @@ class MockDataService {
       }
 
       // 2) 插入复习任务（批量插入提升性能）。
-      final companions = <ReviewTasksCompanion>[];
-      final maxAttempts = config.taskCount * 25;
+      //
+      // 关键规则：
+      // - scheduledDate 必须由 learningDay + intervalDays 推导，确保数据满足“学习日期 -> 复习计划”的语义
+      // - 同一条学习内容的同一轮次最多生成 1 条任务（避免下游按轮次聚合时出现歧义）
+      final candidates = <({int itemId, int round, DateTime scheduledDay})>[];
+      for (final item in items) {
+        for (var round = 1; round <= maxRound; round++) {
+          final intervalDays = intervalsDays[round - 1];
+          final scheduledDay = DateTime(
+            item.learningDay.year,
+            item.learningDay.month,
+            item.learningDay.day,
+          ).add(Duration(days: intervalDays));
 
-      for (
-        var attempt = 0;
-        attempt < maxAttempts && companions.length < config.taskCount;
-        attempt++
-      ) {
-        final item = items[_random.nextInt(items.length)];
-        final round = _pickRoundByWeight();
-        final intervalDays = _intervalByRound[round]!;
-
-        // scheduledDate 由 learningDay + interval 推导，保证“轮次-间隔”语义一致。
-        final scheduledDay = DateTime(
-          item.learningDay.year,
-          item.learningDay.month,
-          item.learningDay.day,
-        ).add(Duration(days: intervalDays));
-
-        // 只保留落在“最近 N 天”范围内的任务。
-        if (scheduledDay.isBefore(scheduledStart) ||
-            !scheduledDay.isBefore(scheduledEndExclusive)) {
-          continue;
+          if (scheduledDay.isBefore(scheduledStart) ||
+              !scheduledDay.isBefore(scheduledEndExclusive)) {
+            continue;
+          }
+          candidates.add((
+            itemId: item.id,
+            round: round,
+            scheduledDay: scheduledDay,
+          ));
         }
+      }
 
-        final scheduledAt = _withRandomTime(scheduledDay);
-        final status = _pickStatus(scheduledAt: scheduledAt, now: now);
-
-        final (completedAt, skippedAt) = _statusTimestamps(
-          status: status,
-          scheduledAt: scheduledAt,
-        );
-
-        companions.add(
-          ReviewTasksCompanion.insert(
-            learningItemId: item.id,
-            reviewRound: round,
-            scheduledDate: scheduledAt,
-            status: Value(status),
-            completedAt: Value(completedAt),
-            skippedAt: Value(skippedAt),
-            createdAt: Value(now),
-            updatedAt: const Value.absent(),
-            isMockData: const Value(true),
-          ),
+      if (candidates.length < config.taskCount) {
+        throw StateError(
+          '可生成的任务数量不足：在最近 ${config.daysRange} 天范围内，最多可生成 ${candidates.length} 条任务；'
+          '当前配置要求生成 ${config.taskCount} 条。请尝试：增加学习内容数量、扩大日期范围，或减少任务数量。',
         );
       }
 
-      // 兜底：若由于随机分布导致数量不足，则用“范围内随机日期”补齐（仍保持 round 范围合法）。
-      while (companions.length < config.taskCount) {
-        final item = items[_random.nextInt(items.length)];
-        final round = _pickRoundByWeight();
-        final scheduledDay = _randomDay(
-          start: scheduledStart,
-          endInclusive: scheduledEndExclusive.subtract(const Duration(days: 1)),
-        );
-        final scheduledAt = _withRandomTime(scheduledDay);
+      candidates.shuffle(_random);
+      final selected = candidates
+          .take(config.taskCount)
+          .toList(growable: false);
+
+      final companions = <ReviewTasksCompanion>[];
+      for (final c in selected) {
+        final scheduledAt = _withRandomTime(c.scheduledDay);
         final status = _pickStatus(scheduledAt: scheduledAt, now: now);
         final (completedAt, skippedAt) = _statusTimestamps(
           status: status,
@@ -207,8 +229,8 @@ class MockDataService {
 
         companions.add(
           ReviewTasksCompanion.insert(
-            learningItemId: item.id,
-            reviewRound: round,
+            learningItemId: c.itemId,
+            reviewRound: c.round,
             scheduledDate: scheduledAt,
             status: Value(status),
             completedAt: Value(completedAt),
@@ -281,16 +303,6 @@ class MockDataService {
     if (!allowed.contains(config.daysRange)) {
       throw ArgumentError('复习日期范围仅支持 7/14/30/60/90 天');
     }
-  }
-
-  int _pickRoundByWeight() {
-    // 权重：1天20%，2天25%，4天25%，7天15%，15天15%。
-    final r = _random.nextInt(100);
-    if (r < 20) return 1;
-    if (r < 45) return 2;
-    if (r < 70) return 3;
-    if (r < 85) return 4;
-    return 5;
   }
 
   String _pickStatus({required DateTime scheduledAt, required DateTime now}) {
