@@ -104,12 +104,18 @@ class LearningTopicDao {
   Future<List<TopicOverviewModel>> getTopicOverviews() async {
     final topic = db.learningTopics;
     final rel = db.topicItemRelations;
+    final item = db.learningItems;
     final task = db.reviewTasks;
 
     // left join：允许空主题（无关联内容）也能显示。
     final query = db.select(topic).join([
       leftOuterJoin(rel, rel.topicId.equalsExp(topic.id)),
-      leftOuterJoin(task, task.learningItemId.equalsExp(rel.learningItemId)),
+      // 规格增强：默认过滤已停用学习内容（is_deleted=1）。
+      leftOuterJoin(
+        item,
+        item.id.equalsExp(rel.learningItemId) & item.isDeleted.equals(false),
+      ),
+      leftOuterJoin(task, task.learningItemId.equalsExp(item.id)),
     ]);
 
     final rows = await query.get();
@@ -120,7 +126,8 @@ class LearningTopicDao {
       final agg = map.putIfAbsent(t.id, () => _TopicAgg(topic: t));
 
       final relRow = row.readTableOrNull(rel);
-      if (relRow != null) {
+      final itemRow = row.readTableOrNull(item);
+      if (relRow != null && itemRow != null) {
         agg.itemIds.add(relRow.learningItemId);
       }
 

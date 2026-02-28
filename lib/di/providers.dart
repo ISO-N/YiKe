@@ -45,6 +45,11 @@ import '../domain/usecases/manage_topic_usecase.dart';
 import '../domain/usecases/ocr_recognition_usecase.dart';
 import '../domain/usecases/skip_review_task_usecase.dart';
 import '../domain/usecases/undo_task_status_usecase.dart';
+import '../domain/usecases/update_learning_item_note_usecase.dart';
+import '../domain/usecases/deactivate_learning_item_usecase.dart';
+import '../domain/usecases/get_review_plan_usecase.dart';
+import '../domain/usecases/adjust_review_date_usecase.dart';
+import '../domain/usecases/add_review_round_usecase.dart';
 import '../infrastructure/ocr/ocr_service.dart' as infra_ocr;
 import '../infrastructure/speech/speech_service.dart';
 
@@ -232,6 +237,38 @@ final skipReviewTaskUseCaseProvider = Provider<SkipReviewTaskUseCase>((ref) {
 
 final undoTaskStatusUseCaseProvider = Provider<UndoTaskStatusUseCase>((ref) {
   return UndoTaskStatusUseCase(
+    reviewTaskRepository: ref.read(reviewTaskRepositoryProvider),
+  );
+});
+
+final updateLearningItemNoteUseCaseProvider =
+    Provider<UpdateLearningItemNoteUseCase>((ref) {
+      return UpdateLearningItemNoteUseCase(
+        learningItemRepository: ref.read(learningItemRepositoryProvider),
+      );
+    });
+
+final deactivateLearningItemUseCaseProvider =
+    Provider<DeactivateLearningItemUseCase>((ref) {
+      return DeactivateLearningItemUseCase(
+        learningItemRepository: ref.read(learningItemRepositoryProvider),
+      );
+    });
+
+final getReviewPlanUseCaseProvider = Provider<GetReviewPlanUseCase>((ref) {
+  return GetReviewPlanUseCase(
+    reviewTaskRepository: ref.read(reviewTaskRepositoryProvider),
+  );
+});
+
+final adjustReviewDateUseCaseProvider = Provider<AdjustReviewDateUseCase>((ref) {
+  return AdjustReviewDateUseCase(
+    reviewTaskRepository: ref.read(reviewTaskRepositoryProvider),
+  );
+});
+
+final addReviewRoundUseCaseProvider = Provider<AddReviewRoundUseCase>((ref) {
+  return AddReviewRoundUseCase(
     reviewTaskRepository: ref.read(reviewTaskRepositoryProvider),
   );
 });

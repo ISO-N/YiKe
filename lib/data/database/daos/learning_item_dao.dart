@@ -38,6 +38,40 @@ class LearningItemDao {
     return db.update(db.learningItems).replace(item);
   }
 
+  /// 更新学习内容备注（仅更新 note 字段）。
+  ///
+  /// 返回值：更新行数。
+  /// 异常：数据库更新失败时可能抛出异常。
+  Future<int> updateLearningItemNote(int id, String? note) {
+    final now = DateTime.now();
+    return (db.update(db.learningItems)..where((t) => t.id.equals(id))).write(
+      LearningItemsCompanion(
+        note: Value(note),
+        updatedAt: Value(now),
+      ),
+    );
+  }
+
+  /// 停用学习内容（软删除）。
+  ///
+  /// 规则：
+  /// - is_deleted = 1
+  /// - deleted_at = now
+  /// - updated_at = now
+  ///
+  /// 返回值：更新行数。
+  /// 异常：数据库更新失败时可能抛出异常。
+  Future<int> deactivateLearningItem(int id) {
+    final now = DateTime.now();
+    return (db.update(db.learningItems)..where((t) => t.id.equals(id))).write(
+      LearningItemsCompanion(
+        isDeleted: const Value(true),
+        deletedAt: Value(now),
+        updatedAt: Value(now),
+      ),
+    );
+  }
+
   /// 删除学习内容（级联删除关联复习任务）。
   ///
   /// 返回值：删除行数。
@@ -63,7 +97,8 @@ class LearningItemDao {
   Future<List<LearningItem>> getAllLearningItems() {
     return (db.select(
       db.learningItems,
-    )..orderBy([(t) => OrderingTerm.desc(t.createdAt)])).get();
+    )..where((t) => t.isDeleted.equals(false))
+      ..orderBy([(t) => OrderingTerm.desc(t.createdAt)])).get();
   }
 
   /// F14.1：按关键词搜索学习内容（title/note）。
@@ -91,7 +126,9 @@ class LearningItemDao {
     final query = db.select(db.learningItems)
       ..where(
         (t) =>
-            t.title.like(pattern) | (t.note.isNotNull() & t.note.like(pattern)),
+            t.isDeleted.equals(false) &
+            (t.title.like(pattern) |
+                (t.note.isNotNull() & t.note.like(pattern))),
       )
       ..orderBy([(t) => OrderingTerm.desc(t.createdAt)])
       ..limit(capped);
@@ -122,6 +159,7 @@ class LearningItemDao {
     final start = DateTime(date.year, date.month, date.day);
     final end = start.add(const Duration(days: 1));
     return (db.select(db.learningItems)
+          ..where((t) => t.isDeleted.equals(false))
           ..where((t) => t.learningDate.isBetweenValues(start, end))
           ..orderBy([(t) => OrderingTerm.desc(t.createdAt)]))
         .get();
@@ -137,6 +175,7 @@ class LearningItemDao {
     // v1.0 MVP：JSON 文本匹配，避免引入复杂的 JSON1 SQL 依赖。
     final pattern = '%"${tag.trim()}"%';
     return (db.select(db.learningItems)
+          ..where((t) => t.isDeleted.equals(false))
           ..where((t) => t.tags.like(pattern))
           ..orderBy([(t) => OrderingTerm.desc(t.createdAt)]))
         .get();
@@ -149,6 +188,7 @@ class LearningItemDao {
   Future<List<String>> getAllTags() async {
     final query = db.selectOnly(db.learningItems)
       ..addColumns([db.learningItems.tags]);
+    query.where(db.learningItems.isDeleted.equals(false));
     final rows = await query.get();
     final set = <String>{};
     for (final row in rows) {
@@ -168,6 +208,7 @@ class LearningItemDao {
   Future<Map<String, int>> getTagDistribution() async {
     final query = db.selectOnly(db.learningItems)
       ..addColumns([db.learningItems.tags]);
+    query.where(db.learningItems.isDeleted.equals(false));
     final rows = await query.get();
     final map = <String, int>{};
     for (final row in rows) {

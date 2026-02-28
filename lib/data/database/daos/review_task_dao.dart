@@ -64,7 +64,9 @@ class ReviewTaskDao {
     String status, {
     DateTime? completedAt,
     DateTime? skippedAt,
-  }) {
+  }) async {
+    // 规格增强：已停用学习内容禁止任何任务状态变更。
+    await _assertLearningItemActiveByTaskIds([id]);
     final now = DateTime.now();
     return (db.update(db.reviewTasks)..where((t) => t.id.equals(id))).write(
       ReviewTasksCompanion(
@@ -88,8 +90,10 @@ class ReviewTaskDao {
     List<int> ids,
     String status, {
     DateTime? timestamp,
-  }) {
+  }) async {
     if (ids.isEmpty) return Future.value(0);
+    // 规格增强：已停用学习内容禁止任何任务状态变更。
+    await _assertLearningItemActiveByTaskIds(ids);
 
     final now = DateTime.now();
     final companion = ReviewTasksCompanion(
@@ -146,6 +150,7 @@ class ReviewTaskDao {
         db.select(task).join([
             innerJoin(item, item.id.equalsExp(task.learningItemId)),
           ])
+          ..where(item.isDeleted.equals(false))
           ..where(task.scheduledDate.isBiggerOrEqualValue(start))
           ..where(task.scheduledDate.isSmallerThanValue(end))
           ..orderBy([
@@ -199,6 +204,7 @@ class ReviewTaskDao {
         db.select(task).join([
             innerJoin(item, item.id.equalsExp(task.learningItemId)),
           ])
+          ..where(item.isDeleted.equals(false))
           ..where(task.status.equals('done'))
           ..where(task.completedAt.isBiggerOrEqualValue(start))
           ..where(task.completedAt.isSmallerThanValue(end))
@@ -235,6 +241,7 @@ class ReviewTaskDao {
         db.select(task).join([
             innerJoin(item, item.id.equalsExp(task.learningItemId)),
           ])
+          ..where(item.isDeleted.equals(false))
           ..where(task.status.equals('skipped'))
           ..where(task.skippedAt.isBiggerOrEqualValue(start))
           ..where(task.skippedAt.isSmallerThanValue(end))
@@ -257,7 +264,9 @@ class ReviewTaskDao {
   /// - status 设置为 pending
   /// - completedAt/skippedAt 清空（两者都清空，避免历史脏数据影响口径）
   /// 返回值：更新行数。
-  Future<int> undoTaskStatus(int id) {
+  Future<int> undoTaskStatus(int id) async {
+    // 规格增强：已停用学习内容禁止任何任务状态变更。
+    await _assertLearningItemActiveByTaskIds([id]);
     final now = DateTime.now();
     return (db.update(db.reviewTasks)..where((t) => t.id.equals(id))).write(
       ReviewTasksCompanion(
@@ -274,27 +283,22 @@ class ReviewTaskDao {
   /// 返回值：(all, pending, done, skipped)。
   Future<(int all, int pending, int done, int skipped)>
   getGlobalTaskStatusCounts() async {
-    final allExp = db.reviewTasks.id.count();
-    final pendingExp = db.reviewTasks.id.count(
-      filter: db.reviewTasks.status.equals('pending'),
-    );
-    final doneExp = db.reviewTasks.id.count(
-      filter: db.reviewTasks.status.equals('done'),
-    );
-    final skippedExp = db.reviewTasks.id.count(
-      filter: db.reviewTasks.status.equals('skipped'),
-    );
-
-    final row =
-        await (db.selectOnly(db.reviewTasks)
-              ..addColumns([allExp, pendingExp, doneExp, skippedExp]))
-            .getSingle();
-
+    const sql = '''
+SELECT
+  COUNT(*) AS all_count,
+  SUM(CASE WHEN rt.status='pending' THEN 1 ELSE 0 END) AS pending_count,
+  SUM(CASE WHEN rt.status='done' THEN 1 ELSE 0 END) AS done_count,
+  SUM(CASE WHEN rt.status='skipped' THEN 1 ELSE 0 END) AS skipped_count
+FROM review_tasks rt
+INNER JOIN learning_items li ON li.id = rt.learning_item_id
+WHERE li.is_deleted = 0
+''';
+    final row = await db.customSelect(sql, readsFrom: {db.reviewTasks, db.learningItems}).getSingle();
     return (
-      row.read(allExp) ?? 0,
-      row.read(pendingExp) ?? 0,
-      row.read(doneExp) ?? 0,
-      row.read(skippedExp) ?? 0,
+      row.read<int?>('all_count') ?? 0,
+      row.read<int?>('pending_count') ?? 0,
+      row.read<int?>('done_count') ?? 0,
+      row.read<int?>('skipped_count') ?? 0,
     );
   }
 
@@ -342,7 +346,7 @@ END
     }
 
     final sql = '''
-SELECT * FROM (
+ SELECT * FROM (
   SELECT
     rt.id AS "rt.id",
     rt.learning_item_id AS "rt.learning_item_id",
@@ -358,21 +362,23 @@ SELECT * FROM (
     li.id AS "li.id",
     li.title AS "li.title",
     li.note AS "li.note",
-    li.tags AS "li.tags",
-    li.learning_date AS "li.learning_date",
-    li.created_at AS "li.created_at",
-    li.updated_at AS "li.updated_at",
-    li.is_mock_data AS "li.is_mock_data",
+     li.tags AS "li.tags",
+     li.learning_date AS "li.learning_date",
+     li.created_at AS "li.created_at",
+     li.updated_at AS "li.updated_at",
+     li.is_deleted AS "li.is_deleted",
+     li.deleted_at AS "li.deleted_at",
+     li.is_mock_data AS "li.is_mock_data",
 
-    $occurredSql AS occurred_at
-  FROM review_tasks rt
-  INNER JOIN learning_items li ON li.id = rt.learning_item_id
-  WHERE ${where.toString()}
-) t
-${cursorWhere.toString()}
-ORDER BY t.occurred_at ASC, t."rt.id" ASC
-LIMIT ?
-''';
+     $occurredSql AS occurred_at
+   FROM review_tasks rt
+   INNER JOIN learning_items li ON li.id = rt.learning_item_id
+   WHERE li.is_deleted = 0 AND ${where.toString()}
+ ) t
+ ${cursorWhere.toString()}
+ ORDER BY t.occurred_at ASC, t."rt.id" ASC
+ LIMIT ?
+ ''';
 
     final rows =
         await db.customSelect(
@@ -401,6 +407,76 @@ LIMIT ?
     )..where((t) => t.learningItemId.equals(learningItemId))).get();
   }
 
+  /// 查询学习内容的复习计划（join 学习内容，用于详情 Sheet）。
+  ///
+  /// 说明：
+  /// - 不过滤 is_deleted，详情页需要展示“已停用只读模式”
+  /// - 按 reviewRound 正序返回
+  Future<List<ReviewTaskWithItemModel>> getReviewPlanWithItem(
+    int learningItemId,
+  ) async {
+    final task = db.reviewTasks;
+    final item = db.learningItems;
+    final query =
+        db.select(task).join([
+            innerJoin(item, item.id.equalsExp(task.learningItemId)),
+          ])
+          ..where(item.id.equals(learningItemId))
+          ..orderBy([OrderingTerm.asc(task.reviewRound), OrderingTerm.asc(task.id)]);
+
+    final rows = await query.get();
+    return rows
+        .map(
+          (row) => ReviewTaskWithItemModel(
+            task: row.readTable(task),
+            item: row.readTable(item),
+          ),
+        )
+        .toList();
+  }
+
+  /// 根据 learningItemId + reviewRound 定位唯一复习任务记录。
+  Future<ReviewTask?> getTaskByLearningItemAndRound(
+    int learningItemId,
+    int reviewRound,
+  ) {
+    return (db.select(db.reviewTasks)
+          ..where((t) => t.learningItemId.equals(learningItemId))
+          ..where((t) => t.reviewRound.equals(reviewRound)))
+        .getSingleOrNull();
+  }
+
+  /// 更新指定轮次的 scheduledDate（定位键：learningItemId + reviewRound）。
+  ///
+  /// 返回值：更新行数。
+  Future<int> updateScheduledDateByLearningItemAndRound({
+    required int learningItemId,
+    required int reviewRound,
+    required DateTime scheduledDate,
+  }) {
+    final now = DateTime.now();
+    return (db.update(db.reviewTasks)
+          ..where((t) => t.learningItemId.equals(learningItemId))
+          ..where((t) => t.reviewRound.equals(reviewRound)))
+        .write(
+          ReviewTasksCompanion(
+            scheduledDate: Value(scheduledDate),
+            updatedAt: Value(now),
+          ),
+        );
+  }
+
+  /// 获取指定学习内容当前最大复习轮次（不存在则返回 0）。
+  Future<int> getMaxReviewRound(int learningItemId) async {
+    final exp = db.reviewTasks.reviewRound.max();
+    final row =
+        await (db.selectOnly(db.reviewTasks)
+              ..addColumns([exp])
+              ..where(db.reviewTasks.learningItemId.equals(learningItemId)))
+            .getSingle();
+    return row.read(exp) ?? 0;
+  }
+
   /// 获取指定日期任务统计（completed/total）。
   ///
   /// 说明：total 包含 done/skipped/pending，completed 仅统计 done。
@@ -408,21 +484,25 @@ LIMIT ?
     final start = DateTime(date.year, date.month, date.day);
     final end = start.add(const Duration(days: 1));
 
-    final totalExp = db.reviewTasks.id.count();
-    final completedExp = db.reviewTasks.id.count(
-      filter: db.reviewTasks.status.equals('done'),
+    const sql = '''
+SELECT
+  COUNT(*) AS total_count,
+  SUM(CASE WHEN rt.status='done' THEN 1 ELSE 0 END) AS completed_count
+FROM review_tasks rt
+INNER JOIN learning_items li ON li.id = rt.learning_item_id
+WHERE li.is_deleted = 0
+  AND rt.scheduled_date >= ?
+  AND rt.scheduled_date < ?
+''';
+    final row = await db.customSelect(
+      sql,
+      variables: [Variable<DateTime>(start), Variable<DateTime>(end)],
+      readsFrom: {db.reviewTasks, db.learningItems},
+    ).getSingle();
+    return (
+      row.read<int?>('completed_count') ?? 0,
+      row.read<int?>('total_count') ?? 0,
     );
-
-    final row =
-        await (db.selectOnly(db.reviewTasks)
-              ..addColumns([totalExp, completedExp])
-              ..where(db.reviewTasks.scheduledDate.isBiggerOrEqualValue(start))
-              ..where(db.reviewTasks.scheduledDate.isSmallerThanValue(end)))
-            .getSingle();
-
-    final total = row.read(totalExp) ?? 0;
-    final completed = row.read(completedExp) ?? 0;
-    return (completed, total);
   }
 
   /// F6：获取指定月份每天的任务统计（用于日历圆点标记）。
@@ -439,17 +519,23 @@ LIMIT ?
     final start = DateTime(year, month, 1);
     final end = DateTime(year, month + 1, 1);
 
-    final query = db.selectOnly(db.reviewTasks)
-      ..addColumns([db.reviewTasks.scheduledDate, db.reviewTasks.status])
-      ..where(db.reviewTasks.scheduledDate.isBiggerOrEqualValue(start))
-      ..where(db.reviewTasks.scheduledDate.isSmallerThanValue(end));
-
-    final rows = await query.get();
+    const sql = '''
+SELECT rt.scheduled_date AS scheduled_date, rt.status AS status
+FROM review_tasks rt
+INNER JOIN learning_items li ON li.id = rt.learning_item_id
+WHERE li.is_deleted = 0
+  AND rt.scheduled_date >= ?
+  AND rt.scheduled_date < ?
+''';
+    final rows = await db.customSelect(
+      sql,
+      variables: [Variable<DateTime>(start), Variable<DateTime>(end)],
+      readsFrom: {db.reviewTasks, db.learningItems},
+    ).get();
     final map = <DateTime, _DayStatsAccumulator>{};
     for (final row in rows) {
-      final scheduled = row.read(db.reviewTasks.scheduledDate);
-      if (scheduled == null) continue;
-      final status = row.read(db.reviewTasks.status) ?? 'pending';
+      final scheduled = row.read<DateTime>('scheduled_date');
+      final status = row.read<String?>('status') ?? 'pending';
       final day = YikeDateUtils.atStartOfDay(scheduled);
       final stats = map.putIfAbsent(day, _DayStatsAccumulator.new);
       switch (status) {
@@ -496,6 +582,7 @@ LIMIT ?
         db.select(task).join([
             innerJoin(item, item.id.equalsExp(task.learningItemId)),
           ])
+          ..where(item.isDeleted.equals(false))
           ..where(task.scheduledDate.isBiggerOrEqualValue(start))
           ..where(task.scheduledDate.isSmallerThanValue(end))
           ..orderBy([
@@ -527,28 +614,36 @@ LIMIT ?
     final todayStart = YikeDateUtils.atStartOfDay(now);
     final todayEnd = todayStart.add(const Duration(days: 1));
 
-    // 找到最早的“done/pending”任务日期作为遍历下界，避免无穷回溯。
-    final minDateExp = db.reviewTasks.scheduledDate.min();
-    final minRow =
-        await (db.selectOnly(db.reviewTasks)
-              ..addColumns([minDateExp])
-              ..where(db.reviewTasks.scheduledDate.isSmallerThanValue(todayEnd))
-              ..where(db.reviewTasks.status.isIn(const ['done', 'pending'])))
-            .getSingle();
+    final task = db.reviewTasks;
+    final item = db.learningItems;
 
-    final earliest = minRow.read(minDateExp);
+    // 找到最早的“done/pending”任务日期作为遍历下界，避免无穷回溯。
+    final earliestRow =
+        await (db.select(task).join([
+              innerJoin(item, item.id.equalsExp(task.learningItemId)),
+            ])
+              ..where(item.isDeleted.equals(false))
+              ..where(task.scheduledDate.isSmallerThanValue(todayEnd))
+              ..where(task.status.isIn(const ['done', 'pending']))
+              ..orderBy([OrderingTerm.asc(task.scheduledDate)])
+              ..limit(1))
+            .getSingleOrNull();
+
+    final earliest = earliestRow?.readTable(task).scheduledDate;
     if (earliest == null) return 0;
     final earliestStart = YikeDateUtils.atStartOfDay(earliest);
 
-    // 一次性拉取范围内的 done/pending 任务，再在 Dart 侧按天聚合。
-    final tasks =
-        await (db.select(db.reviewTasks)
-              ..where(
-                (t) => t.scheduledDate.isBiggerOrEqualValue(earliestStart),
-              )
-              ..where((t) => t.scheduledDate.isSmallerThanValue(todayEnd))
-              ..where((t) => t.status.isIn(const ['done', 'pending'])))
+    // 一次性拉取范围内的 done/pending 任务，再在 Dart 侧按天聚合（排除已停用学习内容）。
+    final joined =
+        await (db.select(task).join([
+              innerJoin(item, item.id.equalsExp(task.learningItemId)),
+            ])
+              ..where(item.isDeleted.equals(false))
+              ..where(task.scheduledDate.isBiggerOrEqualValue(earliestStart))
+              ..where(task.scheduledDate.isSmallerThanValue(todayEnd))
+              ..where(task.status.isIn(const ['done', 'pending'])))
             .get();
+    final tasks = joined.map((r) => r.readTable(task)).toList();
 
     final dayMap = <DateTime, _DayStatsAccumulator>{};
     for (final task in tasks) {
@@ -593,22 +688,23 @@ LIMIT ?
     DateTime start,
     DateTime end,
   ) async {
-    final totalExp = db.reviewTasks.id.count(
-      filter: db.reviewTasks.status.isIn(const ['done', 'pending']),
-    );
-    final completedExp = db.reviewTasks.id.count(
-      filter: db.reviewTasks.status.equals('done'),
-    );
-
-    final row =
-        await (db.selectOnly(db.reviewTasks)
-              ..addColumns([totalExp, completedExp])
-              ..where(db.reviewTasks.scheduledDate.isBiggerOrEqualValue(start))
-              ..where(db.reviewTasks.scheduledDate.isSmallerThanValue(end)))
-            .getSingle();
-
-    final total = row.read(totalExp) ?? 0;
-    final completed = row.read(completedExp) ?? 0;
+    const sql = '''
+SELECT
+  SUM(CASE WHEN rt.status IN ('done','pending') THEN 1 ELSE 0 END) AS total_count,
+  SUM(CASE WHEN rt.status='done' THEN 1 ELSE 0 END) AS completed_count
+FROM review_tasks rt
+INNER JOIN learning_items li ON li.id = rt.learning_item_id
+WHERE li.is_deleted = 0
+  AND rt.scheduled_date >= ?
+  AND rt.scheduled_date < ?
+''';
+    final row = await db.customSelect(
+      sql,
+      variables: [Variable<DateTime>(start), Variable<DateTime>(end)],
+      readsFrom: {db.reviewTasks, db.learningItems},
+    ).getSingle();
+    final total = row.read<int?>('total_count') ?? 0;
+    final completed = row.read<int?>('completed_count') ?? 0;
     return (completed, total);
   }
 
@@ -642,6 +738,7 @@ LIMIT ?
     final query = db.select(task).join([
       innerJoin(item, item.id.equalsExp(task.learningItemId)),
     ]);
+    query.where(item.isDeleted.equals(false));
 
     if (onlyOverdue) {
       query.where(task.scheduledDate.isSmallerThanValue(start));
@@ -668,6 +765,25 @@ LIMIT ?
           ),
         )
         .toList();
+  }
+
+  Future<void> _assertLearningItemActiveByTaskIds(List<int> taskIds) async {
+    if (taskIds.isEmpty) return;
+
+    final task = db.reviewTasks;
+    final item = db.learningItems;
+
+    final q = db.select(task).join([
+      innerJoin(item, item.id.equalsExp(task.learningItemId)),
+    ])
+      ..where(task.id.isIn(taskIds))
+      ..where(item.isDeleted.equals(true))
+      ..limit(1);
+
+    final hit = await q.getSingleOrNull();
+    if (hit != null) {
+      throw StateError('学习内容已停用，无法操作');
+    }
   }
 }
 
