@@ -47,6 +47,9 @@ class SyncService {
   static const String entityTopicItemRelation = 'topic_item_relation';
   static const String entitySettingsBundle = 'settings_bundle';
 
+  // 快照完成标记：用于避免每次同步都全表扫描生成快照日志。
+  static const String _snapshotDoneKeyPrefix = 'sync_snapshot_done_v1';
+
   /// 确保本机“本地源数据”已生成快照日志（用于首次全量同步）。
   ///
   /// 说明：
@@ -59,11 +62,18 @@ class SyncService {
   /// - 默认不包含模拟数据，避免调试数据污染真实同步结果
   /// - 若需要用模拟数据测试同步链路，可在调试设置中开启
   Future<void> ensureLocalSnapshotLogs({bool includeMockData = false}) async {
+    // 性能优化：快照只需执行一次。
+    // - 历史存量数据：由快照生成 create 日志
+    // - 后续增量：由仓储层 SyncLogWriter 写入日志
+    if (await _readSnapshotDone(includeMockData: includeMockData)) return;
+
     await _snapshotLearningItems(includeMockData: includeMockData);
     await _snapshotReviewTasks(includeMockData: includeMockData);
     await _snapshotTemplates();
     await _snapshotTopics();
     await _snapshotTopicItemRelations();
+
+    await _writeSnapshotDone(includeMockData: includeMockData, value: true);
   }
 
   /// 根据 SyncLog 行构建 SyncEvent。
@@ -122,16 +132,19 @@ class SyncService {
   }) async {
     if (events.isEmpty) return;
 
-    for (final event in events) {
-      // 规则：设置项以主机为准，主机忽略来自其他设备的 settings_bundle。
-      if (event.entityType == entitySettingsBundle &&
-          isMaster &&
-          event.deviceId != localDeviceId) {
-        continue;
-      }
+    // 性能优化：批量应用放在事务中，降低大量事件下的卡顿与耗时。
+    await db.transaction(() async {
+      for (final event in events) {
+        // 规则：设置项以主机为准，主机忽略来自其他设备的 settings_bundle。
+        if (event.entityType == entitySettingsBundle &&
+            isMaster &&
+            event.deviceId != localDeviceId) {
+          continue;
+        }
 
-      await _applySingleEvent(event);
-    }
+        await _applySingleEvent(event);
+      }
+    });
   }
 
   /// 处理交换请求：先持久化并应用对端事件，再返回本端增量。
@@ -683,6 +696,35 @@ class SyncService {
     );
   }
 
+  String _snapshotDoneKey({required bool includeMockData}) {
+    final mode = includeMockData ? 'with_mock' : 'no_mock';
+    return '$_snapshotDoneKeyPrefix:$mode:$localDeviceId';
+  }
+
+  Future<bool> _readSnapshotDone({required bool includeMockData}) async {
+    final raw = await settingsDao.getValue(
+      _snapshotDoneKey(includeMockData: includeMockData),
+    );
+    if (raw == null) return false;
+    try {
+      final decrypted = await _settingsCrypto.decrypt(raw);
+      return decrypted.trim().toLowerCase() == 'true';
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<void> _writeSnapshotDone({
+    required bool includeMockData,
+    required bool value,
+  }) async {
+    final encrypted = await _settingsCrypto.encrypt(value.toString());
+    await settingsDao.upsertValue(
+      _snapshotDoneKey(includeMockData: includeMockData),
+      encrypted,
+    );
+  }
+
   Map<String, dynamic> _decodeJsonObject(String raw) {
     try {
       final decoded = jsonDecode(raw);
@@ -706,14 +748,17 @@ class SyncService {
 
   Future<void> _snapshotLearningItems({required bool includeMockData}) async {
     final rows = await db.select(db.learningItems).get();
+    final mappingByLocalId = await _getMappingsByLocalIds(
+      entityType: entityLearningItem,
+      localEntityIds: rows.map((e) => e.id).toList(),
+    );
+
+    final batch = <SyncLogsCompanion>[];
     for (final row in rows) {
       // v3.1：Mock 数据默认不参与同步（可在调试开关中允许）。
       if (row.isMockData && !includeMockData) continue;
 
-      final mapping = await syncEntityMappingDao.getByLocalEntityId(
-        entityType: entityLearningItem,
-        localEntityId: row.id,
-      );
+      final mapping = mappingByLocalId[row.id];
 
       // 若已存在且非本机 origin，则跳过（远端数据由接收端写入日志）。
       if (mapping != null &&
@@ -740,7 +785,7 @@ class SyncService {
         'is_mock_data': row.isMockData,
       };
 
-      await syncLogDao.insertLog(
+      batch.add(
         SyncLogsCompanion(
           deviceId: Value(localDeviceId),
           entityType: const Value(entityLearningItem),
@@ -751,19 +796,39 @@ class SyncService {
           localVersion: const Value(0),
         ),
       );
+
+      if (batch.length >= 200) {
+        await syncLogDao.insertLogs(batch);
+        batch.clear();
+        // 让出事件循环，避免大数据量快照时阻塞 UI。
+        await Future<void>.delayed(Duration.zero);
+      }
+    }
+
+    if (batch.isNotEmpty) {
+      await syncLogDao.insertLogs(batch);
     }
   }
 
   Future<void> _snapshotReviewTasks({required bool includeMockData}) async {
     final rows = await db.select(db.reviewTasks).get();
+    final mappingByLocalId = await _getMappingsByLocalIds(
+      entityType: entityReviewTask,
+      localEntityIds: rows.map((e) => e.id).toList(),
+    );
+
+    final learningItemIds = rows.map((e) => e.learningItemId).toSet().toList();
+    final learningMappingByLocalId = await _getMappingsByLocalIds(
+      entityType: entityLearningItem,
+      localEntityIds: learningItemIds,
+    );
+
+    final batch = <SyncLogsCompanion>[];
     for (final row in rows) {
       // v3.1：Mock 数据默认不参与同步（可在调试开关中允许）。
       if (row.isMockData && !includeMockData) continue;
 
-      final mapping = await syncEntityMappingDao.getByLocalEntityId(
-        entityType: entityReviewTask,
-        localEntityId: row.id,
-      );
+      final mapping = mappingByLocalId[row.id];
       if (mapping != null &&
           (mapping.originDeviceId != localDeviceId ||
               mapping.originEntityId != row.id)) {
@@ -771,10 +836,16 @@ class SyncService {
       }
 
       // 复习任务引用学习内容：需要把 learningItemId 解析为 origin key。
-      final learningOrigin = await _originForLocal(
-        entityType: entityLearningItem,
-        localEntityId: row.learningItemId,
-      );
+      final learningMapping = learningMappingByLocalId[row.learningItemId];
+      final learningOrigin = learningMapping == null
+          ? await _originForLocal(
+              entityType: entityLearningItem,
+              localEntityId: row.learningItemId,
+            )
+          : _OriginKey(
+              deviceId: learningMapping.originDeviceId,
+              entityId: learningMapping.originEntityId,
+            );
       if (learningOrigin == null) continue;
 
       final updatedAt = row.updatedAt ?? row.createdAt;
@@ -799,7 +870,7 @@ class SyncService {
         'is_mock_data': row.isMockData,
       };
 
-      await syncLogDao.insertLog(
+      batch.add(
         SyncLogsCompanion(
           deviceId: Value(localDeviceId),
           entityType: const Value(entityReviewTask),
@@ -810,6 +881,17 @@ class SyncService {
           localVersion: const Value(0),
         ),
       );
+
+      if (batch.length >= 200) {
+        await syncLogDao.insertLogs(batch);
+        batch.clear();
+        // 让出事件循环，避免大数据量快照时阻塞 UI。
+        await Future<void>.delayed(Duration.zero);
+      }
+    }
+
+    if (batch.isNotEmpty) {
+      await syncLogDao.insertLogs(batch);
     }
   }
 
@@ -950,6 +1032,40 @@ class SyncService {
         ),
       );
     }
+  }
+
+  /// 批量按 localEntityId 预取映射，减少大数据量下的 N 次查询。
+  ///
+  /// 说明：
+  /// - SQLite 默认变量上限较低，这里按固定大小分块查询
+  /// - 返回值以 localEntityId 为 key，便于快照流程快速判断“是否为远端 origin”
+  Future<Map<int, SyncEntityMapping>> _getMappingsByLocalIds({
+    required String entityType,
+    required List<int> localEntityIds,
+  }) async {
+    if (localEntityIds.isEmpty) return const {};
+
+    const chunkSize = 400;
+    final result = <int, SyncEntityMapping>{};
+
+    for (var i = 0; i < localEntityIds.length; i += chunkSize) {
+      final chunk = localEntityIds
+          .skip(i)
+          .take(chunkSize)
+          .toList(growable: false);
+      final rows =
+          await (db.select(db.syncEntityMappings)..where(
+                (t) =>
+                    t.entityType.equals(entityType) &
+                    t.localEntityId.isIn(chunk),
+              ))
+              .get();
+      for (final row in rows) {
+        result[row.localEntityId] = row;
+      }
+    }
+
+    return result;
   }
 
   Future<void> _ensureLocalOriginMapping({
