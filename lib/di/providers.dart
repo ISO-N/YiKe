@@ -36,11 +36,15 @@ import '../domain/usecases/export_data_usecase.dart';
 import '../domain/usecases/get_calendar_tasks_usecase.dart';
 import '../domain/usecases/get_home_tasks_usecase.dart';
 import '../domain/usecases/get_statistics_usecase.dart';
+import '../domain/usecases/get_tasks_by_time_usecase.dart';
+import '../domain/usecases/get_today_completed_tasks_usecase.dart';
+import '../domain/usecases/get_today_skipped_tasks_usecase.dart';
 import '../domain/usecases/import_learning_items_usecase.dart';
 import '../domain/usecases/manage_template_usecase.dart';
 import '../domain/usecases/manage_topic_usecase.dart';
 import '../domain/usecases/ocr_recognition_usecase.dart';
 import '../domain/usecases/skip_review_task_usecase.dart';
+import '../domain/usecases/undo_task_status_usecase.dart';
 import '../infrastructure/ocr/ocr_service.dart' as infra_ocr;
 import '../infrastructure/speech/speech_service.dart';
 
@@ -222,6 +226,32 @@ final completeReviewTaskUseCaseProvider = Provider<CompleteReviewTaskUseCase>((
 
 final skipReviewTaskUseCaseProvider = Provider<SkipReviewTaskUseCase>((ref) {
   return SkipReviewTaskUseCase(
+    reviewTaskRepository: ref.read(reviewTaskRepositoryProvider),
+  );
+});
+
+final undoTaskStatusUseCaseProvider = Provider<UndoTaskStatusUseCase>((ref) {
+  return UndoTaskStatusUseCase(
+    reviewTaskRepository: ref.read(reviewTaskRepositoryProvider),
+  );
+});
+
+final getTodayCompletedTasksUseCaseProvider =
+    Provider<GetTodayCompletedTasksUseCase>((ref) {
+      return GetTodayCompletedTasksUseCase(
+        reviewTaskRepository: ref.read(reviewTaskRepositoryProvider),
+      );
+    });
+
+final getTodaySkippedTasksUseCaseProvider =
+    Provider<GetTodaySkippedTasksUseCase>((ref) {
+      return GetTodaySkippedTasksUseCase(
+        reviewTaskRepository: ref.read(reviewTaskRepositoryProvider),
+      );
+    });
+
+final getTasksByTimeUseCaseProvider = Provider<GetTasksByTimeUseCase>((ref) {
+  return GetTasksByTimeUseCase(
     reviewTaskRepository: ref.read(reviewTaskRepositoryProvider),
   );
 });
