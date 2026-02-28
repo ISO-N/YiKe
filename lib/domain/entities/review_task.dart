@@ -56,6 +56,7 @@ class ReviewTaskEntity {
   /// - [completedAt] 完成时间
   /// - [skippedAt] 跳过时间
   /// - [createdAt] 创建时间
+  /// - [updatedAt] 更新时间（用于同步/备份诊断，可选）
   const ReviewTaskEntity({
     required this.uuid,
     this.id,
@@ -66,6 +67,7 @@ class ReviewTaskEntity {
     this.completedAt,
     this.skippedAt,
     required this.createdAt,
+    this.updatedAt,
     this.isMockData = false,
   });
 
@@ -84,6 +86,7 @@ class ReviewTaskEntity {
   final DateTime? completedAt;
   final DateTime? skippedAt;
   final DateTime createdAt;
+  final DateTime? updatedAt;
 
   /// 是否为模拟数据（v3.1：用于 Debug 模拟数据隔离）。
   final bool isMockData;
@@ -98,6 +101,7 @@ class ReviewTaskEntity {
     DateTime? completedAt,
     DateTime? skippedAt,
     DateTime? createdAt,
+    DateTime? updatedAt,
     bool? isMockData,
   }) {
     return ReviewTaskEntity(
@@ -110,6 +114,7 @@ class ReviewTaskEntity {
       completedAt: completedAt ?? this.completedAt,
       skippedAt: skippedAt ?? this.skippedAt,
       createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
       isMockData: isMockData ?? this.isMockData,
     );
   }

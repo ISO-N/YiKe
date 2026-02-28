@@ -51,7 +51,7 @@ class ReviewTaskRepositoryImpl implements ReviewTaskRepository {
       ),
     );
 
-    final saved = task.copyWith(id: id, uuid: ensuredUuid);
+    final saved = task.copyWith(id: id, uuid: ensuredUuid, updatedAt: now);
 
     final sync = _sync;
     if (sync != null) {
@@ -249,6 +249,7 @@ class ReviewTaskRepositoryImpl implements ReviewTaskRepository {
         scheduledDate: nextDate,
         status: ReviewTaskStatus.pending,
         createdAt: now,
+        updatedAt: now,
       ),
     );
   }
@@ -300,6 +301,7 @@ class ReviewTaskRepositoryImpl implements ReviewTaskRepository {
             completedAt: row.completedAt,
             skippedAt: row.skippedAt,
             createdAt: row.createdAt,
+            updatedAt: row.updatedAt,
             isMockData: row.isMockData,
           ),
         )

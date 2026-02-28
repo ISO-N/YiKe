@@ -107,6 +107,7 @@ class CreateLearningItemUseCase {
                 scheduledDate: learningDate.add(Duration(days: c.intervalDays)),
                 status: ReviewTaskStatus.pending,
                 createdAt: now,
+                updatedAt: now,
               ),
             )
             .toList()
