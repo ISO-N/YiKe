@@ -88,10 +88,7 @@ class SyncSettingsPage extends ConsumerWidget {
                     ListTile(
                       title: const Text('手动同步'),
                       subtitle: const Text('立即执行一次双向同步'),
-                      trailing: FilledButton(
-                        onPressed: () => controller.syncNow(),
-                        child: const Text('立即同步'),
-                      ),
+                      trailing: _ManualSyncButton(state: state),
                     ),
                   ],
                 ),
@@ -392,6 +389,38 @@ class _ConnectedDevicesCard extends ConsumerWidget {
               }),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// 手动同步按钮：仅在存在在线同步目标时可点击。
+///
+/// 说明：
+/// - 主机：至少存在 1 台在线从机
+/// - 从机：主机设备需在线
+class _ManualSyncButton extends ConsumerWidget {
+  const _ManualSyncButton({required this.state});
+
+  final SyncUiState state;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final controller = ref.read(syncControllerProvider.notifier);
+
+    final hasOnlineTarget = state.isMaster
+        ? state.connectedDevices.any((d) => !d.isMaster && d.isOnline)
+        : state.connectedDevices.any((d) => d.isMaster && d.isOnline);
+
+    final reason = state.connectedDevices.isEmpty
+        ? '暂无已配对设备'
+        : (state.isMaster ? '暂无在线从机' : '主机离线');
+
+    return Tooltip(
+      message: hasOnlineTarget ? '立即执行一次同步' : '不可同步：$reason',
+      child: FilledButton(
+        onPressed: hasOnlineTarget ? () => controller.syncNow() : null,
+        child: const Text('立即同步'),
       ),
     );
   }

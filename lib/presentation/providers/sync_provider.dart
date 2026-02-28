@@ -445,6 +445,9 @@ class SyncController extends StateNotifier<SyncUiState> {
     _syncing = true;
 
     try {
+      // 说明：手动同步仅在存在“在线同步目标”时执行，避免离线情况下长时间卡顿等待。
+      _ensureHasOnlineSyncTarget();
+
       final canSync = await _shouldSyncWithNetworkPrefs();
       if (!canSync) {
         throw StateError('当前网络不满足同步设置（Wi-Fi/移动网络限制）');
@@ -452,6 +455,9 @@ class SyncController extends StateNotifier<SyncUiState> {
 
       state = state.copyWith(state: SyncState.syncing, errorMessage: null);
       _refreshTrayStatus();
+
+      // 让出一帧：避免 UI 状态刚更新就进入大量数据库/网络操作而造成明显卡顿。
+      await Future<void>.delayed(Duration.zero);
 
       final syncService = _buildSyncService();
       await syncService.ensureLocalSnapshotLogs(
@@ -474,6 +480,21 @@ class SyncController extends StateNotifier<SyncUiState> {
       _refreshTrayStatus();
     } finally {
       _syncing = false;
+    }
+  }
+
+  void _ensureHasOnlineSyncTarget() {
+    // - 主机：至少 1 个在线从机
+    // - 从机：主机在线
+    final hasOnlineTarget = state.isMaster
+        ? state.connectedDevices.any((d) => !d.isMaster && d.isOnline)
+        : state.connectedDevices.any((d) => d.isMaster && d.isOnline);
+    if (!hasOnlineTarget) {
+      throw StateError(
+        state.connectedDevices.isEmpty
+            ? '暂无已配对设备'
+            : (state.isMaster ? '暂无在线从机' : '主机离线'),
+      );
     }
   }
 
@@ -884,13 +905,16 @@ class SyncController extends StateNotifier<SyncUiState> {
   void _refreshTrayStatus() {
     // 仅桌面端启用托盘时生效；移动端调用也不会产生副作用。
     final tray = TrayService.instance;
+    final hasAnyOnline = state.connectedDevices.any((e) => e.isOnline);
     switch (state.state) {
       case SyncState.syncing:
         tray.updateStatus(TrayStatus.syncing);
         return;
       case SyncState.connected:
       case SyncState.synced:
-        tray.updateStatus(TrayStatus.normal);
+        tray.updateStatus(
+          hasAnyOnline ? TrayStatus.normal : TrayStatus.offline,
+        );
         return;
       case SyncState.disconnected:
       case SyncState.connecting:
