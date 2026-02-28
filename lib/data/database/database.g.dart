@@ -4496,6 +4496,14 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     'idx_learning_item_id',
     'CREATE INDEX idx_learning_item_id ON review_tasks (learning_item_id)',
   );
+  late final Index idxCompletedAtStatus = Index(
+    'idx_completed_at_status',
+    'CREATE INDEX idx_completed_at_status ON review_tasks (completed_at, status)',
+  );
+  late final Index idxSkippedAtStatus = Index(
+    'idx_skipped_at_status',
+    'CREATE INDEX idx_skipped_at_status ON review_tasks (skipped_at, status)',
+  );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -4514,6 +4522,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     idxScheduledDate,
     idxStatus,
     idxLearningItemId,
+    idxCompletedAtStatus,
+    idxSkippedAtStatus,
   ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
