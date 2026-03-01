@@ -10,6 +10,7 @@ import 'package:intl/intl.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/utils/ebbinghaus_utils.dart';
+import '../../../domain/entities/learning_subtask.dart';
 import '../../../domain/entities/review_task.dart';
 import '../../providers/task_detail_provider.dart';
 
@@ -70,26 +71,79 @@ class TaskDetailSheet extends ConsumerWidget {
                               const SizedBox(height: AppSpacing.md),
                             ],
                             _InfoCard(
-                              note: item.note,
                               tags: item.tags,
                               learningDate: item.learningDate,
+                            ),
+                            const SizedBox(height: AppSpacing.lg),
+                            _DescriptionCard(
+                              description: item.description,
+                              legacyNote: item.note,
+                              isReadOnly: isReadOnly,
+                              onEdit: () async {
+                                final next = await _showEditDescriptionDialog(
+                                  context,
+                                  initial: item.description ?? item.note,
+                                  readOnly: isReadOnly,
+                                );
+                                if (next == null) return;
+                                await runAction(
+                                  () => notifier.updateDescription(next),
+                                  ok: '描述已更新',
+                                );
+                              },
+                            ),
+                            const SizedBox(height: AppSpacing.lg),
+                            _SubtasksCard(
+                              subtasks: state.subtasks,
+                              isReadOnly: isReadOnly,
+                              onAdd: () async {
+                                final content = await _showEditSubtaskDialog(
+                                  context,
+                                  title: '新增子任务',
+                                  initial: '',
+                                  readOnly: isReadOnly,
+                                );
+                                if (content == null) return;
+                                await runAction(
+                                  () => notifier.createSubtask(content),
+                                  ok: '子任务已添加',
+                                );
+                              },
+                              onEdit: (subtask) async {
+                                final next = await _showEditSubtaskDialog(
+                                  context,
+                                  title: '编辑子任务',
+                                  initial: subtask.content,
+                                  readOnly: isReadOnly,
+                                );
+                                if (next == null) return;
+                                await runAction(
+                                  () => notifier.updateSubtask(
+                                    subtask.copyWith(content: next),
+                                  ),
+                                  ok: '子任务已更新',
+                                );
+                              },
+                              onDelete: (id) async {
+                                final ok = await _confirmDeleteSubtask(context);
+                                if (ok != true) return;
+                                await runAction(
+                                  () => notifier.deleteSubtask(id),
+                                  ok: '子任务已删除',
+                                );
+                              },
+                              onReorder: (ids) async {
+                                await runAction(
+                                  () => notifier.reorderSubtasks(ids),
+                                  ok: '排序已更新',
+                                );
+                              },
                             ),
                             const SizedBox(height: AppSpacing.lg),
                             _ActionRow(
                               isReadOnly: isReadOnly,
                               canAddRound: _canAddRound(plan),
-                              onEditNote: () async {
-                                final next = await _showEditNoteDialog(
-                                  context,
-                                  initial: item.note,
-                                  readOnly: isReadOnly,
-                                );
-                                if (next == null) return;
-                                await runAction(
-                                  () => notifier.updateNote(next),
-                                  ok: '备注已更新',
-                                );
-                              },
+                              canRemoveRound: _canRemoveRound(plan),
                               onDeactivate: () async {
                                 final confirmed = await _confirmDeactivate(context);
                                 if (confirmed != true) return;
@@ -124,6 +178,21 @@ class TaskDetailSheet extends ConsumerWidget {
                                 await runAction(
                                   notifier.addReviewRound,
                                   ok: '已增加一轮复习',
+                                );
+                              },
+                              onRemoveRound: () async {
+                                final latest = _latestRoundTask(plan);
+                                if (latest == null) return;
+                                final confirmed = await _confirmRemoveRound(
+                                  context,
+                                  round: latest.reviewRound,
+                                  status: latest.status,
+                                  isReadOnly: isReadOnly,
+                                );
+                                if (confirmed != true) return;
+                                await runAction(
+                                  notifier.removeReviewRound,
+                                  ok: '已减少一轮复习',
                                 );
                               },
                               onViewPlan: () async {
@@ -172,6 +241,20 @@ class TaskDetailSheet extends ConsumerWidget {
     if (plan.isEmpty) return false;
     final max = _maxRound(plan);
     return max < EbbinghausUtils.maxReviewRound;
+  }
+
+  bool _canRemoveRound(List<ReviewTaskViewEntity> plan) {
+    if (plan.isEmpty) return false;
+    return _maxRound(plan) > 1;
+  }
+
+  ReviewTaskViewEntity? _latestRoundTask(List<ReviewTaskViewEntity> plan) {
+    if (plan.isEmpty) return null;
+    var latest = plan.first;
+    for (final t in plan) {
+      if (t.reviewRound > latest.reviewRound) latest = t;
+    }
+    return latest;
   }
 
   int _maxRound(List<ReviewTaskViewEntity> plan) {
@@ -251,12 +334,10 @@ class _SheetHeader extends StatelessWidget {
 
 class _InfoCard extends StatelessWidget {
   const _InfoCard({
-    required this.note,
     required this.tags,
     required this.learningDate,
   });
 
-  final String? note;
   final List<String> tags;
   final DateTime learningDate;
 
@@ -285,13 +366,165 @@ class _InfoCard extends StatelessWidget {
                     .toList(),
               ),
             ],
-            const SizedBox(height: AppSpacing.sm),
-            Text('备注', style: AppTypography.h2(context).copyWith(fontSize: 14)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DescriptionCard extends StatelessWidget {
+  const _DescriptionCard({
+    required this.description,
+    required this.legacyNote,
+    required this.isReadOnly,
+    required this.onEdit,
+  });
+
+  final String? description;
+  final String? legacyNote;
+  final bool isReadOnly;
+  final VoidCallback onEdit;
+
+  @override
+  Widget build(BuildContext context) {
+    final desc = (description ?? '').trim();
+    final note = (legacyNote ?? '').trim();
+    final content = desc.isNotEmpty ? desc : (note.isNotEmpty ? note : '');
+    final label = desc.isNotEmpty ? '描述' : (note.isNotEmpty ? '旧备注（待迁移）' : '描述');
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    label,
+                    style: AppTypography.h2(context).copyWith(fontSize: 14),
+                  ),
+                ),
+                OutlinedButton.icon(
+                  onPressed: isReadOnly ? null : onEdit,
+                  icon: const Icon(Icons.edit, size: 18),
+                  label: const Text('编辑描述'),
+                ),
+              ],
+            ),
             const SizedBox(height: 6),
             Text(
-              note?.trim().isNotEmpty == true ? note!.trim() : '（无）',
+              content.isEmpty ? '（无）' : content,
               style: AppTypography.bodySecondary(context),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SubtasksCard extends StatelessWidget {
+  const _SubtasksCard({
+    required this.subtasks,
+    required this.isReadOnly,
+    required this.onAdd,
+    required this.onEdit,
+    required this.onDelete,
+    required this.onReorder,
+  });
+
+  final List<LearningSubtaskEntity> subtasks;
+  final bool isReadOnly;
+  final VoidCallback onAdd;
+  final void Function(LearningSubtaskEntity subtask) onEdit;
+  final void Function(int id) onDelete;
+  final void Function(List<int> orderedIds) onReorder;
+
+  @override
+  Widget build(BuildContext context) {
+    final sorted = [...subtasks]..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    '子任务',
+                    style: AppTypography.h2(context).copyWith(fontSize: 14),
+                  ),
+                ),
+                OutlinedButton.icon(
+                  onPressed: isReadOnly ? null : onAdd,
+                  icon: const Icon(Icons.add, size: 18),
+                  label: const Text('新增'),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            if (sorted.isEmpty)
+              Text('（无）', style: AppTypography.bodySecondary(context))
+            else
+              ReorderableListView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: sorted.length,
+                buildDefaultDragHandles: false,
+                onReorder:
+                    isReadOnly
+                        ? (oldIndex, newIndex) {}
+                        : (oldIndex, newIndex) {
+                          var target = newIndex;
+                          if (newIndex > oldIndex) target = newIndex - 1;
+                          final next = [...sorted];
+                          final moved = next.removeAt(oldIndex);
+                          next.insert(target, moved);
+                          final ids = next.map((e) => e.id).whereType<int>().toList();
+                          if (ids.length != next.length) return;
+                          onReorder(ids);
+                        },
+                itemBuilder: (context, index) {
+                  final s = sorted[index];
+                  return ListTile(
+                    key: ValueKey('subtask_${s.id ?? s.uuid}'),
+                    contentPadding: EdgeInsets.zero,
+                    leading: isReadOnly
+                        ? const Icon(Icons.drag_handle, color: Colors.grey)
+                        : ReorderableDragStartListener(
+                            index: index,
+                            child: const Icon(Icons.drag_handle),
+                          ),
+                    title: Text(
+                      s.content,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          tooltip: '编辑',
+                          onPressed: isReadOnly ? null : () => onEdit(s),
+                          icon: const Icon(Icons.edit, size: 20),
+                        ),
+                        IconButton(
+                          tooltip: '删除',
+                          onPressed: isReadOnly || s.id == null ? null : () => onDelete(s.id!),
+                          icon: const Icon(Icons.delete_outline, size: 20),
+                        ),
+                      ],
+                    ),
+                    onTap: isReadOnly ? null : () => onEdit(s),
+                  );
+                },
+              ),
           ],
         ),
       ),
@@ -303,19 +536,21 @@ class _ActionRow extends StatelessWidget {
   const _ActionRow({
     required this.isReadOnly,
     required this.canAddRound,
-    required this.onEditNote,
+    required this.canRemoveRound,
     required this.onDeactivate,
     required this.onAdjustPlan,
     required this.onAddRound,
+    required this.onRemoveRound,
     required this.onViewPlan,
   });
 
   final bool isReadOnly;
   final bool canAddRound;
-  final VoidCallback onEditNote;
+  final bool canRemoveRound;
   final VoidCallback onDeactivate;
   final VoidCallback onAdjustPlan;
   final VoidCallback onAddRound;
+  final VoidCallback onRemoveRound;
   final VoidCallback onViewPlan;
 
   @override
@@ -324,11 +559,6 @@ class _ActionRow extends StatelessWidget {
       spacing: AppSpacing.sm,
       runSpacing: AppSpacing.sm,
       children: [
-        FilledButton.icon(
-          onPressed: isReadOnly ? null : onEditNote,
-          icon: const Icon(Icons.edit),
-          label: const Text('编辑备注'),
-        ),
         OutlinedButton.icon(
           onPressed: isReadOnly ? null : onAdjustPlan,
           icon: const Icon(Icons.event),
@@ -338,6 +568,11 @@ class _ActionRow extends StatelessWidget {
           onPressed: isReadOnly || !canAddRound ? null : onAddRound,
           icon: const Icon(Icons.add),
           label: Text(canAddRound ? '增加轮次' : '已达上限'),
+        ),
+        OutlinedButton.icon(
+          onPressed: isReadOnly || !canRemoveRound ? null : onRemoveRound,
+          icon: const Icon(Icons.remove),
+          label: Text(canRemoveRound ? '减少轮次' : '已达下限'),
         ),
         OutlinedButton.icon(
           onPressed: onViewPlan,
@@ -436,7 +671,7 @@ class _EmptyDetail extends StatelessWidget {
   }
 }
 
-Future<String?> _showEditNoteDialog(
+Future<String?> _showEditDescriptionDialog(
   BuildContext context, {
   required String? initial,
   required bool readOnly,
@@ -447,14 +682,12 @@ Future<String?> _showEditNoteDialog(
     context: context,
     builder: (context) {
       return AlertDialog(
-        title: const Text('编辑备注'),
+        title: const Text('编辑描述'),
         content: TextField(
           controller: controller,
           autofocus: true,
           maxLines: 6,
-          decoration: const InputDecoration(
-            hintText: '请输入备注（可为空）',
-          ),
+          decoration: const InputDecoration(hintText: '请输入描述（可为空）'),
         ),
         actions: [
           TextButton(
@@ -464,6 +697,62 @@ Future<String?> _showEditNoteDialog(
           FilledButton(
             onPressed: () => Navigator.of(context).pop(controller.text),
             child: const Text('保存'),
+          ),
+        ],
+      );
+    },
+  );
+}
+
+Future<String?> _showEditSubtaskDialog(
+  BuildContext context, {
+  required String title,
+  required String initial,
+  required bool readOnly,
+}) async {
+  if (readOnly) return null;
+  final controller = TextEditingController(text: initial);
+  return showDialog<String?>(
+    context: context,
+    builder: (context) {
+      return AlertDialog(
+        title: Text(title),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          maxLines: 4,
+          decoration: const InputDecoration(hintText: '请输入子任务内容'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(null),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(controller.text),
+            child: const Text('保存'),
+          ),
+        ],
+      );
+    },
+  );
+}
+
+Future<bool?> _confirmDeleteSubtask(BuildContext context) {
+  return showDialog<bool>(
+    context: context,
+    builder: (context) {
+      return AlertDialog(
+        title: const Text('删除子任务'),
+        content: const Text('确定删除该子任务吗？该操作不可恢复。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('删除'),
           ),
         ],
       );
@@ -539,6 +828,48 @@ Future<bool?> _confirmAddRound(
           FilledButton(
             onPressed: () => Navigator.of(context).pop(true),
             child: const Text('确认增加'),
+          ),
+        ],
+      );
+    },
+  );
+}
+
+Future<bool?> _confirmRemoveRound(
+  BuildContext context, {
+  required int round,
+  required ReviewTaskStatus status,
+  required bool isReadOnly,
+}) {
+  if (isReadOnly) return Future.value(false);
+
+  final statusText = switch (status) {
+    ReviewTaskStatus.pending => 'pending',
+    ReviewTaskStatus.done => '已完成',
+    ReviewTaskStatus.skipped => '已跳过',
+  };
+
+  final content = switch (status) {
+    ReviewTaskStatus.pending => '当前轮次为第 $round 轮，将删除第 $round 轮复习任务。该操作不可恢复，是否确认？',
+    ReviewTaskStatus.done ||
+    ReviewTaskStatus.skipped =>
+      '当前轮次为第 $round 轮（$statusText），将删除第 $round 轮复习任务。该操作会影响历史统计连续性，是否确认？',
+  };
+
+  return showDialog<bool>(
+    context: context,
+    builder: (context) {
+      return AlertDialog(
+        title: const Text('减少复习轮次'),
+        content: Text(content),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('确认减少'),
           ),
         ],
       );
@@ -721,4 +1052,3 @@ Future<void> _showAdjustPlanSheet(
     },
   );
 }
-

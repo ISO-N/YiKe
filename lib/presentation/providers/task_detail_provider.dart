@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../di/providers.dart';
 import '../../domain/entities/learning_item.dart';
+import '../../domain/entities/learning_subtask.dart';
 import '../../domain/entities/review_task.dart';
 import 'calendar_provider.dart';
 import 'home_tasks_provider.dart';
@@ -19,21 +20,29 @@ class TaskDetailState {
     required this.isLoading,
     required this.item,
     required this.plan,
+    required this.subtasks,
     this.errorMessage,
   });
 
   final bool isLoading;
   final LearningItemEntity? item;
   final List<ReviewTaskViewEntity> plan;
+  final List<LearningSubtaskEntity> subtasks;
   final String? errorMessage;
 
   factory TaskDetailState.initial() =>
-      const TaskDetailState(isLoading: true, item: null, plan: []);
+      const TaskDetailState(
+        isLoading: true,
+        item: null,
+        plan: [],
+        subtasks: [],
+      );
 
   TaskDetailState copyWith({
     bool? isLoading,
     LearningItemEntity? item,
     List<ReviewTaskViewEntity>? plan,
+    List<LearningSubtaskEntity>? subtasks,
     String? errorMessage,
     bool clearError = false,
   }) {
@@ -41,6 +50,7 @@ class TaskDetailState {
       isLoading: isLoading ?? this.isLoading,
       item: item ?? this.item,
       plan: plan ?? this.plan,
+      subtasks: subtasks ?? this.subtasks,
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
     );
   }
@@ -61,15 +71,23 @@ class TaskDetailNotifier extends StateNotifier<TaskDetailState> {
     state = state.copyWith(isLoading: true, clearError: true);
     try {
       final itemRepo = _ref.read(learningItemRepositoryProvider);
+      final subtaskRepo = _ref.read(learningSubtaskRepositoryProvider);
       final planUseCase = _ref.read(getReviewPlanUseCaseProvider);
 
       final itemFuture = itemRepo.getById(learningItemId);
       final planFuture = planUseCase.execute(learningItemId);
+      final subtasksFuture = subtaskRepo.getByLearningItemId(learningItemId);
 
       final item = await itemFuture;
       final plan = await planFuture;
+      final subtasks = await subtasksFuture;
 
-      state = state.copyWith(isLoading: false, item: item, plan: plan);
+      state = state.copyWith(
+        isLoading: false,
+        item: item,
+        plan: plan,
+        subtasks: subtasks,
+      );
     } catch (e) {
       state = state.copyWith(isLoading: false, errorMessage: e.toString());
     }
@@ -81,6 +99,14 @@ class TaskDetailNotifier extends StateNotifier<TaskDetailState> {
     await _ref
         .read(updateLearningItemNoteUseCaseProvider)
         .execute(learningItemId: learningItemId, note: note);
+    _invalidateRelatedPages();
+    await load();
+  }
+
+  Future<void> updateDescription(String? description) async {
+    await _ref
+        .read(updateLearningItemDescriptionUseCaseProvider)
+        .execute(learningItemId: learningItemId, description: description);
     _invalidateRelatedPages();
     await load();
   }
@@ -116,6 +142,42 @@ class TaskDetailNotifier extends StateNotifier<TaskDetailState> {
     await load();
   }
 
+  Future<void> removeReviewRound() async {
+    await _ref.read(removeReviewRoundUseCaseProvider).execute(learningItemId);
+    _invalidateRelatedPages();
+    await load();
+  }
+
+  Future<void> createSubtask(String content) async {
+    await _ref.read(createSubtaskUseCaseProvider).execute(
+      learningItemId: learningItemId,
+      content: content,
+    );
+    _invalidateRelatedPages();
+    await load();
+  }
+
+  Future<void> updateSubtask(LearningSubtaskEntity subtask) async {
+    await _ref.read(updateSubtaskUseCaseProvider).execute(subtask);
+    _invalidateRelatedPages();
+    await load();
+  }
+
+  Future<void> deleteSubtask(int id) async {
+    await _ref.read(deleteSubtaskUseCaseProvider).execute(id);
+    _invalidateRelatedPages();
+    await load();
+  }
+
+  Future<void> reorderSubtasks(List<int> subtaskIds) async {
+    await _ref.read(reorderSubtasksUseCaseProvider).execute(
+      learningItemId: learningItemId,
+      subtaskIds: subtaskIds,
+    );
+    _invalidateRelatedPages();
+    await load();
+  }
+
   void _invalidateRelatedPages() {
     _ref.invalidate(homeTasksProvider);
     _ref.invalidate(calendarProvider);
@@ -132,4 +194,3 @@ final taskDetailProvider =
 ) {
   return TaskDetailNotifier(ref, learningItemId);
 });
-

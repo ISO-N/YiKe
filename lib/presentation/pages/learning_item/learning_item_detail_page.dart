@@ -57,6 +57,12 @@ class LearningItemDetailPage extends ConsumerWidget {
                   );
                 }
 
+                final subtasks = item.subtasks;
+                final description =
+                    (item.item.description ?? '').trim().isNotEmpty
+                        ? item.item.description!.trim()
+                        : (item.item.note ?? '').trim();
+
                 return ListView(
                   children: [
                     GlassCard(
@@ -68,20 +74,42 @@ class LearningItemDetailPage extends ConsumerWidget {
                             Text('标题', style: AppTypography.h2(context)),
                             const SizedBox(height: AppSpacing.sm),
                             Text(
-                              item.title,
+                              item.item.title,
                               style: AppTypography.body(
                                 context,
                               ).copyWith(fontWeight: FontWeight.w700),
                             ),
                             const SizedBox(height: AppSpacing.lg),
-                            Text('备注', style: AppTypography.h2(context)),
+                            Text('描述', style: AppTypography.h2(context)),
                             const SizedBox(height: AppSpacing.sm),
                             Text(
-                              (item.note == null || item.note!.trim().isEmpty)
-                                  ? '（无）'
-                                  : item.note!,
+                              description.isEmpty ? '（无）' : description,
                               style: AppTypography.bodySecondary(context),
                             ),
+                            if (subtasks.isNotEmpty) ...[
+                              const SizedBox(height: AppSpacing.lg),
+                              Text('子任务', style: AppTypography.h2(context)),
+                              const SizedBox(height: AppSpacing.sm),
+                              ...subtasks.map(
+                                (s) => Padding(
+                                  padding: const EdgeInsets.only(bottom: 6),
+                                  child: Row(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      const Text('• '),
+                                      Expanded(
+                                        child: Text(
+                                          s.content,
+                                          style: AppTypography.bodySecondary(
+                                            context,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
                           ],
                         ),
                       ),
@@ -97,30 +125,35 @@ class LearningItemDetailPage extends ConsumerWidget {
                             const SizedBox(height: AppSpacing.md),
                             _InfoRow(
                               label: '学习日期',
-                              value: YikeDateUtils.formatYmd(item.learningDate),
+                              value: YikeDateUtils.formatYmd(
+                                item.item.learningDate,
+                              ),
                             ),
                             const SizedBox(height: 8),
                             _InfoRow(
                               label: '创建时间',
-                              value: item.createdAt.toIso8601String(),
+                              value: item.item.createdAt.toIso8601String(),
                             ),
-                            if (item.updatedAt != null) ...[
+                            if (item.item.updatedAt != null) ...[
                               const SizedBox(height: 8),
                               _InfoRow(
                                 label: '更新时间',
-                                value: item.updatedAt!.toIso8601String(),
+                                value: item.item.updatedAt!.toIso8601String(),
                               ),
                             ],
                             const SizedBox(height: 8),
                             _InfoRow(
                               label: '数据类型',
-                              value: item.isMockData ? 'Mock（仅调试）' : '真实数据',
+                              value:
+                                  item.item.isMockData
+                                      ? 'Mock（仅调试）'
+                                      : '真实数据',
                             ),
                           ],
                         ),
                       ),
                     ),
-                    if (item.tags.isNotEmpty) ...[
+                    if (item.item.tags.isNotEmpty) ...[
                       const SizedBox(height: AppSpacing.lg),
                       GlassCard(
                         child: Padding(
@@ -133,7 +166,7 @@ class LearningItemDetailPage extends ConsumerWidget {
                               Wrap(
                                 spacing: 8,
                                 runSpacing: 8,
-                                children: item.tags
+                                children: item.item.tags
                                     .take(20)
                                     .map(
                                       (t) => Chip(
