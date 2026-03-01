@@ -10,6 +10,7 @@ import 'package:yike/data/database/daos/learning_template_dao.dart';
 import 'package:yike/data/database/database.dart';
 
 import '../helpers/test_database.dart';
+import '../helpers/test_uuid.dart';
 
 void main() {
   late AppDatabase db;
@@ -27,6 +28,7 @@ void main() {
   test('insertTemplate / getById 可正常读写（含 notePattern 可空）', () async {
     final id = await dao.insertTemplate(
       LearningTemplatesCompanion.insert(
+        uuid: drift.Value(testUuid(1)),
         name: 'T1',
         titlePattern: '{date}',
         notePattern: const drift.Value.absent(),
@@ -49,6 +51,7 @@ void main() {
   test('getAll 按 sortOrder 升序，其次 createdAt 倒序', () async {
     await dao.insertTemplate(
       LearningTemplatesCompanion.insert(
+        uuid: drift.Value(testUuid(2)),
         name: 'B',
         titlePattern: 'b',
         tags: const drift.Value('[]'),
@@ -58,6 +61,7 @@ void main() {
     );
     await dao.insertTemplate(
       LearningTemplatesCompanion.insert(
+        uuid: drift.Value(testUuid(3)),
         name: 'A2',
         titlePattern: 'a2',
         tags: const drift.Value('[]'),
@@ -67,6 +71,7 @@ void main() {
     );
     await dao.insertTemplate(
       LearningTemplatesCompanion.insert(
+        uuid: drift.Value(testUuid(4)),
         name: 'A1',
         titlePattern: 'a1',
         tags: const drift.Value('[]'),
@@ -83,6 +88,7 @@ void main() {
     final ok = await dao.updateTemplate(
       LearningTemplate(
         id: 999,
+        uuid: testUuid(5),
         name: 'X',
         titlePattern: 'x',
         notePattern: null,
@@ -98,6 +104,7 @@ void main() {
   test('deleteTemplate: 删除后 getById 返回 null', () async {
     final id = await dao.insertTemplate(
       LearningTemplatesCompanion.insert(
+        uuid: drift.Value(testUuid(6)),
         name: 'T',
         titlePattern: 't',
         tags: const drift.Value('[]'),
@@ -113,6 +120,7 @@ void main() {
   test('existsName: 支持 exceptId 过滤', () async {
     final id = await dao.insertTemplate(
       LearningTemplatesCompanion.insert(
+        uuid: drift.Value(testUuid(7)),
         name: 'Dup',
         titlePattern: 't',
         tags: const drift.Value('[]'),
@@ -128,6 +136,7 @@ void main() {
   test('updateSortOrders: 可批量更新 sortOrder 并写入 updatedAt', () async {
     final id1 = await dao.insertTemplate(
       LearningTemplatesCompanion.insert(
+        uuid: drift.Value(testUuid(8)),
         name: 'T1',
         titlePattern: 't1',
         tags: const drift.Value('[]'),
@@ -137,6 +146,7 @@ void main() {
     );
     final id2 = await dao.insertTemplate(
       LearningTemplatesCompanion.insert(
+        uuid: drift.Value(testUuid(9)),
         name: 'T2',
         titlePattern: 't2',
         tags: const drift.Value('[]'),

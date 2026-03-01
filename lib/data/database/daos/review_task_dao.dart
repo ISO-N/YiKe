@@ -4,6 +4,7 @@
 library;
 
 import 'package:drift/drift.dart';
+import 'package:uuid/uuid.dart';
 
 import '../../../core/utils/date_utils.dart';
 import '../../../domain/entities/task_day_stats.dart';
@@ -23,6 +24,8 @@ class ReviewTaskDao {
   ReviewTaskDao(this.db);
 
   final AppDatabase db;
+
+  static const Uuid _uuid = Uuid();
 
   /// 插入复习任务。
   ///
@@ -76,6 +79,50 @@ class ReviewTaskDao {
         updatedAt: Value(now),
       ),
     );
+  }
+
+  /// 标记任务完成（done）并写入一条复习记录（review_records）。
+  ///
+  /// 说明：
+  /// - 使用事务确保“任务状态 + 记录”一致
+  /// - occurredAt 使用当前时间（与 completedAt 一致）
+  Future<void> completeTaskWithRecord(int id) async {
+    final now = DateTime.now();
+    await db.transaction(() async {
+      await updateTaskStatus(id, 'done', completedAt: now);
+      await _insertRecord(reviewTaskId: id, action: 'done', occurredAt: now);
+    });
+  }
+
+  /// 标记任务跳过（skipped）并写入一条复习记录（review_records）。
+  Future<void> skipTaskWithRecord(int id) async {
+    final now = DateTime.now();
+    await db.transaction(() async {
+      await updateTaskStatus(id, 'skipped', skippedAt: now);
+      await _insertRecord(reviewTaskId: id, action: 'skipped', occurredAt: now);
+    });
+  }
+
+  /// 批量标记任务完成并写入复习记录（review_records）。
+  ///
+  /// 说明：在同一事务内执行，避免部分成功导致口径不一致。
+  Future<void> completeTasksWithRecords(List<int> ids) async {
+    if (ids.isEmpty) return;
+    final now = DateTime.now();
+    await db.transaction(() async {
+      await updateTaskStatusBatch(ids, 'done', timestamp: now);
+      await _insertRecords(ids, action: 'done', occurredAt: now);
+    });
+  }
+
+  /// 批量标记任务跳过并写入复习记录（review_records）。
+  Future<void> skipTasksWithRecords(List<int> ids) async {
+    if (ids.isEmpty) return;
+    final now = DateTime.now();
+    await db.transaction(() async {
+      await updateTaskStatusBatch(ids, 'skipped', timestamp: now);
+      await _insertRecords(ids, action: 'skipped', occurredAt: now);
+    });
   }
 
   /// 批量更新任务状态。
@@ -278,6 +325,57 @@ class ReviewTaskDao {
     );
   }
 
+  /// 撤销任务状态并写入一条复习记录（review_records）。
+  ///
+  /// 说明：撤销同样属于行为事件，便于审计与未来扩展。
+  Future<void> undoTaskStatusWithRecord(int id) async {
+    final now = DateTime.now();
+    await db.transaction(() async {
+      await undoTaskStatus(id);
+      await _insertRecord(reviewTaskId: id, action: 'undo', occurredAt: now);
+    });
+  }
+
+  /// 插入单条复习记录。
+  Future<void> _insertRecord({
+    required int reviewTaskId,
+    required String action,
+    required DateTime occurredAt,
+  }) async {
+    await db.into(db.reviewRecords).insert(
+      ReviewRecordsCompanion.insert(
+        uuid: Value(_uuid.v4()),
+        reviewTaskId: reviewTaskId,
+        action: action,
+        occurredAt: occurredAt,
+        createdAt: Value(occurredAt),
+      ),
+    );
+  }
+
+  /// 批量插入复习记录（同一 action/occurredAt）。
+  Future<void> _insertRecords(
+    List<int> reviewTaskIds, {
+    required String action,
+    required DateTime occurredAt,
+  }) async {
+    final companions = reviewTaskIds
+        .map(
+          (id) => ReviewRecordsCompanion.insert(
+            uuid: Value(_uuid.v4()),
+            reviewTaskId: id,
+            action: action,
+            occurredAt: occurredAt,
+            createdAt: Value(occurredAt),
+          ),
+        )
+        .toList();
+
+    await db.batch((batch) {
+      batch.insertAll(db.reviewRecords, companions);
+    });
+  }
+
   /// 获取全量任务状态计数（用于任务中心筛选栏展示）。
   ///
   /// 返回值：(all, pending, done, skipped)。
@@ -349,6 +447,7 @@ END
  SELECT * FROM (
   SELECT
     rt.id AS "rt.id",
+    rt.uuid AS "rt.uuid",
     rt.learning_item_id AS "rt.learning_item_id",
     rt.review_round AS "rt.review_round",
     rt.scheduled_date AS "rt.scheduled_date",
@@ -360,6 +459,7 @@ END
     rt.is_mock_data AS "rt.is_mock_data",
 
     li.id AS "li.id",
+    li.uuid AS "li.uuid",
     li.title AS "li.title",
     li.note AS "li.note",
      li.tags AS "li.tags",

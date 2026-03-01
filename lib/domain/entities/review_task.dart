@@ -47,6 +47,7 @@ class ReviewTaskEntity {
   /// 构造函数。
   ///
   /// 参数：
+  /// - [uuid] 业务唯一标识（用于备份合并去重，稳定且跨设备）
   /// - [id] 数据库 ID（新建时可为 null）
   /// - [learningItemId] 关联学习内容 ID
   /// - [reviewRound] 复习轮次（1-10）
@@ -55,7 +56,9 @@ class ReviewTaskEntity {
   /// - [completedAt] 完成时间
   /// - [skippedAt] 跳过时间
   /// - [createdAt] 创建时间
+  /// - [updatedAt] 更新时间（用于同步/备份诊断，可选）
   const ReviewTaskEntity({
+    required this.uuid,
     this.id,
     required this.learningItemId,
     required this.reviewRound,
@@ -64,8 +67,16 @@ class ReviewTaskEntity {
     this.completedAt,
     this.skippedAt,
     required this.createdAt,
+    this.updatedAt,
     this.isMockData = false,
   });
+
+  /// 业务唯一标识（UUID v4）。
+  ///
+  /// 说明：
+  /// - 用于备份/恢复的合并去重与外键修复（uuid → id 映射）
+  /// - 不参与 UI 展示
+  final String uuid;
 
   final int? id;
   final int learningItemId;
@@ -75,11 +86,13 @@ class ReviewTaskEntity {
   final DateTime? completedAt;
   final DateTime? skippedAt;
   final DateTime createdAt;
+  final DateTime? updatedAt;
 
   /// 是否为模拟数据（v3.1：用于 Debug 模拟数据隔离）。
   final bool isMockData;
 
   ReviewTaskEntity copyWith({
+    String? uuid,
     int? id,
     int? learningItemId,
     int? reviewRound,
@@ -88,9 +101,11 @@ class ReviewTaskEntity {
     DateTime? completedAt,
     DateTime? skippedAt,
     DateTime? createdAt,
+    DateTime? updatedAt,
     bool? isMockData,
   }) {
     return ReviewTaskEntity(
+      uuid: uuid ?? this.uuid,
       id: id ?? this.id,
       learningItemId: learningItemId ?? this.learningItemId,
       reviewRound: reviewRound ?? this.reviewRound,
@@ -99,6 +114,7 @@ class ReviewTaskEntity {
       completedAt: completedAt ?? this.completedAt,
       skippedAt: skippedAt ?? this.skippedAt,
       createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
       isMockData: isMockData ?? this.isMockData,
     );
   }

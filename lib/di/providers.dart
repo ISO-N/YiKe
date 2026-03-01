@@ -8,12 +8,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/database/daos/learning_item_dao.dart';
 import '../data/database/daos/learning_template_dao.dart';
 import '../data/database/daos/learning_topic_dao.dart';
+import '../data/database/daos/backup_dao.dart';
 import '../data/database/daos/review_task_dao.dart';
 import '../data/database/daos/settings_dao.dart';
 import '../data/database/daos/sync_device_dao.dart';
 import '../data/database/daos/sync_entity_mapping_dao.dart';
 import '../data/database/daos/sync_log_dao.dart';
 import '../data/database/database.dart';
+import '../data/repositories/backup_repository_impl.dart';
 import '../data/repositories/learning_item_repository_impl.dart';
 import '../data/repositories/learning_template_repository_impl.dart';
 import '../data/repositories/learning_topic_repository_impl.dart';
@@ -21,6 +23,7 @@ import '../data/repositories/review_task_repository_impl.dart';
 import '../data/repositories/settings_repository_impl.dart';
 import '../data/repositories/theme_settings_repository_impl.dart';
 import '../data/sync/sync_log_writer.dart';
+import '../domain/repositories/backup_repository.dart';
 import '../domain/repositories/learning_item_repository.dart';
 import '../domain/repositories/learning_template_repository.dart';
 import '../domain/repositories/learning_topic_repository.dart';
@@ -28,7 +31,11 @@ import '../domain/repositories/review_task_repository.dart';
 import '../domain/repositories/settings_repository.dart';
 import '../domain/repositories/theme_settings_repository.dart';
 import '../domain/services/ocr_service.dart';
+import '../domain/usecases/export_backup_usecase.dart';
+import '../domain/usecases/get_backup_list_usecase.dart';
+import '../domain/usecases/import_backup_usecase.dart';
 import '../infrastructure/storage/secure_storage_service.dart';
+import '../infrastructure/storage/backup_storage.dart';
 import '../infrastructure/sync/device_identity_service.dart';
 import '../domain/usecases/complete_review_task_usecase.dart';
 import '../domain/usecases/create_learning_item_usecase.dart';
@@ -78,6 +85,11 @@ final settingsDaoProvider = Provider<SettingsDao>((ref) {
   return SettingsDao(ref.read(appDatabaseProvider));
 });
 
+/// 备份 DAO Provider（用于导出读取）。
+final backupDaoProvider = Provider<BackupDao>((ref) {
+  return BackupDao(ref.read(appDatabaseProvider));
+});
+
 final learningTemplateDaoProvider = Provider<LearningTemplateDao>((ref) {
   return LearningTemplateDao(ref.read(appDatabaseProvider));
 });
@@ -110,6 +122,11 @@ final syncLogWriterProvider = Provider<SyncLogWriter>((ref) {
 /// 基础设施 Providers
 final secureStorageServiceProvider = Provider<SecureStorageService>((ref) {
   return SecureStorageService();
+});
+
+/// 备份文件存储 Provider（应用私有目录）。
+final backupStorageProvider = Provider<BackupStorage>((ref) {
+  return const BackupStorage();
 });
 
 /// 设备身份服务 Provider（用于同步/配对）。
@@ -178,6 +195,17 @@ final themeSettingsRepositoryProvider = Provider<ThemeSettingsRepository>((
     dao: ref.read(settingsDaoProvider),
     secureStorageService: ref.read(secureStorageServiceProvider),
     syncLogWriter: ref.read(syncLogWriterProvider),
+  );
+});
+
+/// 备份仓储 Provider。
+final backupRepositoryProvider = Provider<BackupRepository>((ref) {
+  return BackupRepositoryImpl(
+    db: ref.read(appDatabaseProvider),
+    backupDao: ref.read(backupDaoProvider),
+    settingsRepository: ref.read(settingsRepositoryProvider),
+    themeSettingsRepository: ref.read(themeSettingsRepositoryProvider),
+    storage: ref.read(backupStorageProvider),
   );
 });
 
@@ -261,7 +289,9 @@ final getReviewPlanUseCaseProvider = Provider<GetReviewPlanUseCase>((ref) {
   );
 });
 
-final adjustReviewDateUseCaseProvider = Provider<AdjustReviewDateUseCase>((ref) {
+final adjustReviewDateUseCaseProvider = Provider<AdjustReviewDateUseCase>((
+  ref,
+) {
   return AdjustReviewDateUseCase(
     reviewTaskRepository: ref.read(reviewTaskRepositoryProvider),
   );
@@ -314,4 +344,17 @@ final exportDataUseCaseProvider = Provider<ExportDataUseCase>((ref) {
     learningItemRepository: ref.read(learningItemRepositoryProvider),
     reviewTaskRepository: ref.read(reviewTaskRepositoryProvider),
   );
+});
+
+/// v1.5：备份与恢复 UseCase Providers
+final exportBackupUseCaseProvider = Provider<ExportBackupUseCase>((ref) {
+  return ExportBackupUseCase(repository: ref.read(backupRepositoryProvider));
+});
+
+final getBackupListUseCaseProvider = Provider<GetBackupListUseCase>((ref) {
+  return GetBackupListUseCase(repository: ref.read(backupRepositoryProvider));
+});
+
+final importBackupUseCaseProvider = Provider<ImportBackupUseCase>((ref) {
+  return ImportBackupUseCase(repository: ref.read(backupRepositoryProvider));
 });

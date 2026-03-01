@@ -9,6 +9,7 @@ library;
 import 'dart:convert';
 
 import 'package:drift/drift.dart';
+import 'package:uuid/uuid.dart';
 
 import '../../data/database/daos/settings_dao.dart';
 import '../../data/database/daos/sync_entity_mapping_dao.dart';
@@ -39,6 +40,10 @@ class SyncService {
   final String localDeviceId;
 
   final SettingsCrypto _settingsCrypto;
+
+  // v1.5：备份恢复引入稳定 uuid 字段后，所有“直接写库”的入口都必须确保插入时写入 uuid，
+  // 否则会触发 uuid 唯一索引冲突（默认空字符串会重复）。
+  static const Uuid _uuid = Uuid();
 
   static const String entityLearningItem = 'learning_item';
   static const String entityReviewTask = 'review_task';
@@ -271,6 +276,7 @@ class SyncService {
           .into(db.learningItems)
           .insert(
             LearningItemsCompanion.insert(
+              uuid: Value(_uuid.v4()),
               title: title,
               note: note == null ? const Value.absent() : Value(note),
               tags: Value(jsonEncode(tags)),
@@ -363,6 +369,7 @@ class SyncService {
           .into(db.reviewTasks)
           .insert(
             ReviewTasksCompanion.insert(
+              uuid: Value(_uuid.v4()),
               learningItemId: learningLocalId,
               reviewRound: reviewRound,
               scheduledDate: scheduledDate,
@@ -445,6 +452,7 @@ class SyncService {
           .into(db.learningTemplates)
           .insert(
             LearningTemplatesCompanion.insert(
+              uuid: Value(_uuid.v4()),
               name: name,
               titlePattern: titlePattern,
               notePattern: notePattern == null
@@ -517,6 +525,7 @@ class SyncService {
           .into(db.learningTopics)
           .insert(
             LearningTopicsCompanion.insert(
+              uuid: Value(_uuid.v4()),
               name: name,
               description: description == null
                   ? const Value.absent()

@@ -3,6 +3,8 @@
 /// 创建日期：2026-02-26
 library;
 
+import 'package:uuid/uuid.dart';
+
 import '../entities/learning_topic.dart';
 import '../entities/learning_topic_overview.dart';
 import '../repositories/learning_topic_repository.dart';
@@ -24,6 +26,8 @@ class ManageTopicUseCase {
 
   final LearningTopicRepository _repository;
 
+  static const Uuid _uuid = Uuid();
+
   /// 创建主题。
   ///
   /// 异常：
@@ -37,6 +41,7 @@ class ManageTopicUseCase {
 
     final now = DateTime.now();
     final entity = LearningTopicEntity(
+      uuid: _uuid.v4(),
       name: name,
       description: params.description?.trim().isEmpty == true
           ? null
@@ -52,6 +57,7 @@ class ManageTopicUseCase {
     int id,
     TopicParams params, {
     required DateTime createdAt,
+    required String uuid,
   }) async {
     final name = params.name.trim();
     if (name.isEmpty) throw ArgumentError('主题名称不能为空');
@@ -61,6 +67,7 @@ class ManageTopicUseCase {
     final now = DateTime.now();
     final entity = LearningTopicEntity(
       id: id,
+      uuid: uuid,
       name: name,
       description: params.description?.trim().isEmpty == true
           ? null

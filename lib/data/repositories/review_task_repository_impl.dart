@@ -6,6 +6,7 @@ library;
 import 'dart:convert';
 
 import 'package:drift/drift.dart';
+import 'package:uuid/uuid.dart';
 
 import '../../core/utils/ebbinghaus_utils.dart';
 import '../../domain/entities/review_task.dart';
@@ -30,11 +31,15 @@ class ReviewTaskRepositoryImpl implements ReviewTaskRepository {
   final ReviewTaskDao dao;
   final SyncLogWriter? _sync;
 
+  static const Uuid _uuid = Uuid();
+
   @override
   Future<ReviewTaskEntity> create(ReviewTaskEntity task) async {
     final now = DateTime.now();
+    final ensuredUuid = task.uuid.trim().isEmpty ? _uuid.v4() : task.uuid.trim();
     final id = await dao.insertReviewTask(
       ReviewTasksCompanion.insert(
+        uuid: Value(ensuredUuid),
         learningItemId: task.learningItemId,
         reviewRound: task.reviewRound,
         scheduledDate: task.scheduledDate,
@@ -45,6 +50,8 @@ class ReviewTaskRepositoryImpl implements ReviewTaskRepository {
         updatedAt: Value(now),
       ),
     );
+
+    final saved = task.copyWith(id: id, uuid: ensuredUuid, updatedAt: now);
 
     final sync = _sync;
     if (sync != null) {
@@ -78,7 +85,7 @@ class ReviewTaskRepositoryImpl implements ReviewTaskRepository {
       );
     }
 
-    return task.copyWith(id: id);
+    return saved;
   }
 
   @override
@@ -125,19 +132,19 @@ class ReviewTaskRepositoryImpl implements ReviewTaskRepository {
 
   @override
   Future<void> completeTask(int id) async {
-    await dao.updateTaskStatus(id, 'done', completedAt: DateTime.now());
+    await dao.completeTaskWithRecord(id);
     await _logTaskUpdateById(id);
   }
 
   @override
   Future<void> skipTask(int id) async {
-    await dao.updateTaskStatus(id, 'skipped', skippedAt: DateTime.now());
+    await dao.skipTaskWithRecord(id);
     await _logTaskUpdateById(id);
   }
 
   @override
   Future<void> completeTasks(List<int> ids) async {
-    await dao.updateTaskStatusBatch(ids, 'done', timestamp: DateTime.now());
+    await dao.completeTasksWithRecords(ids);
     for (final id in ids) {
       await _logTaskUpdateById(id);
     }
@@ -145,7 +152,7 @@ class ReviewTaskRepositoryImpl implements ReviewTaskRepository {
 
   @override
   Future<void> skipTasks(List<int> ids) async {
-    await dao.updateTaskStatusBatch(ids, 'skipped', timestamp: DateTime.now());
+    await dao.skipTasksWithRecords(ids);
     for (final id in ids) {
       await _logTaskUpdateById(id);
     }
@@ -153,7 +160,7 @@ class ReviewTaskRepositoryImpl implements ReviewTaskRepository {
 
   @override
   Future<void> undoTaskStatus(int id) async {
-    await dao.undoTaskStatus(id);
+    await dao.undoTaskStatusWithRecord(id);
     await _logTaskUpdateById(id);
   }
 
@@ -236,11 +243,13 @@ class ReviewTaskRepositoryImpl implements ReviewTaskRepository {
     final now = DateTime.now();
     await create(
       ReviewTaskEntity(
+        uuid: _uuid.v4(),
         learningItemId: learningItemId,
         reviewRound: nextRound,
         scheduledDate: nextDate,
         status: ReviewTaskStatus.pending,
         createdAt: now,
+        updatedAt: now,
       ),
     );
   }
@@ -284,6 +293,7 @@ class ReviewTaskRepositoryImpl implements ReviewTaskRepository {
         .map(
           (row) => ReviewTaskEntity(
             id: row.id,
+            uuid: row.uuid,
             learningItemId: row.learningItemId,
             reviewRound: row.reviewRound,
             scheduledDate: row.scheduledDate,
@@ -291,6 +301,7 @@ class ReviewTaskRepositoryImpl implements ReviewTaskRepository {
             completedAt: row.completedAt,
             skippedAt: row.skippedAt,
             createdAt: row.createdAt,
+            updatedAt: row.updatedAt,
             isMockData: row.isMockData,
           ),
         )

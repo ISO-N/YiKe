@@ -4,6 +4,7 @@
 library;
 
 import 'package:drift/drift.dart';
+import 'package:uuid/uuid.dart';
 
 import '../../domain/entities/learning_topic.dart';
 import '../../domain/entities/learning_topic_overview.dart';
@@ -25,11 +26,15 @@ class LearningTopicRepositoryImpl implements LearningTopicRepository {
   final LearningTopicDao dao;
   final SyncLogWriter? _sync;
 
+  static const Uuid _uuid = Uuid();
+
   @override
   Future<LearningTopicEntity> create(LearningTopicEntity topic) async {
     final now = DateTime.now();
+    final ensuredUuid = topic.uuid.trim().isEmpty ? _uuid.v4() : topic.uuid.trim();
     final id = await dao.insertTopic(
       LearningTopicsCompanion.insert(
+        uuid: Value(ensuredUuid),
         name: topic.name.trim(),
         description: topic.description == null
             ? const Value.absent()
@@ -38,7 +43,7 @@ class LearningTopicRepositoryImpl implements LearningTopicRepository {
         updatedAt: Value(now),
       ),
     );
-    final saved = topic.copyWith(id: id, updatedAt: now);
+    final saved = topic.copyWith(id: id, updatedAt: now, uuid: ensuredUuid);
 
     final sync = _sync;
     if (sync == null) return saved;
@@ -105,6 +110,7 @@ class LearningTopicRepositoryImpl implements LearningTopicRepository {
     final ok = await dao.updateTopic(
       LearningTopic(
         id: topic.id!,
+        uuid: topic.uuid,
         name: topic.name.trim(),
         description: topic.description,
         createdAt: topic.createdAt,
@@ -191,6 +197,7 @@ class LearningTopicRepositoryImpl implements LearningTopicRepository {
   LearningTopicEntity _toEntity(LearningTopic row) {
     return LearningTopicEntity(
       id: row.id,
+      uuid: row.uuid,
       name: row.name,
       description: row.description,
       createdAt: row.createdAt,

@@ -10,10 +10,12 @@ import 'package:yike/data/database/daos/learning_topic_dao.dart';
 import 'package:yike/data/database/database.dart';
 
 import '../helpers/test_database.dart';
+import '../helpers/test_uuid.dart';
 
 void main() {
   late AppDatabase db;
   late LearningTopicDao dao;
+  var uuidSeed = 1;
 
   setUp(() {
     db = createInMemoryDatabase();
@@ -29,6 +31,7 @@ void main() {
         .into(db.learningItems)
         .insert(
           LearningItemsCompanion.insert(
+            uuid: drift.Value(testUuid(uuidSeed++)),
             title: title,
             note: const drift.Value.absent(),
             tags: drift.Value(jsonEncode(<String>[])),
@@ -41,6 +44,7 @@ void main() {
   test('insertTopic / getById 可正常读写', () async {
     final id = await dao.insertTopic(
       LearningTopicsCompanion.insert(
+        uuid: drift.Value(testUuid(uuidSeed++)),
         name: 'Topic1',
         description: const drift.Value('desc'),
         createdAt: drift.Value(DateTime(2026, 2, 26, 10)),
@@ -57,12 +61,14 @@ void main() {
   test('getAllTopics 按 createdAt 倒序', () async {
     await dao.insertTopic(
       LearningTopicsCompanion.insert(
+        uuid: drift.Value(testUuid(uuidSeed++)),
         name: 'Old',
         createdAt: drift.Value(DateTime(2026, 2, 26, 9)),
       ),
     );
     await dao.insertTopic(
       LearningTopicsCompanion.insert(
+        uuid: drift.Value(testUuid(uuidSeed++)),
         name: 'New',
         createdAt: drift.Value(DateTime(2026, 2, 26, 10)),
       ),
@@ -77,6 +83,7 @@ void main() {
     () async {
       final topicId = await dao.insertTopic(
         LearningTopicsCompanion.insert(
+          uuid: drift.Value(testUuid(uuidSeed++)),
           name: 'T',
           createdAt: drift.Value(DateTime(2026, 2, 26, 10)),
         ),
@@ -101,6 +108,7 @@ void main() {
   test('existsName: 支持 exceptId 过滤', () async {
     final id = await dao.insertTopic(
       LearningTopicsCompanion.insert(
+        uuid: drift.Value(testUuid(uuidSeed++)),
         name: 'Dup',
         createdAt: drift.Value(DateTime(2026, 2, 26, 10)),
       ),
@@ -116,12 +124,14 @@ void main() {
     () async {
       final topic1 = await dao.insertTopic(
         LearningTopicsCompanion.insert(
+          uuid: drift.Value(testUuid(uuidSeed++)),
           name: 'T1',
           createdAt: drift.Value(DateTime(2026, 2, 26, 9)),
         ),
       );
       final topic2 = await dao.insertTopic(
         LearningTopicsCompanion.insert(
+          uuid: drift.Value(testUuid(uuidSeed++)),
           name: 'T2',
           createdAt: drift.Value(DateTime(2026, 2, 26, 10)),
         ),
@@ -138,6 +148,7 @@ void main() {
           .into(db.reviewTasks)
           .insert(
             ReviewTasksCompanion.insert(
+              uuid: drift.Value(testUuid(uuidSeed++)),
               learningItemId: itemA,
               reviewRound: 1,
               scheduledDate: DateTime(2026, 2, 26),
@@ -148,6 +159,7 @@ void main() {
           .into(db.reviewTasks)
           .insert(
             ReviewTasksCompanion.insert(
+              uuid: drift.Value(testUuid(uuidSeed++)),
               learningItemId: itemA,
               reviewRound: 2,
               scheduledDate: DateTime(2026, 2, 26),
@@ -158,6 +170,7 @@ void main() {
           .into(db.reviewTasks)
           .insert(
             ReviewTasksCompanion.insert(
+              uuid: drift.Value(testUuid(uuidSeed++)),
               learningItemId: itemA,
               reviewRound: 3,
               scheduledDate: DateTime(2026, 2, 26),
@@ -170,6 +183,7 @@ void main() {
           .into(db.reviewTasks)
           .insert(
             ReviewTasksCompanion.insert(
+              uuid: drift.Value(testUuid(uuidSeed++)),
               learningItemId: itemB,
               reviewRound: 1,
               scheduledDate: DateTime(2026, 2, 26),
@@ -180,6 +194,7 @@ void main() {
           .into(db.reviewTasks)
           .insert(
             ReviewTasksCompanion.insert(
+              uuid: drift.Value(testUuid(uuidSeed++)),
               learningItemId: itemB,
               reviewRound: 2,
               scheduledDate: DateTime(2026, 2, 26),

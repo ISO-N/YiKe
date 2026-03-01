@@ -6,6 +6,7 @@ library;
 import 'dart:convert';
 
 import 'package:drift/drift.dart';
+import 'package:uuid/uuid.dart';
 
 import '../../domain/entities/learning_template.dart';
 import '../../domain/repositories/learning_template_repository.dart';
@@ -26,11 +27,16 @@ class LearningTemplateRepositoryImpl implements LearningTemplateRepository {
   final LearningTemplateDao dao;
   final SyncLogWriter? _sync;
 
+  static const Uuid _uuid = Uuid();
+
   @override
   Future<LearningTemplateEntity> create(LearningTemplateEntity template) async {
     final now = DateTime.now();
+    final ensuredUuid =
+        template.uuid.trim().isEmpty ? _uuid.v4() : template.uuid.trim();
     final id = await dao.insertTemplate(
       LearningTemplatesCompanion.insert(
+        uuid: Value(ensuredUuid),
         name: template.name.trim(),
         titlePattern: template.titlePattern,
         notePattern: template.notePattern == null
@@ -42,7 +48,7 @@ class LearningTemplateRepositoryImpl implements LearningTemplateRepository {
         updatedAt: Value(now),
       ),
     );
-    final saved = template.copyWith(id: id, updatedAt: now);
+    final saved = template.copyWith(id: id, updatedAt: now, uuid: ensuredUuid);
 
     final sync = _sync;
     if (sync == null) return saved;
@@ -105,6 +111,7 @@ class LearningTemplateRepositoryImpl implements LearningTemplateRepository {
     final ok = await dao.updateTemplate(
       LearningTemplate(
         id: template.id!,
+        uuid: template.uuid,
         name: template.name.trim(),
         titlePattern: template.titlePattern,
         notePattern: template.notePattern,
@@ -180,6 +187,7 @@ class LearningTemplateRepositoryImpl implements LearningTemplateRepository {
   LearningTemplateEntity _toEntity(LearningTemplate row) {
     return LearningTemplateEntity(
       id: row.id,
+      uuid: row.uuid,
       name: row.name,
       titlePattern: row.titlePattern,
       notePattern: row.notePattern,

@@ -19,6 +19,7 @@ import '../../presentation/pages/learning_item/learning_item_detail_page.dart';
 import '../../presentation/pages/tasks/task_hub_page.dart';
 import '../../presentation/pages/tasks/task_detail_sheet.dart';
 import '../../presentation/pages/settings/export_page.dart';
+import '../../presentation/pages/settings/backup_page.dart';
 import '../../presentation/pages/settings/settings_page.dart';
 import '../../presentation/pages/settings/sync_settings_page.dart';
 import '../../presentation/pages/statistics/statistics_page.dart';
@@ -68,10 +69,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
         ],
       ),
-      GoRoute(
-        path: '/help',
-        redirect: (context, state) => '/settings/help',
-      ),
+      GoRoute(path: '/help', redirect: (context, state) => '/settings/help'),
       GoRoute(
         path: '/tasks/detail/:learningItemId',
         pageBuilder: (context, state) {
@@ -149,6 +147,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             fullscreenDialog: true,
             child: ExportPage(),
           );
+        },
+      ),
+      GoRoute(
+        path: '/settings/backup',
+        pageBuilder: (context, state) {
+          return const MaterialPage(child: BackupPage());
         },
       ),
       GoRoute(

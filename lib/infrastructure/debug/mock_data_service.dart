@@ -7,6 +7,7 @@ import 'dart:math';
 
 import 'package:drift/drift.dart';
 import 'package:flutter/foundation.dart';
+import 'package:uuid/uuid.dart';
 
 import '../../core/utils/ebbinghaus_utils.dart';
 import '../../data/database/daos/learning_item_dao.dart';
@@ -92,6 +93,8 @@ class MockDataService {
   final ReviewTaskDao _reviewTaskDao;
   final Random _random;
 
+  static const Uuid _uuid = Uuid();
+
   /// 生成模拟数据（学习内容 + 复习任务）。
   ///
   /// 返回值：生成结果（插入条数）。
@@ -167,6 +170,7 @@ class MockDataService {
 
         final id = await _learningItemDao.insertLearningItem(
           LearningItemsCompanion.insert(
+            uuid: Value(_uuid.v4()),
             title: title,
             note: Value(note),
             tags: const Value('[]'),
@@ -229,6 +233,7 @@ class MockDataService {
 
         companions.add(
           ReviewTasksCompanion.insert(
+            uuid: Value(_uuid.v4()),
             learningItemId: c.itemId,
             reviewRound: c.round,
             scheduledDate: scheduledAt,

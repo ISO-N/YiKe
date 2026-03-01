@@ -355,13 +355,9 @@ class SettingsPage extends ConsumerWidget {
                       ListTile(
                         contentPadding: EdgeInsets.zero,
                         title: const Text('备份与恢复'),
-                        subtitle: const Text('规划中'),
+                        subtitle: const Text('导出备份、导入恢复、管理历史'),
                         trailing: const Icon(Icons.chevron_right),
-                        onTap: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('备份与恢复功能正在规划中')),
-                          );
-                        },
+                        onTap: () => context.push('/settings/backup'),
                       ),
                     ],
                   ),

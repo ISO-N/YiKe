@@ -7,6 +7,8 @@ import 'package:yike/domain/entities/learning_template.dart';
 import 'package:yike/domain/repositories/learning_template_repository.dart';
 import 'package:yike/domain/usecases/manage_template_usecase.dart';
 
+import '../../helpers/test_uuid.dart';
+
 void main() {
   test('create: name/titlePattern 为空会抛 ArgumentError', () async {
     final usecase = ManageTemplateUseCase(repository: _InMemoryTemplateRepo());
@@ -44,6 +46,7 @@ void main() {
       a.id!,
       const TemplateParams(name: 'A', titlePattern: '{date}', tags: []),
       createdAt: a.createdAt,
+      uuid: a.uuid,
     );
 
     final b = await usecase.create(
@@ -54,6 +57,7 @@ void main() {
         a.id!,
         const TemplateParams(name: 'B', titlePattern: '{date}', tags: []),
         createdAt: a.createdAt,
+        uuid: a.uuid,
       ),
       throwsStateError,
     );
@@ -66,6 +70,7 @@ void main() {
     final usecase = ManageTemplateUseCase(repository: _InMemoryTemplateRepo());
     final template = LearningTemplateEntity(
       id: 1,
+      uuid: testUuid(1),
       name: 'T',
       titlePattern: '{date} {day} {weekday} {unknown}',
       notePattern: '{weekday}',

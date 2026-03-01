@@ -8,6 +8,8 @@ import 'package:yike/domain/entities/learning_topic_overview.dart';
 import 'package:yike/domain/repositories/learning_topic_repository.dart';
 import 'package:yike/domain/usecases/manage_topic_usecase.dart';
 
+import '../../helpers/test_uuid.dart';
+
 void main() {
   test('create/update: name 为空会抛 ArgumentError', () async {
     final usecase = ManageTopicUseCase(repository: _InMemoryTopicRepo());
@@ -20,6 +22,7 @@ void main() {
         1,
         const TopicParams(name: ' '),
         createdAt: DateTime(2026, 2, 26),
+        uuid: testUuid(1),
       ),
       throwsArgumentError,
     );
@@ -40,6 +43,7 @@ void main() {
       a.id!,
       const TopicParams(name: 'A'),
       createdAt: a.createdAt,
+      uuid: a.uuid,
     );
 
     final b = await usecase.create(const TopicParams(name: 'B'));
@@ -48,6 +52,7 @@ void main() {
         a.id!,
         const TopicParams(name: 'B'),
         createdAt: a.createdAt,
+        uuid: a.uuid,
       ),
       throwsStateError,
     );

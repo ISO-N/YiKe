@@ -6,6 +6,7 @@ library;
 import 'dart:convert';
 
 import 'package:drift/drift.dart';
+import 'package:uuid/uuid.dart';
 
 import '../../domain/entities/learning_item.dart';
 import '../../domain/repositories/learning_item_repository.dart';
@@ -26,11 +27,15 @@ class LearningItemRepositoryImpl implements LearningItemRepository {
   final LearningItemDao dao;
   final SyncLogWriter? _sync;
 
+  static const Uuid _uuid = Uuid();
+
   @override
   Future<LearningItemEntity> create(LearningItemEntity item) async {
     final now = DateTime.now();
+    final ensuredUuid = item.uuid.trim().isEmpty ? _uuid.v4() : item.uuid.trim();
     final id = await dao.insertLearningItem(
       LearningItemsCompanion.insert(
+        uuid: Value(ensuredUuid),
         title: item.title,
         note: item.note == null ? const Value.absent() : Value(item.note),
         tags: Value(jsonEncode(item.tags)),
@@ -39,7 +44,7 @@ class LearningItemRepositoryImpl implements LearningItemRepository {
         updatedAt: Value(now),
       ),
     );
-    final saved = item.copyWith(id: id, updatedAt: now);
+    final saved = item.copyWith(id: id, updatedAt: now, uuid: ensuredUuid);
 
     final sync = _sync;
     if (sync == null) return saved;
@@ -141,6 +146,7 @@ class LearningItemRepositoryImpl implements LearningItemRepository {
     final ok = await dao.updateLearningItem(
       LearningItem(
         id: item.id!,
+        uuid: existing.uuid,
         title: item.title,
         note: item.note,
         tags: jsonEncode(item.tags),
@@ -278,6 +284,7 @@ class LearningItemRepositoryImpl implements LearningItemRepository {
 
   LearningItemEntity _toEntity(LearningItem row) {
     return LearningItemEntity(
+      uuid: row.uuid,
       id: row.id,
       title: row.title,
       note: row.note,

@@ -15,6 +15,7 @@ import 'package:yike/data/sync/sync_log_writer.dart';
 import 'package:yike/domain/entities/learning_item.dart';
 
 import '../helpers/test_database.dart';
+import '../helpers/test_uuid.dart';
 
 void main() {
   late AppDatabase db;
@@ -46,6 +47,7 @@ void main() {
   test('create 会写入并回写 id/updatedAt', () async {
     final now = DateTime(2026, 2, 25, 10);
     final item = LearningItemEntity(
+      uuid: testUuid(1),
       title: 'T',
       note: null,
       tags: const ['a'],
@@ -64,6 +66,7 @@ void main() {
     final now = DateTime(2026, 2, 25, 10);
     final created = await repo.create(
       LearningItemEntity(
+        uuid: testUuid(2),
         title: 'T',
         note: null,
         tags: const ['a'],
@@ -85,6 +88,7 @@ void main() {
     final now = DateTime(2026, 2, 25, 10);
     final created = await repo.create(
       LearningItemEntity(
+        uuid: testUuid(3),
         title: 'T',
         note: null,
         tags: const [],
@@ -101,6 +105,7 @@ void main() {
   test('update: id 为空会抛 ArgumentError', () async {
     final now = DateTime(2026, 2, 25, 10);
     final item = LearningItemEntity(
+      uuid: testUuid(4),
       id: null,
       title: 'T',
       note: null,
@@ -116,6 +121,7 @@ void main() {
   test('update: 行不存在会抛 StateError', () async {
     final now = DateTime(2026, 2, 25, 10);
     final item = LearningItemEntity(
+      uuid: testUuid(5),
       id: 999,
       title: 'T',
       note: null,
@@ -131,6 +137,7 @@ void main() {
   test('getById 对非法 tags JSON 返回空列表', () async {
     final id = await dao.insertLearningItem(
       LearningItemsCompanion.insert(
+        uuid: drift.Value(testUuid(6)),
         title: 'T',
         note: const drift.Value.absent(),
         tags: const drift.Value('not-json'),
@@ -147,6 +154,7 @@ void main() {
   test('update: 学习内容已停用时会抛 StateError', () async {
     final id = await dao.insertLearningItem(
       LearningItemsCompanion.insert(
+        uuid: drift.Value(testUuid(7)),
         title: 'T',
         note: const drift.Value.absent(),
         tags: const drift.Value('[]'),
@@ -160,6 +168,7 @@ void main() {
     await expectLater(
       () => repo.update(
         LearningItemEntity(
+          uuid: testUuid(7),
           id: id,
           title: 'T2',
           note: null,
@@ -184,6 +193,7 @@ void main() {
     final now = DateTime(2026, 2, 25, 10);
     final created = await syncRepo.create(
       LearningItemEntity(
+        uuid: testUuid(8),
         title: 'T',
         note: null,
         tags: const ['a', 'b'],
@@ -220,6 +230,7 @@ void main() {
 
     final id = await dao.insertLearningItem(
       LearningItemsCompanion.insert(
+        uuid: drift.Value(testUuid(9)),
         title: 'Mock',
         note: const drift.Value.absent(),
         tags: const drift.Value('[]'),
@@ -247,6 +258,7 @@ void main() {
 
     final id = await dao.insertLearningItem(
       LearningItemsCompanion.insert(
+        uuid: drift.Value(testUuid(10)),
         title: 'T',
         note: const drift.Value.absent(),
         tags: const drift.Value('[]'),
@@ -263,6 +275,7 @@ void main() {
 
     final active = await syncRepo.create(
       LearningItemEntity(
+        uuid: testUuid(11),
         title: 'A',
         note: null,
         tags: const [],
@@ -286,6 +299,7 @@ void main() {
 
     final id = await dao.insertLearningItem(
       LearningItemsCompanion.insert(
+        uuid: drift.Value(testUuid(12)),
         title: 'Mock',
         note: const drift.Value.absent(),
         tags: const drift.Value('[]'),
@@ -298,6 +312,7 @@ void main() {
     await syncRepo.update(
       LearningItemEntity(
         id: id,
+        uuid: testUuid(12),
         title: 'Mock2',
         note: null,
         tags: const [],
