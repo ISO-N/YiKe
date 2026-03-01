@@ -18,6 +18,7 @@ import '../../infrastructure/storage/secure_storage_service.dart';
 import '../../infrastructure/storage/settings_crypto.dart';
 
 import '../../core/utils/backup_utils.dart';
+import '../../core/utils/note_migration_parser.dart';
 import '../../domain/entities/backup_file.dart';
 import '../../domain/entities/backup_summary.dart';
 import '../../domain/repositories/backup_repository.dart';
@@ -62,7 +63,8 @@ class BackupRepositoryImpl implements BackupRepository {
   final SettingsDao _settingsDao;
   final SettingsCrypto _settingsCrypto;
 
-  static const String _schemaVersion = '1.0';
+  // v2.6：任务结构升级后，备份 data 增加 description 与 learningSubtasks。
+  static const String _schemaVersion = '1.1';
   static const String _backupFileExt = '.yikebackup';
   static const String _snapshotFileName =
       'yike_snapshot_import_before$_backupFileExt';
@@ -92,6 +94,8 @@ class BackupRepositoryImpl implements BackupRepository {
       ),
     );
     final items = await _backupDao.getLearningItemsForBackup();
+    cancelToken.throwIfCanceled();
+    final subtasks = await _backupDao.getLearningSubtasksForBackup();
     cancelToken.throwIfCanceled();
     final tasks = await _backupDao.getReviewTasksForBackup();
     cancelToken.throwIfCanceled();
@@ -134,6 +138,7 @@ class BackupRepositoryImpl implements BackupRepository {
 
     final data = BackupDataEntity(
       learningItems: items,
+      learningSubtasks: subtasks,
       reviewTasks: tasks,
       reviewRecords: records,
       settings: settings,
@@ -324,6 +329,8 @@ WHERE rt.is_mock_data = 0
     );
     final items = await _backupDao.getLearningItemsForBackup();
     cancelToken.throwIfCanceled();
+    final subtasks = await _backupDao.getLearningSubtasksForBackup();
+    cancelToken.throwIfCanceled();
     final tasks = await _backupDao.getReviewTasksForBackup();
     cancelToken.throwIfCanceled();
     final records = await _backupDao.getReviewRecordsForBackup();
@@ -363,6 +370,7 @@ WHERE rt.is_mock_data = 0
 
     final data = BackupDataEntity(
       learningItems: items,
+      learningSubtasks: subtasks,
       reviewTasks: tasks,
       reviewRecords: records,
       settings: settings,
@@ -519,8 +527,22 @@ WHERE rt.is_mock_data = 0
       }
 
       // 1) learning_items
-      final itemUuidToId = await _upsertLearningItems(
+      final (itemUuidToId, migratedSubtasks) = await _upsertLearningItems(
         normalized.data.learningItems,
+        hasSubtasksFromBackup: normalized.data.learningSubtasks
+            .map((e) => e.learningItemUuid)
+            .toSet(),
+      );
+      cancelToken.throwIfCanceled();
+
+      // 1.1) learning_subtasks（含旧备份 note 迁移生成的子任务）
+      final mergedSubtasks = <BackupLearningSubtaskEntity>[
+        ...normalized.data.learningSubtasks,
+        ...migratedSubtasks,
+      ];
+      await _upsertLearningSubtasks(
+        mergedSubtasks,
+        itemUuidToId: itemUuidToId,
       );
       cancelToken.throwIfCanceled();
 
@@ -726,12 +748,24 @@ WHERE rt.is_mock_data = 0
     )) {
       throw const FormatException('备份文件已损坏');
     }
+    if (backup.data.learningSubtasks.any(
+      (e) => e.uuid.isEmpty || e.learningItemUuid.isEmpty,
+    )) {
+      throw const FormatException('备份文件已损坏');
+    }
 
     final itemUuids = backup.data.learningItems.map((e) => e.uuid).toSet();
     final hasMissingItemRef = backup.data.reviewTasks.any(
       (t) => !itemUuids.contains(t.learningItemUuid),
     );
     if (hasMissingItemRef) {
+      throw const FormatException('备份文件格式无效');
+    }
+
+    final hasMissingItemRefForSubtasks = backup.data.learningSubtasks.any(
+      (s) => !itemUuids.contains(s.learningItemUuid),
+    );
+    if (hasMissingItemRefForSubtasks) {
       throw const FormatException('备份文件格式无效');
     }
 
@@ -782,20 +816,58 @@ WHERE rt.is_mock_data = 0
     }
   }
 
-  Future<Map<String, int>> _upsertLearningItems(
-    List<BackupLearningItemEntity> items,
-  ) async {
+  /// Upsert 学习内容，并对旧备份（仅 note、无 description/learningSubtasks）做一次性迁移。
+  ///
+  /// 返回值：
+  /// - itemUuid → localId 映射（用于外键修复）
+  /// - 由 note 迁移生成的子任务列表（用于后续写入 learning_subtasks）
+  Future<(Map<String, int>, List<BackupLearningSubtaskEntity>)> _upsertLearningItems(
+    List<BackupLearningItemEntity> items, {
+    required Set<String> hasSubtasksFromBackup,
+  }) async {
     final existing = await _loadExistingLearningItemsByUuid(
       items.map((e) => e.uuid).toList(),
     );
 
     final map = <String, int>{};
+    final migratedSubtasks = <BackupLearningSubtaskEntity>[];
+    final uuidGen = const Uuid();
     for (final item in items) {
       final createdAt = _parseDateTime(item.createdAt) ?? DateTime.now();
       final updatedAt = _parseDateTime(item.updatedAt);
       final learningDate = _parseDateTime(item.learningDate) ?? DateTime.now();
       final deletedAt = _parseDateTime(item.deletedAt);
       final tagsJson = jsonEncode(item.tags);
+
+      // 旧备份兼容：若无 description 且备份也未提供 learningSubtasks，则按迁移规则从 note 拆解。
+      final hasNewStructure =
+          (item.description?.trim().isNotEmpty ?? false) ||
+          hasSubtasksFromBackup.contains(item.uuid);
+      final legacyNote = (item.note ?? '').trim();
+      final migration = (!hasNewStructure && legacyNote.isNotEmpty)
+          ? NoteMigrationParser.parse(legacyNote)
+          : null;
+
+      final effectiveDescription =
+          (item.description?.trim().isNotEmpty ?? false)
+              ? item.description?.trim()
+              : migration?.description?.trim();
+      final effectiveNote = migration == null ? item.note : null;
+
+      if (migration != null && migration.subtasks.isNotEmpty) {
+        for (var i = 0; i < migration.subtasks.length; i++) {
+          migratedSubtasks.add(
+            BackupLearningSubtaskEntity(
+              uuid: uuidGen.v4(),
+              learningItemUuid: item.uuid,
+              content: migration.subtasks[i],
+              sortOrder: i,
+              createdAt: createdAt.toIso8601String(),
+              updatedAt: updatedAt?.toIso8601String(),
+            ),
+          );
+        }
+      }
 
       final row = existing[item.uuid];
       if (row != null) {
@@ -805,7 +877,8 @@ WHERE rt.is_mock_data = 0
         )..where((t) => t.id.equals(row.id))).write(
           LearningItemsCompanion(
             title: Value(item.title),
-            note: Value(item.note),
+            description: Value(effectiveDescription),
+            note: Value(effectiveNote),
             tags: Value(tagsJson),
             learningDate: Value(learningDate),
             isDeleted: Value(item.isDeleted),
@@ -827,7 +900,8 @@ WHERE rt.is_mock_data = 0
               LearningItemsCompanion.insert(
                 uuid: Value(item.uuid),
                 title: item.title,
-                note: Value(item.note),
+                description: Value(effectiveDescription),
+                note: Value(effectiveNote),
                 tags: Value(tagsJson),
                 learningDate: learningDate,
                 createdAt: Value(createdAt),
@@ -844,7 +918,60 @@ WHERE rt.is_mock_data = 0
         map[item.uuid] = id;
       }
     }
-    return map;
+    return (map, migratedSubtasks);
+  }
+
+  Future<void> _upsertLearningSubtasks(
+    List<BackupLearningSubtaskEntity> subtasks, {
+    required Map<String, int> itemUuidToId,
+  }) async {
+    if (subtasks.isEmpty) return;
+
+    final existing = await _loadExistingLearningSubtasksByUuid(
+      subtasks.map((e) => e.uuid).toList(),
+    );
+
+    for (final subtask in subtasks) {
+      final createdAt = _parseDateTime(subtask.createdAt) ?? DateTime.now();
+      final updatedAt = _parseDateTime(subtask.updatedAt);
+
+      final row = existing[subtask.uuid];
+      if (row != null) {
+        // learningItemUuid 不一致说明 uuid 冲突：中止导入。
+        if (row.learningItemUuid != subtask.learningItemUuid) {
+          throw const FormatException('备份文件数据异常，导入中止');
+        }
+
+        // 更新：不覆盖 id、learning_item_id、created_at。
+        await (_db.update(
+          _db.learningSubtasks,
+        )..where((t) => t.id.equals(row.id))).write(
+          LearningSubtasksCompanion(
+            content: Value(subtask.content),
+            sortOrder: Value(subtask.sortOrder),
+            updatedAt: updatedAt != null ? Value(updatedAt) : const Value.absent(),
+            isMockData: const Value(false),
+          ),
+        );
+      } else {
+        final itemId = itemUuidToId[subtask.learningItemUuid];
+        if (itemId == null) {
+          throw const FormatException('备份文件格式无效');
+        }
+
+        await _db.into(_db.learningSubtasks).insert(
+          LearningSubtasksCompanion.insert(
+            uuid: Value(subtask.uuid),
+            learningItemId: itemId,
+            content: subtask.content,
+            sortOrder: Value(subtask.sortOrder),
+            createdAt: createdAt,
+            updatedAt: updatedAt != null ? Value(updatedAt) : const Value.absent(),
+            isMockData: const Value(false),
+          ),
+        );
+      }
+    }
   }
 
   Future<Map<String, int>> _upsertReviewTasks(
@@ -1054,6 +1181,32 @@ WHERE rt.is_mock_data = 0
     return map;
   }
 
+  Future<Map<String, _ExistingLearningSubtaskRow>>
+  _loadExistingLearningSubtasksByUuid(List<String> uuids) async {
+    final map = <String, _ExistingLearningSubtaskRow>{};
+    final filtered = uuids.where((e) => e.trim().isNotEmpty).toList();
+    for (final chunk in _chunk(filtered, size: 300)) {
+      final query = _db.select(_db.learningSubtasks).join([
+        innerJoin(
+          _db.learningItems,
+          _db.learningItems.id.equalsExp(_db.learningSubtasks.learningItemId),
+        ),
+      ]);
+      query.where(_db.learningSubtasks.uuid.isIn(chunk));
+
+      final rows = await query.get();
+      for (final row in rows) {
+        final subtask = row.readTable(_db.learningSubtasks);
+        final item = row.readTable(_db.learningItems);
+        map[subtask.uuid] = _ExistingLearningSubtaskRow(
+          id: subtask.id,
+          learningItemUuid: item.uuid,
+        );
+      }
+    }
+    return map;
+  }
+
   Future<Map<String, _ExistingTaskRow>> _loadExistingReviewTasksByUuid(
     List<String> uuids,
   ) async {
@@ -1115,6 +1268,16 @@ WHERE rt.is_mock_data = 0
       yield items.sublist(i, end);
     }
   }
+}
+
+class _ExistingLearningSubtaskRow {
+  const _ExistingLearningSubtaskRow({
+    required this.id,
+    required this.learningItemUuid,
+  });
+
+  final int id;
+  final String learningItemUuid;
 }
 
 class _ExistingTaskRow {

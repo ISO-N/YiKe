@@ -87,6 +87,7 @@ void main() {
           deletedAt: null,
         ),
       ],
+      learningSubtasks: const [],
       reviewTasks: [
         BackupReviewTaskEntity(
           uuid: 'task-1',
@@ -173,5 +174,108 @@ void main() {
     // 断言：主题设置被覆盖导入。
     final theme = await themeRepo.getThemeSettings();
     expect(theme.mode, 'dark');
+  });
+
+  test('旧备份导入：仅 note 且无子任务时，会自动迁移并清空 note', () async {
+    final db = createInMemoryDatabase();
+    final tempDir = await Directory.systemTemp.createTemp('yike_backup_test_');
+    addTearDown(() async {
+      await db.close();
+      try {
+        await tempDir.delete(recursive: true);
+      } catch (_) {}
+    });
+
+    final settingsDao = SettingsDao(db);
+    final secure = SecureStorageService();
+    final settingsRepo = SettingsRepositoryImpl(
+      dao: settingsDao,
+      secureStorageService: secure,
+    );
+    final themeRepo = ThemeSettingsRepositoryImpl(
+      dao: settingsDao,
+      secureStorageService: secure,
+    );
+
+    final now = DateTime.now();
+    final data = BackupDataEntity(
+      learningItems: [
+        BackupLearningItemEntity(
+          uuid: 'item-legacy',
+          title: '旧备份任务',
+          // 说明：模拟旧备份仅有 note（含列表符号），新字段缺失。
+          note: '- 子任务A\n- 子任务B',
+          tags: const [],
+          learningDate: now.toIso8601String(),
+          createdAt: now.subtract(const Duration(days: 1)).toIso8601String(),
+          updatedAt: now.toIso8601String(),
+          isDeleted: false,
+          deletedAt: null,
+        ),
+      ],
+      // 说明：旧备份不包含 learningSubtasks（这里用空列表模拟）。
+      learningSubtasks: const [],
+      reviewTasks: const [],
+      reviewRecords: const [],
+      settings: const {},
+    );
+
+    final canonical = BackupUtils.canonicalizeDataJson(
+      data.toJson().cast<String, dynamic>(),
+    );
+    final checksum = await BackupUtils.sha256Hex(canonical);
+    final payloadSize = BackupUtils.utf8BytesLength(canonical);
+
+    final backup = BackupFileEntity(
+      schemaVersion: '1.0',
+      appVersion: 'test',
+      dbSchemaVersion: 0,
+      backupId: 'backup-legacy-1',
+      createdAt: BackupUtils.formatLocalIsoWithOffset(now),
+      createdAtUtc: now.toUtc().toIso8601String(),
+      checksum: checksum,
+      stats: BackupStatsEntity(
+        learningItems: 1,
+        reviewTasks: 0,
+        reviewRecords: 0,
+        payloadSize: payloadSize,
+      ),
+      data: data,
+      platform: 'android',
+    );
+
+    final backupFile = File(p.join(tempDir.path, 'legacy.yikebackup'));
+    await backupFile.writeAsString(jsonEncode(backup.toJson()), flush: true);
+
+    final repo = BackupRepositoryImpl(
+      db: db,
+      backupDao: BackupDao(db),
+      settingsRepository: settingsRepo,
+      themeSettingsRepository: themeRepo,
+      storage: BackupStorage(baseDir: tempDir),
+    );
+    final useCase = ImportBackupUseCase(repository: repo);
+
+    final token = BackupCancelToken();
+    final preview = await useCase.preview(file: backupFile, cancelToken: token);
+    await useCase.execute(
+      preview: preview,
+      strategy: BackupImportStrategy.overwrite,
+      cancelToken: token,
+    );
+
+    final item = await (db.select(db.learningItems)
+          ..where((t) => t.uuid.equals('item-legacy')))
+        .getSingle();
+    // 断言：旧 note 已清空（幂等锚点），description 为空（列表型 note 不迁移到描述）。
+    expect(item.note == null || item.note!.isEmpty, isTrue);
+    expect(item.description == null || item.description!.isEmpty, isTrue);
+
+    final subtasks = await (db.select(db.learningSubtasks)
+          ..where((t) => t.learningItemId.equals(item.id))
+          ..orderBy([(t) => OrderingTerm.asc(t.sortOrder)]))
+        .get();
+    expect(subtasks.map((e) => e.content).toList(), ['子任务A', '子任务B']);
+    expect(subtasks.map((e) => e.sortOrder).toList(), [0, 1]);
   });
 }
