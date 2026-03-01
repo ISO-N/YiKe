@@ -956,6 +956,7 @@ class _TaskGrid extends StatelessWidget {
                 padding: const EdgeInsets.only(bottom: AppSpacing.md),
                 child: _TaskCard(
                   taskId: t.taskId,
+                  learningItemId: t.learningItemId,
                   title: t.title,
                   description: t.description,
                   legacyNote: t.note,
@@ -983,8 +984,9 @@ class _TaskGrid extends StatelessWidget {
     }
 
     // 桌面/宽屏：多列网格，关闭滑动（桌面端用按钮/快捷键更符合预期）。
-    // v2.6：副标题增加“描述/子任务摘要”，桌面端卡片略增高以避免溢出。
-    final itemExtent = selectionMode ? 184.0 : 172.0;
+    // v2.6：副标题增加"描述/子任务摘要"，桌面端卡片略增高以避免溢出。
+    // v2.7：增加高度以容纳展开描述后的"查看完整描述"链接。
+    final itemExtent = selectionMode ? 240.0 : 220.0;
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -999,6 +1001,7 @@ class _TaskGrid extends StatelessWidget {
         final t = tasks[index];
         return _TaskCard(
           taskId: t.taskId,
+          learningItemId: t.learningItemId,
           title: t.title,
           description: t.description,
           legacyNote: t.note,
@@ -1028,6 +1031,7 @@ class _TaskGrid extends StatelessWidget {
 class _TaskCard extends StatelessWidget {
   const _TaskCard({
     required this.taskId,
+    required this.learningItemId,
     required this.title,
     required this.description,
     required this.legacyNote,
@@ -1051,6 +1055,7 @@ class _TaskCard extends StatelessWidget {
   });
 
   final int taskId;
+  final int learningItemId;
   final String title;
   final String? description;
   final String? legacyNote;
@@ -1240,10 +1245,32 @@ class _TaskCard extends StatelessWidget {
                                     const SizedBox(height: 6),
                                     Text(
                                       detailText,
+                                      maxLines: 5,
+                                      overflow: TextOverflow.ellipsis,
                                       style: AppTypography.bodySecondary(
                                         context,
                                       ),
                                     ),
+                                    // 当描述文本超过5行时，显示"查看完整描述"链接
+                                    if (detailText.split('\n').length > 5) ...[
+                                      const SizedBox(height: AppSpacing.xs),
+                                      GestureDetector(
+                                        onTap: () {
+                                          // 跳转到任务详情页
+                                          context.push(
+                                            '/tasks/detail/$learningItemId',
+                                          );
+                                        },
+                                        child: Text(
+                                          '查看完整描述 >>',
+                                          style: TextStyle(
+                                            color: primary,
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                     const SizedBox(height: AppSpacing.sm),
                                   ],
                                   Text(
