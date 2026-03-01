@@ -11,6 +11,7 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
 import 'tables/learning_items_table.dart';
+import 'tables/learning_subtasks_table.dart';
 import 'tables/review_records_table.dart';
 import 'tables/learning_templates_table.dart';
 import 'tables/learning_topics_table.dart';
@@ -33,6 +34,7 @@ part 'database.g.dart';
 @DriftDatabase(
   tables: [
     LearningItems,
+    LearningSubtasks,
     ReviewTasks,
     ReviewRecords,
     AppSettingsTable,
@@ -67,7 +69,7 @@ class AppDatabase extends _$AppDatabase {
   }
 
   @override
-  int get schemaVersion => 8;
+  int get schemaVersion => 9;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -273,6 +275,38 @@ class AppDatabase extends _$AppDatabase {
         );
         await customStatement(
           'CREATE UNIQUE INDEX IF NOT EXISTS idx_review_records_uuid ON review_records (uuid)',
+        );
+      }
+
+      // v2.6：任务结构增强 - learning_items.description + learning_subtasks 表。
+      if (from < 9) {
+        Future<bool> hasTable(String table) async {
+          final rows = await customSelect(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name = ?",
+            variables: [Variable<String>(table)],
+          ).get();
+          return rows.isNotEmpty;
+        }
+
+        Future<bool> hasColumn(String table, String column) async {
+          final rows = await customSelect('PRAGMA table_info($table)').get();
+          return rows.any((r) => r.read<String>('name') == column);
+        }
+
+        // 1) 新增 description 列（兼容：历史脏库可能已存在）。
+        if (await hasTable('learning_items') &&
+            !await hasColumn('learning_items', 'description')) {
+          await migrator.addColumn(learningItems, learningItems.description);
+        }
+
+        // 2) 新建 learning_subtasks 表（兼容：历史脏库表可能已存在）。
+        if (!await hasTable('learning_subtasks')) {
+          await migrator.createTable(learningSubtasks);
+        }
+
+        // 3) 创建索引（兼容：重复执行）。
+        await customStatement(
+          'CREATE INDEX IF NOT EXISTS idx_learning_subtasks_item_order ON learning_subtasks (learning_item_id, sort_order)',
         );
       }
     },

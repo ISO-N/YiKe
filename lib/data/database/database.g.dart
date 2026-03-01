@@ -58,6 +58,17 @@ class $LearningItemsTable extends LearningItems
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _descriptionMeta = const VerificationMeta(
+    'description',
+  );
+  @override
+  late final GeneratedColumn<String> description = GeneratedColumn<String>(
+    'description',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _tagsMeta = const VerificationMeta('tags');
   @override
   late final GeneratedColumn<String> tags = GeneratedColumn<String>(
@@ -149,6 +160,7 @@ class $LearningItemsTable extends LearningItems
     uuid,
     title,
     note,
+    description,
     tags,
     learningDate,
     createdAt,
@@ -190,6 +202,15 @@ class $LearningItemsTable extends LearningItems
       context.handle(
         _noteMeta,
         note.isAcceptableOrUnknown(data['note']!, _noteMeta),
+      );
+    }
+    if (data.containsKey('description')) {
+      context.handle(
+        _descriptionMeta,
+        description.isAcceptableOrUnknown(
+          data['description']!,
+          _descriptionMeta,
+        ),
       );
     }
     if (data.containsKey('tags')) {
@@ -267,6 +288,10 @@ class $LearningItemsTable extends LearningItems
         DriftSqlType.string,
         data['${effectivePrefix}note'],
       ),
+      description: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}description'],
+      ),
       tags: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}tags'],
@@ -321,6 +346,13 @@ class LearningItem extends DataClass implements Insertable<LearningItem> {
   /// 备注内容（可选，v1.0 MVP 仅纯文本）。
   final String? note;
 
+  /// 描述内容（可选，v2.6：替代 note 的结构化入口）。
+  ///
+  /// 说明：
+  /// - 本次变更采用渐进式迁移：保留 note 字段不删除
+  /// - 迁移完成后：旧 note 会被迁移到 description 与 learning_subtasks，并置空 note
+  final String? description;
+
   /// 标签列表（JSON 字符串，如 ["Java","英语"]）。
   final String tags;
 
@@ -355,6 +387,7 @@ class LearningItem extends DataClass implements Insertable<LearningItem> {
     required this.uuid,
     required this.title,
     this.note,
+    this.description,
     required this.tags,
     required this.learningDate,
     required this.createdAt,
@@ -371,6 +404,9 @@ class LearningItem extends DataClass implements Insertable<LearningItem> {
     map['title'] = Variable<String>(title);
     if (!nullToAbsent || note != null) {
       map['note'] = Variable<String>(note);
+    }
+    if (!nullToAbsent || description != null) {
+      map['description'] = Variable<String>(description);
     }
     map['tags'] = Variable<String>(tags);
     map['learning_date'] = Variable<DateTime>(learningDate);
@@ -392,6 +428,9 @@ class LearningItem extends DataClass implements Insertable<LearningItem> {
       uuid: Value(uuid),
       title: Value(title),
       note: note == null && nullToAbsent ? const Value.absent() : Value(note),
+      description: description == null && nullToAbsent
+          ? const Value.absent()
+          : Value(description),
       tags: Value(tags),
       learningDate: Value(learningDate),
       createdAt: Value(createdAt),
@@ -416,6 +455,7 @@ class LearningItem extends DataClass implements Insertable<LearningItem> {
       uuid: serializer.fromJson<String>(json['uuid']),
       title: serializer.fromJson<String>(json['title']),
       note: serializer.fromJson<String?>(json['note']),
+      description: serializer.fromJson<String?>(json['description']),
       tags: serializer.fromJson<String>(json['tags']),
       learningDate: serializer.fromJson<DateTime>(json['learningDate']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
@@ -433,6 +473,7 @@ class LearningItem extends DataClass implements Insertable<LearningItem> {
       'uuid': serializer.toJson<String>(uuid),
       'title': serializer.toJson<String>(title),
       'note': serializer.toJson<String?>(note),
+      'description': serializer.toJson<String?>(description),
       'tags': serializer.toJson<String>(tags),
       'learningDate': serializer.toJson<DateTime>(learningDate),
       'createdAt': serializer.toJson<DateTime>(createdAt),
@@ -448,6 +489,7 @@ class LearningItem extends DataClass implements Insertable<LearningItem> {
     String? uuid,
     String? title,
     Value<String?> note = const Value.absent(),
+    Value<String?> description = const Value.absent(),
     String? tags,
     DateTime? learningDate,
     DateTime? createdAt,
@@ -460,6 +502,7 @@ class LearningItem extends DataClass implements Insertable<LearningItem> {
     uuid: uuid ?? this.uuid,
     title: title ?? this.title,
     note: note.present ? note.value : this.note,
+    description: description.present ? description.value : this.description,
     tags: tags ?? this.tags,
     learningDate: learningDate ?? this.learningDate,
     createdAt: createdAt ?? this.createdAt,
@@ -474,6 +517,9 @@ class LearningItem extends DataClass implements Insertable<LearningItem> {
       uuid: data.uuid.present ? data.uuid.value : this.uuid,
       title: data.title.present ? data.title.value : this.title,
       note: data.note.present ? data.note.value : this.note,
+      description: data.description.present
+          ? data.description.value
+          : this.description,
       tags: data.tags.present ? data.tags.value : this.tags,
       learningDate: data.learningDate.present
           ? data.learningDate.value
@@ -495,6 +541,7 @@ class LearningItem extends DataClass implements Insertable<LearningItem> {
           ..write('uuid: $uuid, ')
           ..write('title: $title, ')
           ..write('note: $note, ')
+          ..write('description: $description, ')
           ..write('tags: $tags, ')
           ..write('learningDate: $learningDate, ')
           ..write('createdAt: $createdAt, ')
@@ -512,6 +559,7 @@ class LearningItem extends DataClass implements Insertable<LearningItem> {
     uuid,
     title,
     note,
+    description,
     tags,
     learningDate,
     createdAt,
@@ -528,6 +576,7 @@ class LearningItem extends DataClass implements Insertable<LearningItem> {
           other.uuid == this.uuid &&
           other.title == this.title &&
           other.note == this.note &&
+          other.description == this.description &&
           other.tags == this.tags &&
           other.learningDate == this.learningDate &&
           other.createdAt == this.createdAt &&
@@ -542,6 +591,7 @@ class LearningItemsCompanion extends UpdateCompanion<LearningItem> {
   final Value<String> uuid;
   final Value<String> title;
   final Value<String?> note;
+  final Value<String?> description;
   final Value<String> tags;
   final Value<DateTime> learningDate;
   final Value<DateTime> createdAt;
@@ -554,6 +604,7 @@ class LearningItemsCompanion extends UpdateCompanion<LearningItem> {
     this.uuid = const Value.absent(),
     this.title = const Value.absent(),
     this.note = const Value.absent(),
+    this.description = const Value.absent(),
     this.tags = const Value.absent(),
     this.learningDate = const Value.absent(),
     this.createdAt = const Value.absent(),
@@ -567,6 +618,7 @@ class LearningItemsCompanion extends UpdateCompanion<LearningItem> {
     this.uuid = const Value.absent(),
     required String title,
     this.note = const Value.absent(),
+    this.description = const Value.absent(),
     this.tags = const Value.absent(),
     required DateTime learningDate,
     this.createdAt = const Value.absent(),
@@ -581,6 +633,7 @@ class LearningItemsCompanion extends UpdateCompanion<LearningItem> {
     Expression<String>? uuid,
     Expression<String>? title,
     Expression<String>? note,
+    Expression<String>? description,
     Expression<String>? tags,
     Expression<DateTime>? learningDate,
     Expression<DateTime>? createdAt,
@@ -594,6 +647,7 @@ class LearningItemsCompanion extends UpdateCompanion<LearningItem> {
       if (uuid != null) 'uuid': uuid,
       if (title != null) 'title': title,
       if (note != null) 'note': note,
+      if (description != null) 'description': description,
       if (tags != null) 'tags': tags,
       if (learningDate != null) 'learning_date': learningDate,
       if (createdAt != null) 'created_at': createdAt,
@@ -609,6 +663,7 @@ class LearningItemsCompanion extends UpdateCompanion<LearningItem> {
     Value<String>? uuid,
     Value<String>? title,
     Value<String?>? note,
+    Value<String?>? description,
     Value<String>? tags,
     Value<DateTime>? learningDate,
     Value<DateTime>? createdAt,
@@ -622,6 +677,7 @@ class LearningItemsCompanion extends UpdateCompanion<LearningItem> {
       uuid: uuid ?? this.uuid,
       title: title ?? this.title,
       note: note ?? this.note,
+      description: description ?? this.description,
       tags: tags ?? this.tags,
       learningDate: learningDate ?? this.learningDate,
       createdAt: createdAt ?? this.createdAt,
@@ -646,6 +702,9 @@ class LearningItemsCompanion extends UpdateCompanion<LearningItem> {
     }
     if (note.present) {
       map['note'] = Variable<String>(note.value);
+    }
+    if (description.present) {
+      map['description'] = Variable<String>(description.value);
     }
     if (tags.present) {
       map['tags'] = Variable<String>(tags.value);
@@ -678,12 +737,555 @@ class LearningItemsCompanion extends UpdateCompanion<LearningItem> {
           ..write('uuid: $uuid, ')
           ..write('title: $title, ')
           ..write('note: $note, ')
+          ..write('description: $description, ')
           ..write('tags: $tags, ')
           ..write('learningDate: $learningDate, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('isDeleted: $isDeleted, ')
           ..write('deletedAt: $deletedAt, ')
+          ..write('isMockData: $isMockData')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $LearningSubtasksTable extends LearningSubtasks
+    with TableInfo<$LearningSubtasksTable, LearningSubtask> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $LearningSubtasksTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _uuidMeta = const VerificationMeta('uuid');
+  @override
+  late final GeneratedColumn<String> uuid = GeneratedColumn<String>(
+    'uuid',
+    aliasedName,
+    false,
+    additionalChecks: GeneratedColumn.checkTextLength(
+      minTextLength: 1,
+      maxTextLength: 36,
+    ),
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    clientDefault: () => const Uuid().v4(),
+  );
+  static const VerificationMeta _learningItemIdMeta = const VerificationMeta(
+    'learningItemId',
+  );
+  @override
+  late final GeneratedColumn<int> learningItemId = GeneratedColumn<int>(
+    'learning_item_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES learning_items (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _contentMeta = const VerificationMeta(
+    'content',
+  );
+  @override
+  late final GeneratedColumn<String> content = GeneratedColumn<String>(
+    'content',
+    aliasedName,
+    false,
+    additionalChecks: GeneratedColumn.checkTextLength(
+      minTextLength: 1,
+      maxTextLength: 500,
+    ),
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _sortOrderMeta = const VerificationMeta(
+    'sortOrder',
+  );
+  @override
+  late final GeneratedColumn<int> sortOrder = GeneratedColumn<int>(
+    'sort_order',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _isMockDataMeta = const VerificationMeta(
+    'isMockData',
+  );
+  @override
+  late final GeneratedColumn<bool> isMockData = GeneratedColumn<bool>(
+    'is_mock_data',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_mock_data" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    uuid,
+    learningItemId,
+    content,
+    sortOrder,
+    createdAt,
+    updatedAt,
+    isMockData,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'learning_subtasks';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<LearningSubtask> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('uuid')) {
+      context.handle(
+        _uuidMeta,
+        uuid.isAcceptableOrUnknown(data['uuid']!, _uuidMeta),
+      );
+    }
+    if (data.containsKey('learning_item_id')) {
+      context.handle(
+        _learningItemIdMeta,
+        learningItemId.isAcceptableOrUnknown(
+          data['learning_item_id']!,
+          _learningItemIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_learningItemIdMeta);
+    }
+    if (data.containsKey('content')) {
+      context.handle(
+        _contentMeta,
+        content.isAcceptableOrUnknown(data['content']!, _contentMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_contentMeta);
+    }
+    if (data.containsKey('sort_order')) {
+      context.handle(
+        _sortOrderMeta,
+        sortOrder.isAcceptableOrUnknown(data['sort_order']!, _sortOrderMeta),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    }
+    if (data.containsKey('is_mock_data')) {
+      context.handle(
+        _isMockDataMeta,
+        isMockData.isAcceptableOrUnknown(
+          data['is_mock_data']!,
+          _isMockDataMeta,
+        ),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  List<Set<GeneratedColumn>> get uniqueKeys => [
+    {uuid},
+  ];
+  @override
+  LearningSubtask map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return LearningSubtask(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      uuid: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}uuid'],
+      )!,
+      learningItemId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}learning_item_id'],
+      )!,
+      content: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}content'],
+      )!,
+      sortOrder: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}sort_order'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      ),
+      isMockData: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_mock_data'],
+      )!,
+    );
+  }
+
+  @override
+  $LearningSubtasksTable createAlias(String alias) {
+    return $LearningSubtasksTable(attachedDatabase, alias);
+  }
+}
+
+class LearningSubtask extends DataClass implements Insertable<LearningSubtask> {
+  /// 主键 ID。
+  final int id;
+
+  /// 业务唯一标识（UUID v4）。
+  ///
+  /// 说明：
+  /// - 用于备份合并去重、跨设备映射的稳定 key
+  /// - 插入时自动生成，避免空字符串触发唯一约束冲突
+  final String uuid;
+
+  /// 外键：关联的学习内容 ID（删除学习内容时级联删除）。
+  final int learningItemId;
+
+  /// 子任务内容（必填）。
+  final String content;
+
+  /// 排序顺序（同一 learningItemId 内从 0 开始递增）。
+  final int sortOrder;
+
+  /// 创建时间。
+  final DateTime createdAt;
+
+  /// 更新时间（可空）。
+  final DateTime? updatedAt;
+
+  /// 是否为模拟数据（用于 Debug 生成/清理、同步/导出隔离）。
+  final bool isMockData;
+  const LearningSubtask({
+    required this.id,
+    required this.uuid,
+    required this.learningItemId,
+    required this.content,
+    required this.sortOrder,
+    required this.createdAt,
+    this.updatedAt,
+    required this.isMockData,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['uuid'] = Variable<String>(uuid);
+    map['learning_item_id'] = Variable<int>(learningItemId);
+    map['content'] = Variable<String>(content);
+    map['sort_order'] = Variable<int>(sortOrder);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    if (!nullToAbsent || updatedAt != null) {
+      map['updated_at'] = Variable<DateTime>(updatedAt);
+    }
+    map['is_mock_data'] = Variable<bool>(isMockData);
+    return map;
+  }
+
+  LearningSubtasksCompanion toCompanion(bool nullToAbsent) {
+    return LearningSubtasksCompanion(
+      id: Value(id),
+      uuid: Value(uuid),
+      learningItemId: Value(learningItemId),
+      content: Value(content),
+      sortOrder: Value(sortOrder),
+      createdAt: Value(createdAt),
+      updatedAt: updatedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(updatedAt),
+      isMockData: Value(isMockData),
+    );
+  }
+
+  factory LearningSubtask.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return LearningSubtask(
+      id: serializer.fromJson<int>(json['id']),
+      uuid: serializer.fromJson<String>(json['uuid']),
+      learningItemId: serializer.fromJson<int>(json['learningItemId']),
+      content: serializer.fromJson<String>(json['content']),
+      sortOrder: serializer.fromJson<int>(json['sortOrder']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      updatedAt: serializer.fromJson<DateTime?>(json['updatedAt']),
+      isMockData: serializer.fromJson<bool>(json['isMockData']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'uuid': serializer.toJson<String>(uuid),
+      'learningItemId': serializer.toJson<int>(learningItemId),
+      'content': serializer.toJson<String>(content),
+      'sortOrder': serializer.toJson<int>(sortOrder),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'updatedAt': serializer.toJson<DateTime?>(updatedAt),
+      'isMockData': serializer.toJson<bool>(isMockData),
+    };
+  }
+
+  LearningSubtask copyWith({
+    int? id,
+    String? uuid,
+    int? learningItemId,
+    String? content,
+    int? sortOrder,
+    DateTime? createdAt,
+    Value<DateTime?> updatedAt = const Value.absent(),
+    bool? isMockData,
+  }) => LearningSubtask(
+    id: id ?? this.id,
+    uuid: uuid ?? this.uuid,
+    learningItemId: learningItemId ?? this.learningItemId,
+    content: content ?? this.content,
+    sortOrder: sortOrder ?? this.sortOrder,
+    createdAt: createdAt ?? this.createdAt,
+    updatedAt: updatedAt.present ? updatedAt.value : this.updatedAt,
+    isMockData: isMockData ?? this.isMockData,
+  );
+  LearningSubtask copyWithCompanion(LearningSubtasksCompanion data) {
+    return LearningSubtask(
+      id: data.id.present ? data.id.value : this.id,
+      uuid: data.uuid.present ? data.uuid.value : this.uuid,
+      learningItemId: data.learningItemId.present
+          ? data.learningItemId.value
+          : this.learningItemId,
+      content: data.content.present ? data.content.value : this.content,
+      sortOrder: data.sortOrder.present ? data.sortOrder.value : this.sortOrder,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      isMockData: data.isMockData.present
+          ? data.isMockData.value
+          : this.isMockData,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LearningSubtask(')
+          ..write('id: $id, ')
+          ..write('uuid: $uuid, ')
+          ..write('learningItemId: $learningItemId, ')
+          ..write('content: $content, ')
+          ..write('sortOrder: $sortOrder, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('isMockData: $isMockData')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    uuid,
+    learningItemId,
+    content,
+    sortOrder,
+    createdAt,
+    updatedAt,
+    isMockData,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is LearningSubtask &&
+          other.id == this.id &&
+          other.uuid == this.uuid &&
+          other.learningItemId == this.learningItemId &&
+          other.content == this.content &&
+          other.sortOrder == this.sortOrder &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt &&
+          other.isMockData == this.isMockData);
+}
+
+class LearningSubtasksCompanion extends UpdateCompanion<LearningSubtask> {
+  final Value<int> id;
+  final Value<String> uuid;
+  final Value<int> learningItemId;
+  final Value<String> content;
+  final Value<int> sortOrder;
+  final Value<DateTime> createdAt;
+  final Value<DateTime?> updatedAt;
+  final Value<bool> isMockData;
+  const LearningSubtasksCompanion({
+    this.id = const Value.absent(),
+    this.uuid = const Value.absent(),
+    this.learningItemId = const Value.absent(),
+    this.content = const Value.absent(),
+    this.sortOrder = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.isMockData = const Value.absent(),
+  });
+  LearningSubtasksCompanion.insert({
+    this.id = const Value.absent(),
+    this.uuid = const Value.absent(),
+    required int learningItemId,
+    required String content,
+    this.sortOrder = const Value.absent(),
+    required DateTime createdAt,
+    this.updatedAt = const Value.absent(),
+    this.isMockData = const Value.absent(),
+  }) : learningItemId = Value(learningItemId),
+       content = Value(content),
+       createdAt = Value(createdAt);
+  static Insertable<LearningSubtask> custom({
+    Expression<int>? id,
+    Expression<String>? uuid,
+    Expression<int>? learningItemId,
+    Expression<String>? content,
+    Expression<int>? sortOrder,
+    Expression<DateTime>? createdAt,
+    Expression<DateTime>? updatedAt,
+    Expression<bool>? isMockData,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (uuid != null) 'uuid': uuid,
+      if (learningItemId != null) 'learning_item_id': learningItemId,
+      if (content != null) 'content': content,
+      if (sortOrder != null) 'sort_order': sortOrder,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (isMockData != null) 'is_mock_data': isMockData,
+    });
+  }
+
+  LearningSubtasksCompanion copyWith({
+    Value<int>? id,
+    Value<String>? uuid,
+    Value<int>? learningItemId,
+    Value<String>? content,
+    Value<int>? sortOrder,
+    Value<DateTime>? createdAt,
+    Value<DateTime?>? updatedAt,
+    Value<bool>? isMockData,
+  }) {
+    return LearningSubtasksCompanion(
+      id: id ?? this.id,
+      uuid: uuid ?? this.uuid,
+      learningItemId: learningItemId ?? this.learningItemId,
+      content: content ?? this.content,
+      sortOrder: sortOrder ?? this.sortOrder,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      isMockData: isMockData ?? this.isMockData,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (uuid.present) {
+      map['uuid'] = Variable<String>(uuid.value);
+    }
+    if (learningItemId.present) {
+      map['learning_item_id'] = Variable<int>(learningItemId.value);
+    }
+    if (content.present) {
+      map['content'] = Variable<String>(content.value);
+    }
+    if (sortOrder.present) {
+      map['sort_order'] = Variable<int>(sortOrder.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    if (isMockData.present) {
+      map['is_mock_data'] = Variable<bool>(isMockData.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LearningSubtasksCompanion(')
+          ..write('id: $id, ')
+          ..write('uuid: $uuid, ')
+          ..write('learningItemId: $learningItemId, ')
+          ..write('content: $content, ')
+          ..write('sortOrder: $sortOrder, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
           ..write('isMockData: $isMockData')
           ..write(')'))
         .toString();
@@ -5224,6 +5826,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
   late final $LearningItemsTable learningItems = $LearningItemsTable(this);
+  late final $LearningSubtasksTable learningSubtasks = $LearningSubtasksTable(
+    this,
+  );
   late final $ReviewTasksTable reviewTasks = $ReviewTasksTable(this);
   late final $ReviewRecordsTable reviewRecords = $ReviewRecordsTable(this);
   late final $AppSettingsTableTable appSettingsTable = $AppSettingsTableTable(
@@ -5241,6 +5846,10 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final Index idxLearningDate = Index(
     'idx_learning_date',
     'CREATE INDEX idx_learning_date ON learning_items (learning_date)',
+  );
+  late final Index idxLearningSubtasksItemOrder = Index(
+    'idx_learning_subtasks_item_order',
+    'CREATE INDEX idx_learning_subtasks_item_order ON learning_subtasks (learning_item_id, sort_order)',
   );
   late final Index idxScheduledDate = Index(
     'idx_scheduled_date',
@@ -5268,6 +5877,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   @override
   List<DatabaseSchemaEntity> get allSchemaEntities => [
     learningItems,
+    learningSubtasks,
     reviewTasks,
     reviewRecords,
     appSettingsTable,
@@ -5278,6 +5888,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     syncLogs,
     syncEntityMappings,
     idxLearningDate,
+    idxLearningSubtasksItemOrder,
     idxScheduledDate,
     idxStatus,
     idxLearningItemId,
@@ -5286,6 +5897,13 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'learning_items',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('learning_subtasks', kind: UpdateKind.delete)],
+    ),
     WritePropagation(
       on: TableUpdateQuery.onTableName(
         'learning_items',
@@ -5323,6 +5941,7 @@ typedef $$LearningItemsTableCreateCompanionBuilder =
       Value<String> uuid,
       required String title,
       Value<String?> note,
+      Value<String?> description,
       Value<String> tags,
       required DateTime learningDate,
       Value<DateTime> createdAt,
@@ -5337,6 +5956,7 @@ typedef $$LearningItemsTableUpdateCompanionBuilder =
       Value<String> uuid,
       Value<String> title,
       Value<String?> note,
+      Value<String?> description,
       Value<String> tags,
       Value<DateTime> learningDate,
       Value<DateTime> createdAt,
@@ -5353,6 +5973,29 @@ final class $$LearningItemsTableReferences
     super.$_table,
     super.$_typedResult,
   );
+
+  static MultiTypedResultKey<$LearningSubtasksTable, List<LearningSubtask>>
+  _learningSubtasksRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.learningSubtasks,
+    aliasName: $_aliasNameGenerator(
+      db.learningItems.id,
+      db.learningSubtasks.learningItemId,
+    ),
+  );
+
+  $$LearningSubtasksTableProcessedTableManager get learningSubtasksRefs {
+    final manager = $$LearningSubtasksTableTableManager(
+      $_db,
+      $_db.learningSubtasks,
+    ).filter((f) => f.learningItemId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _learningSubtasksRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
 
   static MultiTypedResultKey<$ReviewTasksTable, List<ReviewTask>>
   _reviewTasksRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
@@ -5429,6 +6072,11 @@ class $$LearningItemsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<String> get tags => $composableBuilder(
     column: $table.tags,
     builder: (column) => ColumnFilters(column),
@@ -5463,6 +6111,31 @@ class $$LearningItemsTableFilterComposer
     column: $table.isMockData,
     builder: (column) => ColumnFilters(column),
   );
+
+  Expression<bool> learningSubtasksRefs(
+    Expression<bool> Function($$LearningSubtasksTableFilterComposer f) f,
+  ) {
+    final $$LearningSubtasksTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.learningSubtasks,
+      getReferencedColumn: (t) => t.learningItemId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LearningSubtasksTableFilterComposer(
+            $db: $db,
+            $table: $db.learningSubtasks,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 
   Expression<bool> reviewTasksRefs(
     Expression<bool> Function($$ReviewTasksTableFilterComposer f) f,
@@ -5544,6 +6217,11 @@ class $$LearningItemsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get tags => $composableBuilder(
     column: $table.tags,
     builder: (column) => ColumnOrderings(column),
@@ -5601,6 +6279,11 @@ class $$LearningItemsTableAnnotationComposer
   GeneratedColumn<String> get note =>
       $composableBuilder(column: $table.note, builder: (column) => column);
 
+  GeneratedColumn<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<String> get tags =>
       $composableBuilder(column: $table.tags, builder: (column) => column);
 
@@ -5625,6 +6308,31 @@ class $$LearningItemsTableAnnotationComposer
     column: $table.isMockData,
     builder: (column) => column,
   );
+
+  Expression<T> learningSubtasksRefs<T extends Object>(
+    Expression<T> Function($$LearningSubtasksTableAnnotationComposer a) f,
+  ) {
+    final $$LearningSubtasksTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.learningSubtasks,
+      getReferencedColumn: (t) => t.learningItemId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LearningSubtasksTableAnnotationComposer(
+            $db: $db,
+            $table: $db.learningSubtasks,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 
   Expression<T> reviewTasksRefs<T extends Object>(
     Expression<T> Function($$ReviewTasksTableAnnotationComposer a) f,
@@ -5692,6 +6400,7 @@ class $$LearningItemsTableTableManager
           (LearningItem, $$LearningItemsTableReferences),
           LearningItem,
           PrefetchHooks Function({
+            bool learningSubtasksRefs,
             bool reviewTasksRefs,
             bool topicItemRelationsRefs,
           })
@@ -5713,6 +6422,7 @@ class $$LearningItemsTableTableManager
                 Value<String> uuid = const Value.absent(),
                 Value<String> title = const Value.absent(),
                 Value<String?> note = const Value.absent(),
+                Value<String?> description = const Value.absent(),
                 Value<String> tags = const Value.absent(),
                 Value<DateTime> learningDate = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
@@ -5725,6 +6435,7 @@ class $$LearningItemsTableTableManager
                 uuid: uuid,
                 title: title,
                 note: note,
+                description: description,
                 tags: tags,
                 learningDate: learningDate,
                 createdAt: createdAt,
@@ -5739,6 +6450,7 @@ class $$LearningItemsTableTableManager
                 Value<String> uuid = const Value.absent(),
                 required String title,
                 Value<String?> note = const Value.absent(),
+                Value<String?> description = const Value.absent(),
                 Value<String> tags = const Value.absent(),
                 required DateTime learningDate,
                 Value<DateTime> createdAt = const Value.absent(),
@@ -5751,6 +6463,7 @@ class $$LearningItemsTableTableManager
                 uuid: uuid,
                 title: title,
                 note: note,
+                description: description,
                 tags: tags,
                 learningDate: learningDate,
                 createdAt: createdAt,
@@ -5768,16 +6481,42 @@ class $$LearningItemsTableTableManager
               )
               .toList(),
           prefetchHooksCallback:
-              ({reviewTasksRefs = false, topicItemRelationsRefs = false}) {
+              ({
+                learningSubtasksRefs = false,
+                reviewTasksRefs = false,
+                topicItemRelationsRefs = false,
+              }) {
                 return PrefetchHooks(
                   db: db,
                   explicitlyWatchedTables: [
+                    if (learningSubtasksRefs) db.learningSubtasks,
                     if (reviewTasksRefs) db.reviewTasks,
                     if (topicItemRelationsRefs) db.topicItemRelations,
                   ],
                   addJoins: null,
                   getPrefetchedDataCallback: (items) async {
                     return [
+                      if (learningSubtasksRefs)
+                        await $_getPrefetchedData<
+                          LearningItem,
+                          $LearningItemsTable,
+                          LearningSubtask
+                        >(
+                          currentTable: table,
+                          referencedTable: $$LearningItemsTableReferences
+                              ._learningSubtasksRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$LearningItemsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).learningSubtasksRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.learningItemId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
                       if (reviewTasksRefs)
                         await $_getPrefetchedData<
                           LearningItem,
@@ -5841,9 +6580,394 @@ typedef $$LearningItemsTableProcessedTableManager =
       (LearningItem, $$LearningItemsTableReferences),
       LearningItem,
       PrefetchHooks Function({
+        bool learningSubtasksRefs,
         bool reviewTasksRefs,
         bool topicItemRelationsRefs,
       })
+    >;
+typedef $$LearningSubtasksTableCreateCompanionBuilder =
+    LearningSubtasksCompanion Function({
+      Value<int> id,
+      Value<String> uuid,
+      required int learningItemId,
+      required String content,
+      Value<int> sortOrder,
+      required DateTime createdAt,
+      Value<DateTime?> updatedAt,
+      Value<bool> isMockData,
+    });
+typedef $$LearningSubtasksTableUpdateCompanionBuilder =
+    LearningSubtasksCompanion Function({
+      Value<int> id,
+      Value<String> uuid,
+      Value<int> learningItemId,
+      Value<String> content,
+      Value<int> sortOrder,
+      Value<DateTime> createdAt,
+      Value<DateTime?> updatedAt,
+      Value<bool> isMockData,
+    });
+
+final class $$LearningSubtasksTableReferences
+    extends
+        BaseReferences<_$AppDatabase, $LearningSubtasksTable, LearningSubtask> {
+  $$LearningSubtasksTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $LearningItemsTable _learningItemIdTable(_$AppDatabase db) =>
+      db.learningItems.createAlias(
+        $_aliasNameGenerator(
+          db.learningSubtasks.learningItemId,
+          db.learningItems.id,
+        ),
+      );
+
+  $$LearningItemsTableProcessedTableManager get learningItemId {
+    final $_column = $_itemColumn<int>('learning_item_id')!;
+
+    final manager = $$LearningItemsTableTableManager(
+      $_db,
+      $_db.learningItems,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_learningItemIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$LearningSubtasksTableFilterComposer
+    extends Composer<_$AppDatabase, $LearningSubtasksTable> {
+  $$LearningSubtasksTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get uuid => $composableBuilder(
+    column: $table.uuid,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get content => $composableBuilder(
+    column: $table.content,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get sortOrder => $composableBuilder(
+    column: $table.sortOrder,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isMockData => $composableBuilder(
+    column: $table.isMockData,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$LearningItemsTableFilterComposer get learningItemId {
+    final $$LearningItemsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.learningItemId,
+      referencedTable: $db.learningItems,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LearningItemsTableFilterComposer(
+            $db: $db,
+            $table: $db.learningItems,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$LearningSubtasksTableOrderingComposer
+    extends Composer<_$AppDatabase, $LearningSubtasksTable> {
+  $$LearningSubtasksTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get uuid => $composableBuilder(
+    column: $table.uuid,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get content => $composableBuilder(
+    column: $table.content,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get sortOrder => $composableBuilder(
+    column: $table.sortOrder,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isMockData => $composableBuilder(
+    column: $table.isMockData,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$LearningItemsTableOrderingComposer get learningItemId {
+    final $$LearningItemsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.learningItemId,
+      referencedTable: $db.learningItems,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LearningItemsTableOrderingComposer(
+            $db: $db,
+            $table: $db.learningItems,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$LearningSubtasksTableAnnotationComposer
+    extends Composer<_$AppDatabase, $LearningSubtasksTable> {
+  $$LearningSubtasksTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get uuid =>
+      $composableBuilder(column: $table.uuid, builder: (column) => column);
+
+  GeneratedColumn<String> get content =>
+      $composableBuilder(column: $table.content, builder: (column) => column);
+
+  GeneratedColumn<int> get sortOrder =>
+      $composableBuilder(column: $table.sortOrder, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  GeneratedColumn<bool> get isMockData => $composableBuilder(
+    column: $table.isMockData,
+    builder: (column) => column,
+  );
+
+  $$LearningItemsTableAnnotationComposer get learningItemId {
+    final $$LearningItemsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.learningItemId,
+      referencedTable: $db.learningItems,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LearningItemsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.learningItems,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$LearningSubtasksTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $LearningSubtasksTable,
+          LearningSubtask,
+          $$LearningSubtasksTableFilterComposer,
+          $$LearningSubtasksTableOrderingComposer,
+          $$LearningSubtasksTableAnnotationComposer,
+          $$LearningSubtasksTableCreateCompanionBuilder,
+          $$LearningSubtasksTableUpdateCompanionBuilder,
+          (LearningSubtask, $$LearningSubtasksTableReferences),
+          LearningSubtask,
+          PrefetchHooks Function({bool learningItemId})
+        > {
+  $$LearningSubtasksTableTableManager(
+    _$AppDatabase db,
+    $LearningSubtasksTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$LearningSubtasksTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$LearningSubtasksTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$LearningSubtasksTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> uuid = const Value.absent(),
+                Value<int> learningItemId = const Value.absent(),
+                Value<String> content = const Value.absent(),
+                Value<int> sortOrder = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime?> updatedAt = const Value.absent(),
+                Value<bool> isMockData = const Value.absent(),
+              }) => LearningSubtasksCompanion(
+                id: id,
+                uuid: uuid,
+                learningItemId: learningItemId,
+                content: content,
+                sortOrder: sortOrder,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                isMockData: isMockData,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> uuid = const Value.absent(),
+                required int learningItemId,
+                required String content,
+                Value<int> sortOrder = const Value.absent(),
+                required DateTime createdAt,
+                Value<DateTime?> updatedAt = const Value.absent(),
+                Value<bool> isMockData = const Value.absent(),
+              }) => LearningSubtasksCompanion.insert(
+                id: id,
+                uuid: uuid,
+                learningItemId: learningItemId,
+                content: content,
+                sortOrder: sortOrder,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                isMockData: isMockData,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$LearningSubtasksTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({learningItemId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (learningItemId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.learningItemId,
+                                referencedTable:
+                                    $$LearningSubtasksTableReferences
+                                        ._learningItemIdTable(db),
+                                referencedColumn:
+                                    $$LearningSubtasksTableReferences
+                                        ._learningItemIdTable(db)
+                                        .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$LearningSubtasksTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $LearningSubtasksTable,
+      LearningSubtask,
+      $$LearningSubtasksTableFilterComposer,
+      $$LearningSubtasksTableOrderingComposer,
+      $$LearningSubtasksTableAnnotationComposer,
+      $$LearningSubtasksTableCreateCompanionBuilder,
+      $$LearningSubtasksTableUpdateCompanionBuilder,
+      (LearningSubtask, $$LearningSubtasksTableReferences),
+      LearningSubtask,
+      PrefetchHooks Function({bool learningItemId})
     >;
 typedef $$ReviewTasksTableCreateCompanionBuilder =
     ReviewTasksCompanion Function({
@@ -8777,6 +9901,8 @@ class $AppDatabaseManager {
   $AppDatabaseManager(this._db);
   $$LearningItemsTableTableManager get learningItems =>
       $$LearningItemsTableTableManager(_db, _db.learningItems);
+  $$LearningSubtasksTableTableManager get learningSubtasks =>
+      $$LearningSubtasksTableTableManager(_db, _db.learningSubtasks);
   $$ReviewTasksTableTableManager get reviewTasks =>
       $$ReviewTasksTableTableManager(_db, _db.reviewTasks);
   $$ReviewRecordsTableTableManager get reviewRecords =>

@@ -52,6 +52,20 @@ class LearningItemDao {
     );
   }
 
+  /// 更新学习内容描述（仅更新 description 字段）。
+  ///
+  /// 返回值：更新行数。
+  /// 异常：数据库更新失败时可能抛出异常。
+  Future<int> updateLearningItemDescription(int id, String? description) {
+    final now = DateTime.now();
+    return (db.update(db.learningItems)..where((t) => t.id.equals(id))).write(
+      LearningItemsCompanion(
+        description: Value(description),
+        updatedAt: Value(now),
+      ),
+    );
+  }
+
   /// 停用学习内容（软删除）。
   ///
   /// 规则：
@@ -104,7 +118,7 @@ class LearningItemDao {
   /// F14.1：按关键词搜索学习内容（title/note）。
   ///
   /// 说明：
-  /// - 仅搜索 title 与 note（不包含 tags）
+  /// - 搜索字段：title/description/note/subtasks.content（不包含 tags）
   /// - 默认最多返回 50 条
   /// - 使用 LIKE 做模糊匹配（SQLite 对 ASCII 默认大小写不敏感，非 ASCII 行为与系统 collation 相关）
   ///
@@ -116,24 +130,45 @@ class LearningItemDao {
   Future<List<LearningItem>> searchLearningItems({
     required String keyword,
     int limit = 50,
-  }) {
+  }) async {
     final q = keyword.trim();
-    if (q.isEmpty) return Future.value(const <LearningItem>[]);
+    if (q.isEmpty) return const <LearningItem>[];
 
     final capped = limit.clamp(1, 200);
     final pattern = '%$q%';
 
-    final query = db.select(db.learningItems)
-      ..where(
-        (t) =>
-            t.isDeleted.equals(false) &
-            (t.title.like(pattern) |
-                (t.note.isNotNull() & t.note.like(pattern))),
-      )
-      ..orderBy([(t) => OrderingTerm.desc(t.createdAt)])
-      ..limit(capped);
+    // 关键逻辑：使用 EXISTS 查询 subtasks，避免 join 导致的重复行与分页错乱。
+    const sql = '''
+SELECT li.*
+FROM learning_items li
+WHERE li.is_deleted = 0
+  AND (
+    li.title LIKE ?
+    OR (li.description IS NOT NULL AND li.description LIKE ?)
+    OR (li.note IS NOT NULL AND li.note LIKE ?)
+    OR EXISTS (
+      SELECT 1 FROM learning_subtasks ls
+      WHERE ls.learning_item_id = li.id AND ls.content LIKE ?
+    )
+  )
+ORDER BY li.created_at DESC
+LIMIT ?
+''';
 
-    return query.get();
+    final rows = await db
+        .customSelect(
+          sql,
+          variables: [
+            Variable<String>(pattern),
+            Variable<String>(pattern),
+            Variable<String>(pattern),
+            Variable<String>(pattern),
+            Variable<int>(capped),
+          ],
+          readsFrom: {db.learningItems, db.learningSubtasks},
+        )
+        .get();
+    return rows.map((r) => db.learningItems.map(r.data)).toList();
   }
 
   /// 删除所有模拟学习内容（v3.1 Debug）。
