@@ -31,10 +31,16 @@ class TaskHubTimelineList extends StatelessWidget {
     super.key,
     required this.state,
     required this.notifier,
+    this.emptyState,
   });
 
   final TaskHubState state;
   final TaskHubNotifier notifier;
+
+  /// 列表为空时的替换 UI（仅用于首页 tab=all 的空状态引导增强）。
+  ///
+  /// 说明：任务中心页面本身不展示首页 CTA，因此默认保持“暂无任务”文案。
+  final Widget? emptyState;
 
   @override
   Widget build(BuildContext context) {
@@ -43,10 +49,15 @@ class TaskHubTimelineList extends StatelessWidget {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
     }
 
-    void runAction(Future<void> Function() action, {required String ok}) {
-      action()
-          .then((_) => showSnack(ok))
-          .catchError((e) => showSnack('操作失败：$e'));
+    Future<bool> runAction(Future<void> Function() action, {String? ok}) async {
+      try {
+        await action();
+        if (ok != null) showSnack(ok);
+        return true;
+      } catch (_) {
+        showSnack('操作失败，请重试');
+        return false;
+      }
     }
 
     Future<void> confirmUndo(int taskId) async {
@@ -70,29 +81,31 @@ class TaskHubTimelineList extends StatelessWidget {
         },
       );
       if (confirmed != true) return;
-      runAction(() => notifier.undoTaskStatus(taskId), ok: '已撤销');
+      await runAction(() => notifier.undoTaskStatus(taskId), ok: '已撤销');
     }
 
     final grouped = <DateTime, List<_TaskTimelineItem>>{};
     for (final item in state.items) {
       final day = YikeDateUtils.atStartOfDay(item.occurredAt);
-      grouped.putIfAbsent(day, () => []).add(
-        _TaskTimelineItem(
-          taskId: item.task.taskId,
-          learningItemId: item.task.learningItemId,
-          title: item.task.title,
-          description: item.task.description,
-          legacyNote: item.task.note,
-          subtaskCount: item.task.subtaskCount,
-          tags: item.task.tags,
-          reviewRound: item.task.reviewRound,
-          scheduledDate: item.task.scheduledDate,
-          status: item.task.status,
-          completedAt: item.task.completedAt,
-          skippedAt: item.task.skippedAt,
-          occurredAt: item.occurredAt,
-        ),
-      );
+      grouped
+          .putIfAbsent(day, () => [])
+          .add(
+            _TaskTimelineItem(
+              taskId: item.task.taskId,
+              learningItemId: item.task.learningItemId,
+              title: item.task.title,
+              description: item.task.description,
+              legacyNote: item.task.note,
+              subtaskCount: item.task.subtaskCount,
+              tags: item.task.tags,
+              reviewRound: item.task.reviewRound,
+              scheduledDate: item.task.scheduledDate,
+              status: item.task.status,
+              completedAt: item.task.completedAt,
+              skippedAt: item.task.skippedAt,
+              occurredAt: item.occurredAt,
+            ),
+          );
     }
 
     // 发生时间正序：日期分组按从早到晚展示。
@@ -121,16 +134,17 @@ class TaskHubTimelineList extends StatelessWidget {
             ),
           ),
         ] else if (state.items.isEmpty) ...[
-          GlassCard(
-            child: Padding(
-              padding: const EdgeInsets.all(AppSpacing.xl),
-              child: Text(
-                '暂无任务',
-                style: AppTypography.bodySecondary(context),
-                textAlign: TextAlign.center,
+          emptyState ??
+              GlassCard(
+                child: Padding(
+                  padding: const EdgeInsets.all(AppSpacing.xl),
+                  child: Text(
+                    '暂无任务',
+                    style: AppTypography.bodySecondary(context),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
               ),
-            ),
-          ),
         ] else ...[
           for (final day in sortedDays) ...[
             _GroupHeader(label: _groupLabel(day)),
@@ -140,27 +154,27 @@ class TaskHubTimelineList extends StatelessWidget {
                 item: item,
                 expanded: state.expandedTaskIds.contains(item.taskId),
                 onToggleExpanded: () => notifier.toggleExpanded(item.taskId),
-                onComplete:
-                    item.status == ReviewTaskStatus.pending
-                        ? () => runAction(
+                onComplete: item.status == ReviewTaskStatus.pending
+                    ? () async {
+                        await runAction(
                           () => notifier.completeTask(item.taskId),
                           ok: '已完成',
-                        )
-                        : null,
-                onSkip:
-                    item.status == ReviewTaskStatus.pending
-                        ? () => runAction(
+                        );
+                      }
+                    : null,
+                onSkip: item.status == ReviewTaskStatus.pending
+                    ? () async {
+                        await runAction(
                           () => notifier.skipTask(item.taskId),
                           ok: '已跳过',
-                        )
-                        : null,
-                onUndo:
-                    item.status == ReviewTaskStatus.pending
-                        ? null
-                        : () => confirmUndo(item.taskId),
-                onOpenDetail: () => context.push(
-                  '/tasks/detail/${item.learningItemId}',
-                ),
+                        );
+                      }
+                    : null,
+                onUndo: item.status == ReviewTaskStatus.pending
+                    ? null
+                    : () => confirmUndo(item.taskId),
+                onOpenDetail: () =>
+                    context.push('/tasks/detail/${item.learningItemId}'),
               ),
               const SizedBox(height: AppSpacing.md),
             ],
@@ -267,12 +281,18 @@ class _TaskTimelineCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final primary = isDark ? Colors.white : Colors.black;
-    final secondary = Theme.of(context).textTheme.bodySmall?.color ?? Colors.grey;
+    final secondary =
+        Theme.of(context).textTheme.bodySmall?.color ?? Colors.grey;
 
     final tag = switch (item.status) {
-      ReviewTaskStatus.done => const _StatusTag(label: '已完成', color: Colors.green),
-      ReviewTaskStatus.skipped =>
-        const _StatusTag(label: '已跳过', color: Colors.orange),
+      ReviewTaskStatus.done => const _StatusTag(
+        label: '已完成',
+        color: Colors.green,
+      ),
+      ReviewTaskStatus.skipped => const _StatusTag(
+        label: '已跳过',
+        color: Colors.orange,
+      ),
       ReviewTaskStatus.pending => null,
     };
 
@@ -299,12 +319,16 @@ class _TaskTimelineCard extends StatelessWidget {
                       children: [
                         Text(
                           '${item.title}（第${item.reviewRound}次）',
-                          style: AppTypography.body(
-                            context,
-                          ).copyWith(fontWeight: FontWeight.w700, color: primary),
+                          style: AppTypography.body(context).copyWith(
+                            fontWeight: FontWeight.w700,
+                            color: primary,
+                          ),
                         ),
                         const SizedBox(height: AppSpacing.xs),
-                        Text(subtitle, style: AppTypography.bodySecondary(context)),
+                        Text(
+                          subtitle,
+                          style: AppTypography.bodySecondary(context),
+                        ),
                         if (info != null) ...[
                           const SizedBox(height: 6),
                           Text(
@@ -334,15 +358,14 @@ class _TaskTimelineCard extends StatelessWidget {
                             vertical: 4,
                           ),
                           decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.primary.withAlpha(
-                              24,
-                            ),
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.primary.withAlpha(24),
                             borderRadius: BorderRadius.circular(999),
                             border: Border.all(
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .primary
-                                  .withAlpha(80),
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.primary.withAlpha(80),
                             ),
                           ),
                           child: Text(
@@ -358,10 +381,9 @@ class _TaskTimelineCard extends StatelessWidget {
               ],
               AnimatedCrossFade(
                 // 交互要求：点击卡片展开/收起操作区。
-                crossFadeState:
-                    expanded
-                        ? CrossFadeState.showSecond
-                        : CrossFadeState.showFirst,
+                crossFadeState: expanded
+                    ? CrossFadeState.showSecond
+                    : CrossFadeState.showFirst,
                 duration: const Duration(milliseconds: 160),
                 firstChild: const SizedBox.shrink(),
                 secondChild: Padding(
@@ -372,7 +394,9 @@ class _TaskTimelineCard extends StatelessWidget {
                       if (detailLabel != null && detailText != null) ...[
                         Text(
                           detailLabel,
-                          style: AppTypography.h2(context).copyWith(fontSize: 14),
+                          style: AppTypography.h2(
+                            context,
+                          ).copyWith(fontSize: 14),
                         ),
                         const SizedBox(height: 6),
                         Text(
@@ -497,4 +521,3 @@ class _StatusTag extends StatelessWidget {
     );
   }
 }
-
