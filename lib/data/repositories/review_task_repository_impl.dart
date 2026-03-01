@@ -15,6 +15,7 @@ import '../../domain/entities/task_timeline.dart';
 import '../../domain/repositories/review_task_repository.dart';
 import '../models/review_task_with_item_model.dart';
 import '../database/daos/review_task_dao.dart';
+import '../database/daos/learning_subtask_dao.dart';
 import '../database/database.dart';
 import '../sync/sync_log_writer.dart';
 
@@ -26,10 +27,22 @@ class ReviewTaskRepositoryImpl implements ReviewTaskRepository {
   /// - [dao] 复习任务 DAO。
   /// 异常：无。
   ReviewTaskRepositoryImpl({required this.dao, SyncLogWriter? syncLogWriter})
-    : _sync = syncLogWriter;
+    : _sync = syncLogWriter,
+      _learningSubtaskDao = null;
+
+  /// 构造函数（带子任务 DAO，用于列表摘要展示）。
+  ///
+  /// 说明：为避免 UI 层 N+1 查询，仓储层在返回 ReviewTaskViewEntity 时可批量补齐 subtaskCount。
+  ReviewTaskRepositoryImpl.withSubtasks({
+    required this.dao,
+    required LearningSubtaskDao learningSubtaskDao,
+    SyncLogWriter? syncLogWriter,
+  }) : _sync = syncLogWriter,
+       _learningSubtaskDao = learningSubtaskDao;
 
   final ReviewTaskDao dao;
   final SyncLogWriter? _sync;
+  final LearningSubtaskDao? _learningSubtaskDao;
 
   static const Uuid _uuid = Uuid();
 
@@ -103,31 +116,31 @@ class ReviewTaskRepositoryImpl implements ReviewTaskRepository {
   @override
   Future<List<ReviewTaskViewEntity>> getOverduePendingTasks() async {
     final rows = await dao.getOverdueTasksWithItem();
-    return rows.map(_toViewEntity).toList();
+    return _mapWithSubtaskCounts(rows);
   }
 
   @override
   Future<List<ReviewTaskViewEntity>> getTodayPendingTasks() async {
     final rows = await dao.getTodayPendingTasksWithItem();
-    return rows.map(_toViewEntity).toList();
+    return _mapWithSubtaskCounts(rows);
   }
 
   @override
   Future<List<ReviewTaskViewEntity>> getTodayCompletedTasks() async {
     final rows = await dao.getTodayCompletedTasksWithItem();
-    return rows.map(_toViewEntity).toList();
+    return _mapWithSubtaskCounts(rows);
   }
 
   @override
   Future<List<ReviewTaskViewEntity>> getTodaySkippedTasks() async {
     final rows = await dao.getTodaySkippedTasksWithItem();
-    return rows.map(_toViewEntity).toList();
+    return _mapWithSubtaskCounts(rows);
   }
 
   @override
   Future<List<ReviewTaskViewEntity>> getTasksByDate(DateTime date) async {
     final rows = await dao.getTasksByDateWithItem(date);
-    return rows.map(_toViewEntity).toList();
+    return _mapWithSubtaskCounts(rows);
   }
 
   @override
@@ -167,8 +180,9 @@ class ReviewTaskRepositoryImpl implements ReviewTaskRepository {
   @override
   Future<List<ReviewTaskViewEntity>> getReviewPlan(int learningItemId) async {
     final rows = await dao.getReviewPlanWithItem(learningItemId);
-    return rows.map(_toViewEntity).toList()
-      ..sort((a, b) => a.reviewRound.compareTo(b.reviewRound));
+    final list = await _mapWithSubtaskCounts(rows);
+    list.sort((a, b) => a.reviewRound.compareTo(b.reviewRound));
+    return list;
   }
 
   @override
@@ -270,7 +284,7 @@ class ReviewTaskRepositoryImpl implements ReviewTaskRepository {
     DateTime end,
   ) async {
     final rows = await dao.getTasksInRange(start, end);
-    return rows.map(_toViewEntity).toList();
+    return _mapWithSubtaskCounts(rows);
   }
 
   @override
@@ -332,14 +346,26 @@ class ReviewTaskRepositoryImpl implements ReviewTaskRepository {
     final hasMore = rows.length > limit;
     final pageRows = hasMore ? rows.take(limit).toList() : rows;
 
-    final items = pageRows
-        .map(
-          (r) => ReviewTaskTimelineItemEntity(
-            task: _toViewEntity(r.model),
-            occurredAt: r.occurredAt,
-          ),
-        )
-        .toList();
+    final subtaskDao = _learningSubtaskDao;
+    final counts =
+        subtaskDao == null
+            ? const <int, int>{}
+            : await subtaskDao.getCountsByLearningItemIds(
+                pageRows.map((e) => e.model.item.id).toSet().toList(),
+              );
+
+    final items =
+        pageRows
+            .map(
+              (r) => ReviewTaskTimelineItemEntity(
+                task: _toViewEntity(
+                  r.model,
+                  subtaskCount: counts[r.model.item.id] ?? 0,
+                ),
+                occurredAt: r.occurredAt,
+              ),
+            )
+            .toList();
 
     TaskTimelineCursorEntity? nextCursor;
     if (hasMore && items.isNotEmpty) {
@@ -353,7 +379,10 @@ class ReviewTaskRepositoryImpl implements ReviewTaskRepository {
     return TaskTimelinePageEntity(items: items, nextCursor: nextCursor);
   }
 
-  ReviewTaskViewEntity _toViewEntity(ReviewTaskWithItemModel model) {
+  ReviewTaskViewEntity _toViewEntity(
+    ReviewTaskWithItemModel model, {
+    required int subtaskCount,
+  }) {
     final task = model.task;
     final item = model.item;
 
@@ -361,7 +390,9 @@ class ReviewTaskRepositoryImpl implements ReviewTaskRepository {
       taskId: task.id,
       learningItemId: item.id,
       title: item.title,
+      description: item.description,
       note: item.note,
+      subtaskCount: subtaskCount,
       tags: _parseTags(item.tags),
       reviewRound: task.reviewRound,
       scheduledDate: task.scheduledDate,
@@ -371,6 +402,76 @@ class ReviewTaskRepositoryImpl implements ReviewTaskRepository {
       isDeleted: item.isDeleted,
       deletedAt: item.deletedAt,
     );
+  }
+
+  Future<List<ReviewTaskViewEntity>> _mapWithSubtaskCounts(
+    List<ReviewTaskWithItemModel> models,
+  ) async {
+    if (models.isEmpty) return const <ReviewTaskViewEntity>[];
+
+    final subtaskDao = _learningSubtaskDao;
+    final counts =
+        subtaskDao == null
+            ? const <int, int>{}
+            : await subtaskDao.getCountsByLearningItemIds(
+                models.map((e) => e.item.id).toSet().toList(),
+              );
+
+    return models
+        .map(
+          (m) => _toViewEntity(
+            m,
+            subtaskCount: counts[m.item.id] ?? 0,
+          ),
+        )
+        .toList();
+  }
+
+  @override
+  Future<void> removeLatestReviewRound(int learningItemId) async {
+    // 规格增强：已停用学习内容禁止任何操作。
+    final itemRow =
+        await (dao.db.select(dao.db.learningItems)
+              ..where((t) => t.id.equals(learningItemId)))
+            .getSingleOrNull();
+    if (itemRow == null) {
+      throw StateError('学习内容不存在（id=$learningItemId）');
+    }
+    if (itemRow.isDeleted) {
+      throw StateError('学习内容已停用，无法减少轮次');
+    }
+
+    final maxRound = await dao.getMaxReviewRound(learningItemId);
+    if (maxRound <= 1) {
+      throw StateError('已达到最小轮次（1）');
+    }
+
+    final taskRow = await dao.getTaskByLearningItemAndRound(
+      learningItemId,
+      maxRound,
+    );
+    if (taskRow == null) {
+      throw StateError(
+        '复习任务不存在（learningItemId=$learningItemId, reviewRound=$maxRound）',
+      );
+    }
+
+    final now = DateTime.now();
+    final ts = now.millisecondsSinceEpoch;
+
+    // v3.1：Mock 数据不参与同步，因此不写入 delete 日志。
+    if (!taskRow.isMockData) {
+      await _sync?.logDelete(
+        entityType: 'review_task',
+        localEntityId: taskRow.id,
+        timestampMs: ts,
+      );
+    }
+
+    final deleted = await dao.deleteReviewTaskByRound(learningItemId, maxRound);
+    if (deleted <= 0) {
+      throw StateError('减少轮次失败（learningItemId=$learningItemId, round=$maxRound）');
+    }
   }
 
   List<String> _parseTags(String tagsJson) {

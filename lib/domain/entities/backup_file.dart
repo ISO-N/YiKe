@@ -51,6 +51,7 @@ class BackupLearningItemEntity {
   const BackupLearningItemEntity({
     required this.uuid,
     required this.title,
+    this.description,
     this.note,
     required this.tags,
     required this.learningDate,
@@ -62,6 +63,7 @@ class BackupLearningItemEntity {
 
   final String uuid;
   final String title;
+  final String? description;
   final String? note;
   final List<String> tags;
   final String learningDate;
@@ -73,6 +75,7 @@ class BackupLearningItemEntity {
   Map<String, dynamic> toJson() => {
     'uuid': uuid,
     'title': title,
+    'description': description,
     'note': note,
     'tags': tags,
     'learningDate': learningDate,
@@ -96,6 +99,7 @@ class BackupLearningItemEntity {
     return BackupLearningItemEntity(
       uuid: (json['uuid'] as String? ?? '').trim(),
       title: (json['title'] as String? ?? '').trim(),
+      description: (json['description'] as String?)?.trim(),
       note: json['note'] as String?,
       tags: tags,
       learningDate: (json['learningDate'] as String? ?? '').trim(),
@@ -103,6 +107,59 @@ class BackupLearningItemEntity {
       updatedAt: (json['updatedAt'] as String?)?.trim(),
       isDeleted: json['isDeleted'] is bool ? json['isDeleted'] as bool : false,
       deletedAt: (json['deletedAt'] as String?)?.trim(),
+    );
+  }
+}
+
+/// 备份文件 `data.learningSubtasks` 的条目。
+class BackupLearningSubtaskEntity {
+  /// 构造函数。
+  const BackupLearningSubtaskEntity({
+    required this.uuid,
+    required this.learningItemUuid,
+    required this.content,
+    required this.sortOrder,
+    required this.createdAt,
+    this.updatedAt,
+  });
+
+  /// 子任务 UUID。
+  final String uuid;
+
+  /// 关联的学习内容 UUID（用于导入外键修复）。
+  final String learningItemUuid;
+
+  /// 子任务内容。
+  final String content;
+
+  /// 排序字段（同 learningItemUuid 内从 0 开始）。
+  final int sortOrder;
+
+  /// 创建时间（ISO 字符串）。
+  final String createdAt;
+
+  /// 更新时间（ISO 字符串，可空）。
+  final String? updatedAt;
+
+  Map<String, dynamic> toJson() => {
+    'uuid': uuid,
+    'learningItemUuid': learningItemUuid,
+    'content': content,
+    'sortOrder': sortOrder,
+    'createdAt': createdAt,
+    'updatedAt': updatedAt,
+  };
+
+  factory BackupLearningSubtaskEntity.fromJson(Map<String, dynamic> json) {
+    int asInt(Object? v) =>
+        v is int ? v : int.tryParse(v?.toString() ?? '') ?? 0;
+    return BackupLearningSubtaskEntity(
+      uuid: (json['uuid'] as String? ?? '').trim(),
+      learningItemUuid: (json['learningItemUuid'] as String? ?? '').trim(),
+      content: (json['content'] as String? ?? '').trim(),
+      sortOrder: asInt(json['sortOrder']),
+      createdAt: (json['createdAt'] as String? ?? '').trim(),
+      updatedAt: (json['updatedAt'] as String?)?.trim(),
     );
   }
 }
@@ -202,12 +259,14 @@ class BackupDataEntity {
   /// 构造函数。
   const BackupDataEntity({
     required this.learningItems,
+    required this.learningSubtasks,
     required this.reviewTasks,
     required this.reviewRecords,
     required this.settings,
   });
 
   final List<BackupLearningItemEntity> learningItems;
+  final List<BackupLearningSubtaskEntity> learningSubtasks;
   final List<BackupReviewTaskEntity> reviewTasks;
   final List<BackupReviewRecordEntity> reviewRecords;
 
@@ -216,6 +275,7 @@ class BackupDataEntity {
 
   Map<String, dynamic> toJson() => {
     'learningItems': learningItems.map((e) => e.toJson()).toList(),
+    'learningSubtasks': learningSubtasks.map((e) => e.toJson()).toList(),
     'reviewTasks': reviewTasks.map((e) => e.toJson()).toList(),
     'reviewRecords': reviewRecords.map((e) => e.toJson()).toList(),
     'settings': settings,
@@ -242,6 +302,10 @@ class BackupDataEntity {
       learningItems: readList(
         json['learningItems'],
         BackupLearningItemEntity.fromJson,
+      ),
+      learningSubtasks: readList(
+        json['learningSubtasks'],
+        BackupLearningSubtaskEntity.fromJson,
       ),
       reviewTasks: readList(
         json['reviewTasks'],
@@ -321,6 +385,7 @@ class BackupFileEntity {
         ? BackupDataEntity.fromJson(dataRaw.cast<String, dynamic>())
         : const BackupDataEntity(
             learningItems: <BackupLearningItemEntity>[],
+            learningSubtasks: <BackupLearningSubtaskEntity>[],
             reviewTasks: <BackupReviewTaskEntity>[],
             reviewRecords: <BackupReviewRecordEntity>[],
             settings: <String, dynamic>{},

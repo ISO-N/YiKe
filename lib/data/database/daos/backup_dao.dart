@@ -35,6 +35,7 @@ class BackupDao {
           (row) => BackupLearningItemEntity(
             uuid: row.uuid,
             title: row.title,
+            description: row.description,
             note: row.note,
             tags: _parseStringList(row.tags),
             learningDate: row.learningDate.toIso8601String(),
@@ -45,6 +46,31 @@ class BackupDao {
           ),
         )
         .toList();
+  }
+
+  /// 读取可导出的学习子任务（默认排除 Mock 数据），并将外键转为 uuid（learningItemUuid）。
+  Future<List<BackupLearningSubtaskEntity>> getLearningSubtasksForBackup() async {
+    final query = db.select(db.learningSubtasks).join([
+      innerJoin(
+        db.learningItems,
+        db.learningItems.id.equalsExp(db.learningSubtasks.learningItemId),
+      ),
+    ]);
+    query.where(db.learningSubtasks.isMockData.equals(false));
+
+    final rows = await query.get();
+    return rows.map((row) {
+      final subtask = row.readTable(db.learningSubtasks);
+      final item = row.readTable(db.learningItems);
+      return BackupLearningSubtaskEntity(
+        uuid: subtask.uuid,
+        learningItemUuid: item.uuid,
+        content: subtask.content,
+        sortOrder: subtask.sortOrder,
+        createdAt: subtask.createdAt.toIso8601String(),
+        updatedAt: subtask.updatedAt?.toIso8601String(),
+      );
+    }).toList();
   }
 
   /// 读取可导出的复习任务（默认排除 Mock 数据），并将外键转为 uuid（learningItemUuid）。

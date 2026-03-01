@@ -10,12 +10,22 @@ class DraftLearningItem {
   /// 构造函数。
   const DraftLearningItem({
     required this.title,
+    this.description,
+    this.subtasks = const [],
     this.note,
     this.tags = const [],
     this.topicId,
   });
 
   final String title;
+
+  /// 描述（v2.6：替代 note 的结构化入口）。
+  final String? description;
+
+  /// 子任务清单（v2.6）。
+  final List<String> subtasks;
+
+  /// 备注（渐进式废弃：仅用于兼容旧链路）。
   final String? note;
   final List<String> tags;
 
@@ -24,12 +34,16 @@ class DraftLearningItem {
 
   DraftLearningItem copyWith({
     String? title,
+    String? description,
+    List<String>? subtasks,
     String? note,
     List<String>? tags,
     int? topicId,
   }) {
     return DraftLearningItem(
       title: title ?? this.title,
+      description: description ?? this.description,
+      subtasks: subtasks ?? this.subtasks,
       note: note ?? this.note,
       tags: tags ?? this.tags,
       topicId: topicId ?? this.topicId,

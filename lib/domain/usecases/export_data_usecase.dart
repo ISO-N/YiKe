@@ -10,8 +10,10 @@ import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 
 import '../entities/learning_item.dart';
+import '../entities/learning_subtask.dart';
 import '../entities/review_task.dart';
 import '../repositories/learning_item_repository.dart';
+import '../repositories/learning_subtask_repository.dart';
 import '../repositories/review_task_repository.dart';
 
 /// 数据导出异常。
@@ -79,11 +81,14 @@ class ExportDataUseCase {
   /// 构造函数。
   const ExportDataUseCase({
     required LearningItemRepository learningItemRepository,
+    required LearningSubtaskRepository learningSubtaskRepository,
     required ReviewTaskRepository reviewTaskRepository,
   }) : _learningItemRepository = learningItemRepository,
+       _learningSubtaskRepository = learningSubtaskRepository,
        _reviewTaskRepository = reviewTaskRepository;
 
   final LearningItemRepository _learningItemRepository;
+  final LearningSubtaskRepository _learningSubtaskRepository;
   final ReviewTaskRepository _reviewTaskRepository;
 
   /// 预览导出数据量（不写文件）。
@@ -125,6 +130,14 @@ class ExportDataUseCase {
               .where((e) => !e.isMockData)
               .toList()
         : const <LearningItemEntity>[];
+    final subtasks =
+        params.includeItems && items.isNotEmpty
+            ? (await _learningSubtaskRepository.getByLearningItemIds(
+                  items.map((e) => e.id).whereType<int>().toList(),
+                ))
+                .where((e) => !e.isMockData)
+                .toList()
+            : const <LearningSubtaskEntity>[];
     final tasks = params.includeTasks
         ? (await _reviewTaskRepository.getAllTasks())
               .where((e) => !e.isMockData)
@@ -138,11 +151,13 @@ class ExportDataUseCase {
     final content = switch (params.format) {
       ExportFormat.json => _toJson(
         items: items,
+        subtasks: subtasks,
         tasks: tasks,
         exportedAt: exportedAt,
       ),
       ExportFormat.csv => _toCsv(
         items: items,
+        subtasks: subtasks,
         tasks: tasks,
         exportedAt: exportedAt,
       ),
@@ -166,21 +181,37 @@ class ExportDataUseCase {
 
   String _toJson({
     required List<LearningItemEntity> items,
+    required List<LearningSubtaskEntity> subtasks,
     required List<ReviewTaskEntity> tasks,
     required DateTime exportedAt,
   }) {
+    final subtasksByItemId = <int, List<LearningSubtaskEntity>>{};
+    for (final s in subtasks) {
+      subtasksByItemId.putIfAbsent(s.learningItemId, () => []).add(s);
+    }
+    for (final entry in subtasksByItemId.entries) {
+      entry.value.sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+    }
+
     return jsonEncode({
-      'version': '2.0',
+      'version': '2.1',
       'exportedAt': exportedAt.toIso8601String(),
-      'items': items.map(_itemToJson).toList(),
+      'items': items
+          .map((e) => _itemToJson(e, subtasksByItemId[e.id] ?? const []))
+          .toList(),
       'tasks': tasks.map(_taskToJson).toList(),
     });
   }
 
-  Map<String, Object?> _itemToJson(LearningItemEntity item) {
+  Map<String, Object?> _itemToJson(
+    LearningItemEntity item,
+    List<LearningSubtaskEntity> subtasks,
+  ) {
     return {
       'id': item.id,
       'title': item.title,
+      'description': item.description,
+      'subtasks': subtasks.map((e) => e.content).toList(),
       'note': item.note,
       'tags': item.tags,
       'learningDate': item.learningDate.toIso8601String(),
@@ -205,25 +236,43 @@ class ExportDataUseCase {
 
   String _toCsv({
     required List<LearningItemEntity> items,
+    required List<LearningSubtaskEntity> subtasks,
     required List<ReviewTaskEntity> tasks,
     required DateTime exportedAt,
   }) {
+    final subtasksByItemId = <int, List<LearningSubtaskEntity>>{};
+    for (final s in subtasks) {
+      subtasksByItemId.putIfAbsent(s.learningItemId, () => []).add(s);
+    }
+    for (final entry in subtasksByItemId.entries) {
+      entry.value.sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+    }
+
     final buffer = StringBuffer();
     buffer.writeln('忆刻数据导出');
-    buffer.writeln('版本,2.0');
+    buffer.writeln('版本,2.1');
     buffer.writeln('导出时间,${exportedAt.toIso8601String()}');
     buffer.writeln();
 
     if (items.isNotEmpty) {
       buffer.writeln('学习内容');
-      buffer.writeln('id,title,note,tags,learningDate,createdAt,isDeleted,deletedAt');
+      buffer.writeln(
+        'id,title,description,subtasks,tags,learningDate,createdAt,isDeleted,deletedAt',
+      );
       for (final item in items) {
+        final lines =
+            (subtasksByItemId[item.id] ?? const <LearningSubtaskEntity>[])
+                .map((e) => e.content)
+                .toList();
+        final joined = lines.join('\n');
         buffer
           ..write(_csvInt(item.id))
           ..write(',')
           ..write(_csvText(item.title))
           ..write(',')
-          ..write(_csvText(item.note ?? ''))
+          ..write(_csvText(item.description ?? ''))
+          ..write(',')
+          ..write(_csvText(joined))
           ..write(',')
           ..write(_csvText(item.tags.join(';')))
           ..write(',')

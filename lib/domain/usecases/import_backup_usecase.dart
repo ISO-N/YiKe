@@ -193,14 +193,14 @@ class ImportBackupUseCase {
     final raw = schemaVersion.trim();
     if (raw.isEmpty) return;
 
-    // 规则：当前实现的格式为 1.0；按 spec 支持 N-1（0.9）。
+    // 规则：当前实现的格式为 1.1；按 spec 支持 N-1（1.0）。
     // 说明：缺 schemaVersion 会在上层被视为默认 1.0。
-    const supported = {'1.0', '0.9'};
+    const supported = {'1.1', '1.0', '0.9'};
     if (supported.contains(raw)) return;
 
     // 若可解析为数字且大于 1.0，则认为版本过高。
     final num = double.tryParse(raw);
-    if (num != null && num > 1.0) {
+    if (num != null && num > 1.1) {
       throw const ImportBackupException('备份文件版本过高，无法导入');
     }
 

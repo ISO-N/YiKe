@@ -10,18 +10,47 @@ import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
+import '../../providers/settings_provider.dart';
 import '../../providers/topics_provider.dart';
 import '../../widgets/glass_card.dart';
 import '../../../domain/usecases/manage_topic_usecase.dart';
 
-class TopicsPage extends ConsumerWidget {
+class TopicsPage extends ConsumerStatefulWidget {
   /// 主题管理页。
   const TopicsPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<TopicsPage> createState() => _TopicsPageState();
+}
+
+class _TopicsPageState extends ConsumerState<TopicsPage> {
+  bool _guideDialogShown = false;
+
+  @override
+  Widget build(BuildContext context) {
     final state = ref.watch(topicsProvider);
     final notifier = ref.read(topicsProvider.notifier);
+    final settingsState = ref.watch(settingsProvider);
+    final settingsNotifier = ref.read(settingsProvider.notifier);
+
+    final shouldShowGuide =
+        !settingsState.isLoading &&
+        !settingsState.settings.topicGuideDismissed &&
+        !_guideDialogShown;
+
+    if (shouldShowGuide) {
+      _guideDialogShown = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        if (!mounted) return;
+        final action = await _showTopicGuideDialog(context);
+        if (!mounted) return;
+        if (action == _TopicGuideAction.dismissForever) {
+          await settingsNotifier.save(
+            settingsState.settings.copyWith(topicGuideDismissed: true),
+          );
+        }
+      });
+    }
 
     Future<void> createOrEdit({int? topicId}) async {
       final editing = topicId != null;
@@ -100,6 +129,19 @@ class TopicsPage extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('主题管理'),
         actions: [
+          IconButton(
+            tooltip: '查看说明',
+            onPressed: () async {
+              final action = await _showTopicGuideDialog(context);
+              if (!mounted) return;
+              if (action == _TopicGuideAction.dismissForever) {
+                await settingsNotifier.save(
+                  settingsState.settings.copyWith(topicGuideDismissed: true),
+                );
+              }
+            },
+            icon: const Icon(Icons.info_outline),
+          ),
           IconButton(
             tooltip: '刷新',
             onPressed: () => notifier.load(),
@@ -256,6 +298,51 @@ class TopicsPage extends ConsumerWidget {
       ),
     );
   }
+}
+
+enum _TopicGuideAction { close, dismissForever }
+
+Future<_TopicGuideAction?> _showTopicGuideDialog(BuildContext context) {
+  return showDialog<_TopicGuideAction>(
+    context: context,
+    builder: (context) {
+      return AlertDialog(
+        title: const Text('主题功能说明'),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: const [
+              Text(
+                '主题可以帮助你将相关的学习内容组织在一起。\n\n'
+                '例如：\n'
+                '• 「英语学习」主题：包含所有英语单词、语法等学习内容\n'
+                '• 「编程」主题：包含编程语言、算法等学习内容\n'
+                '• 「考试复习」主题：包含某个考试的所有复习资料\n\n'
+                '按主题查看学习进度，更容易了解自己在某个领域的掌握情况。',
+              ),
+              SizedBox(height: 12),
+              Text('使用步骤：'),
+              SizedBox(height: 6),
+              Text('1. 在「主题管理」页面创建主题'),
+              Text('2. 录入学习内容时，选择关联到某个主题'),
+              Text('3. 在主题详情页查看该主题下学习内容的进度'),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(_TopicGuideAction.close),
+            child: const Text('我知道了'),
+          ),
+          FilledButton(
+            onPressed: () =>
+                Navigator.of(context).pop(_TopicGuideAction.dismissForever),
+            child: const Text('不再提示'),
+          ),
+        ],
+      );
+    },
+  );
 }
 
 class _EmptyHint extends StatelessWidget {

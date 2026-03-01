@@ -166,13 +166,15 @@ class MockDataService {
           endInclusive: latestLearningDay,
         );
         final title = _mockTitle(config: config, index: i);
-        final note = _mockNote(learningDay: learningDay, now: now);
+        // v2.6：任务结构升级后，Mock 数据优先写入 description/subtasks（note 渐进式废弃）。
+        final description = _mockDescription(learningDay: learningDay, now: now);
+        final subtasks = _mockSubtasks(config: config, index: i);
 
         final id = await _learningItemDao.insertLearningItem(
           LearningItemsCompanion.insert(
             uuid: Value(_uuid.v4()),
             title: title,
-            note: Value(note),
+            description: Value(description),
             tags: const Value('[]'),
             learningDate: learningDay,
             createdAt: Value(now),
@@ -180,6 +182,23 @@ class MockDataService {
             isMockData: const Value(true),
           ),
         );
+
+        // 说明：子任务表有独立的 isMockData 字段，需一并写入，避免影响同步/备份/导出与清理口径。
+        for (var j = 0; j < subtasks.length; j++) {
+          final content = subtasks[j].trim();
+          if (content.isEmpty) continue;
+          await db.into(db.learningSubtasks).insert(
+            LearningSubtasksCompanion.insert(
+              uuid: Value(_uuid.v4()),
+              learningItemId: id,
+              content: content,
+              sortOrder: Value(j),
+              createdAt: now,
+              updatedAt: Value(now),
+              isMockData: const Value(true),
+            ),
+          );
+        }
         items.add((id: id, learningDay: learningDay));
       }
 
@@ -491,10 +510,43 @@ class MockDataService {
     return '历史：$e';
   }
 
-  String _mockNote({required DateTime learningDay, required DateTime now}) {
+  String _mockDescription({required DateTime learningDay, required DateTime now}) {
     final y = learningDay.year;
     final m = learningDay.month.toString().padLeft(2, '0');
     final d = learningDay.day.toString().padLeft(2, '0');
     return 'Mock 数据：用于调试与体验优化验证（生成于 ${now.toIso8601String()}，学习日 $y-$m-$d）。';
+  }
+
+  /// 生成子任务列表（用于模拟“清单能力”）。
+  ///
+  /// 说明：
+  /// - 仅用于 Debug 数据，不追求业务真实性，但需覆盖排序/展示/搜索等链路
+  /// - 通过 index 的奇偶与模板类型混入不同样式，便于回归验证
+  List<String> _mockSubtasks({required MockDataConfig config, required int index}) {
+    final template = _resolveTemplate(config.template);
+    // 简单策略：偶数条生成 0 个子任务（仅描述），奇数条生成 2-3 个子任务。
+    if (index.isEven) return const <String>[];
+
+    return switch (template) {
+      MockDataTemplate.englishWords => <String>[
+        '记忆要点：拼写与发音',
+        '例句：用该单词造句',
+        if (index % 3 == 0) '同义词/反义词：补充对照',
+      ],
+      MockDataTemplate.historyEvents => <String>[
+        '时间：梳理关键时间线',
+        '原因：总结主要原因',
+        if (index % 3 == 0) '影响：列出 2-3 个影响点',
+      ],
+      MockDataTemplate.custom => <String>[
+        '子任务 1：准备材料',
+        '子任务 2：完成练习',
+        if (index % 3 == 0) '子任务 3：复盘总结',
+      ],
+      MockDataTemplate.random => <String>[
+        '子任务 1：拆解步骤',
+        '子任务 2：完成并记录',
+      ],
+    };
   }
 }

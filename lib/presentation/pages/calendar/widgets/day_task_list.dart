@@ -185,6 +185,7 @@ class _TaskCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final primary = isDark ? AppColors.primaryLight : AppColors.primary;
+    final info = _infoText();
 
     return GlassCard(
       child: Padding(
@@ -232,9 +233,14 @@ class _TaskCard extends StatelessWidget {
                     .toList(),
               ),
             ],
-            if (task.note != null && task.note!.trim().isNotEmpty) ...[
+            if (info != null) ...[
               const SizedBox(height: AppSpacing.sm),
-              Text(task.note!, style: AppTypography.bodySecondary(context)),
+              Text(
+                info,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+                style: AppTypography.bodySecondary(context),
+              ),
             ],
             if (onComplete != null || onSkip != null) ...[
               const SizedBox(height: AppSpacing.lg),
@@ -280,6 +286,19 @@ class _TaskCard extends StatelessWidget {
       case ReviewTaskStatus.pending:
         return '状态：待复习';
     }
+  }
+
+  /// 生成日历任务卡片的信息摘要（v2.6：description 优先，其次子任务数量，最后 fallback 到旧 note）。
+  String? _infoText() {
+    final desc = (task.description ?? '').trim();
+    if (desc.isNotEmpty) return desc;
+
+    if (task.subtaskCount > 0) return '${task.subtaskCount} 个子任务';
+
+    final legacy = (task.note ?? '').trim();
+    if (legacy.isNotEmpty) return '旧备注：$legacy';
+
+    return null;
   }
 }
 

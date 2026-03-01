@@ -9,9 +9,11 @@ import 'package:drift/drift.dart' as drift;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:yike/data/database/daos/learning_item_dao.dart';
+import 'package:yike/data/database/daos/learning_subtask_dao.dart';
 import 'package:yike/data/database/daos/review_task_dao.dart';
 import 'package:yike/data/database/database.dart';
 import 'package:yike/data/repositories/learning_item_repository_impl.dart';
+import 'package:yike/data/repositories/learning_subtask_repository_impl.dart';
 import 'package:yike/data/repositories/review_task_repository_impl.dart';
 import 'package:yike/domain/usecases/export_data_usecase.dart';
 
@@ -35,6 +37,9 @@ void main() {
     db = createInMemoryDatabase();
     useCase = ExportDataUseCase(
       learningItemRepository: LearningItemRepositoryImpl(LearningItemDao(db)),
+      learningSubtaskRepository: LearningSubtaskRepositoryImpl(
+        dao: LearningSubtaskDao(db),
+      ),
       reviewTaskRepository: ReviewTaskRepositoryImpl(dao: ReviewTaskDao(db)),
     );
   });
@@ -94,7 +99,7 @@ void main() {
 
       final json =
           jsonDecode(await result.file.readAsString()) as Map<String, Object?>;
-      expect(json['version'], '2.0');
+      expect(json['version'], '2.1');
       expect((json['items'] as List).length, 1);
       expect((json['tasks'] as List).length, 1);
     } finally {
@@ -123,7 +128,9 @@ void main() {
       expect(content.contains('学习内容'), true);
       expect(content.contains('复习任务'), true);
       expect(
-        content.contains('id,title,note,tags,learningDate,createdAt,isDeleted,deletedAt'),
+        content.contains(
+          'id,title,description,subtasks,tags,learningDate,createdAt,isDeleted,deletedAt',
+        ),
         true,
       );
       expect(

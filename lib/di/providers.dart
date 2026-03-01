@@ -6,6 +6,7 @@ library;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/database/daos/learning_item_dao.dart';
+import '../data/database/daos/learning_subtask_dao.dart';
 import '../data/database/daos/learning_template_dao.dart';
 import '../data/database/daos/learning_topic_dao.dart';
 import '../data/database/daos/backup_dao.dart';
@@ -17,18 +18,22 @@ import '../data/database/daos/sync_log_dao.dart';
 import '../data/database/database.dart';
 import '../data/repositories/backup_repository_impl.dart';
 import '../data/repositories/learning_item_repository_impl.dart';
+import '../data/repositories/learning_subtask_repository_impl.dart';
 import '../data/repositories/learning_template_repository_impl.dart';
 import '../data/repositories/learning_topic_repository_impl.dart';
 import '../data/repositories/review_task_repository_impl.dart';
 import '../data/repositories/settings_repository_impl.dart';
+import '../data/repositories/task_structure_migration_repository_impl.dart';
 import '../data/repositories/theme_settings_repository_impl.dart';
 import '../data/sync/sync_log_writer.dart';
 import '../domain/repositories/backup_repository.dart';
 import '../domain/repositories/learning_item_repository.dart';
+import '../domain/repositories/learning_subtask_repository.dart';
 import '../domain/repositories/learning_template_repository.dart';
 import '../domain/repositories/learning_topic_repository.dart';
 import '../domain/repositories/review_task_repository.dart';
 import '../domain/repositories/settings_repository.dart';
+import '../domain/repositories/task_structure_migration_repository.dart';
 import '../domain/repositories/theme_settings_repository.dart';
 import '../domain/services/ocr_service.dart';
 import '../domain/usecases/export_backup_usecase.dart';
@@ -49,9 +54,16 @@ import '../domain/usecases/get_today_skipped_tasks_usecase.dart';
 import '../domain/usecases/import_learning_items_usecase.dart';
 import '../domain/usecases/manage_template_usecase.dart';
 import '../domain/usecases/manage_topic_usecase.dart';
+import '../domain/usecases/migrate_note_to_subtasks_usecase.dart';
 import '../domain/usecases/ocr_recognition_usecase.dart';
+import '../domain/usecases/remove_review_round_usecase.dart';
 import '../domain/usecases/skip_review_task_usecase.dart';
 import '../domain/usecases/undo_task_status_usecase.dart';
+import '../domain/usecases/create_subtask_usecase.dart';
+import '../domain/usecases/update_subtask_usecase.dart';
+import '../domain/usecases/delete_subtask_usecase.dart';
+import '../domain/usecases/reorder_subtasks_usecase.dart';
+import '../domain/usecases/update_learning_item_description_usecase.dart';
 import '../domain/usecases/update_learning_item_note_usecase.dart';
 import '../domain/usecases/deactivate_learning_item_usecase.dart';
 import '../domain/usecases/get_review_plan_usecase.dart';
@@ -75,6 +87,10 @@ final deviceIdProvider = Provider<String>((ref) {
 /// DAO Providers
 final learningItemDaoProvider = Provider<LearningItemDao>((ref) {
   return LearningItemDao(ref.read(appDatabaseProvider));
+});
+
+final learningSubtaskDaoProvider = Provider<LearningSubtaskDao>((ref) {
+  return LearningSubtaskDao(ref.read(appDatabaseProvider));
 });
 
 final reviewTaskDaoProvider = Provider<ReviewTaskDao>((ref) {
@@ -152,6 +168,14 @@ final learningItemRepositoryProvider = Provider<LearningItemRepository>((ref) {
   );
 });
 
+final learningSubtaskRepositoryProvider =
+    Provider<LearningSubtaskRepository>((ref) {
+      return LearningSubtaskRepositoryImpl(
+        dao: ref.read(learningSubtaskDaoProvider),
+        syncLogWriter: ref.read(syncLogWriterProvider),
+      );
+    });
+
 final learningTemplateRepositoryProvider = Provider<LearningTemplateRepository>(
   (ref) {
     return LearningTemplateRepositoryImpl(
@@ -171,8 +195,9 @@ final learningTopicRepositoryProvider = Provider<LearningTopicRepository>((
 });
 
 final reviewTaskRepositoryProvider = Provider<ReviewTaskRepository>((ref) {
-  return ReviewTaskRepositoryImpl(
+  return ReviewTaskRepositoryImpl.withSubtasks(
     dao: ref.read(reviewTaskDaoProvider),
+    learningSubtaskDao: ref.read(learningSubtaskDaoProvider),
     syncLogWriter: ref.read(syncLogWriterProvider),
   );
 });
@@ -209,12 +234,23 @@ final backupRepositoryProvider = Provider<BackupRepository>((ref) {
   );
 });
 
+/// 任务结构迁移仓储 Provider（note → description + subtasks）。
+final taskStructureMigrationRepositoryProvider =
+    Provider<TaskStructureMigrationRepository>((ref) {
+      return TaskStructureMigrationRepositoryImpl(
+        db: ref.read(appDatabaseProvider),
+        learningSubtaskDao: ref.read(learningSubtaskDaoProvider),
+        syncLogWriter: ref.read(syncLogWriterProvider),
+      );
+    });
+
 /// UseCase Providers
 final createLearningItemUseCaseProvider = Provider<CreateLearningItemUseCase>((
   ref,
 ) {
   return CreateLearningItemUseCase(
     learningItemRepository: ref.read(learningItemRepositoryProvider),
+    learningSubtaskRepository: ref.read(learningSubtaskRepositoryProvider),
     reviewTaskRepository: ref.read(reviewTaskRepositoryProvider),
   );
 });
@@ -276,6 +312,13 @@ final updateLearningItemNoteUseCaseProvider =
       );
     });
 
+final updateLearningItemDescriptionUseCaseProvider =
+    Provider<UpdateLearningItemDescriptionUseCase>((ref) {
+      return UpdateLearningItemDescriptionUseCase(
+        learningItemRepository: ref.read(learningItemRepositoryProvider),
+      );
+    });
+
 final deactivateLearningItemUseCaseProvider =
     Provider<DeactivateLearningItemUseCase>((ref) {
       return DeactivateLearningItemUseCase(
@@ -300,6 +343,46 @@ final adjustReviewDateUseCaseProvider = Provider<AdjustReviewDateUseCase>((
 final addReviewRoundUseCaseProvider = Provider<AddReviewRoundUseCase>((ref) {
   return AddReviewRoundUseCase(
     reviewTaskRepository: ref.read(reviewTaskRepositoryProvider),
+  );
+});
+
+final removeReviewRoundUseCaseProvider =
+    Provider<RemoveReviewRoundUseCase>((ref) {
+      return RemoveReviewRoundUseCase(
+        reviewTaskRepository: ref.read(reviewTaskRepositoryProvider),
+      );
+    });
+
+final migrateNoteToSubtasksUseCaseProvider =
+    Provider<MigrateNoteToSubtasksUseCase>((ref) {
+      return MigrateNoteToSubtasksUseCase(
+        repository: ref.read(taskStructureMigrationRepositoryProvider),
+      );
+    });
+
+final createSubtaskUseCaseProvider = Provider<CreateSubtaskUseCase>((ref) {
+  return CreateSubtaskUseCase(
+    learningItemRepository: ref.read(learningItemRepositoryProvider),
+    learningSubtaskRepository: ref.read(learningSubtaskRepositoryProvider),
+  );
+});
+
+final updateSubtaskUseCaseProvider = Provider<UpdateSubtaskUseCase>((ref) {
+  return UpdateSubtaskUseCase(
+    learningItemRepository: ref.read(learningItemRepositoryProvider),
+    learningSubtaskRepository: ref.read(learningSubtaskRepositoryProvider),
+  );
+});
+
+final deleteSubtaskUseCaseProvider = Provider<DeleteSubtaskUseCase>((ref) {
+  return DeleteSubtaskUseCase(
+    learningSubtaskRepository: ref.read(learningSubtaskRepositoryProvider),
+  );
+});
+
+final reorderSubtasksUseCaseProvider = Provider<ReorderSubtasksUseCase>((ref) {
+  return ReorderSubtasksUseCase(
+    learningSubtaskRepository: ref.read(learningSubtaskRepositoryProvider),
   );
 });
 
@@ -342,6 +425,7 @@ final getStatisticsUseCaseProvider = Provider<GetStatisticsUseCase>((ref) {
 final exportDataUseCaseProvider = Provider<ExportDataUseCase>((ref) {
   return ExportDataUseCase(
     learningItemRepository: ref.read(learningItemRepositoryProvider),
+    learningSubtaskRepository: ref.read(learningSubtaskRepositoryProvider),
     reviewTaskRepository: ref.read(reviewTaskRepositoryProvider),
   );
 });

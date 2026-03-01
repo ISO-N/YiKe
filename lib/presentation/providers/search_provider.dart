@@ -12,14 +12,18 @@ class LearningItemSearchResult {
   const LearningItemSearchResult({
     required this.id,
     required this.title,
+    required this.description,
     required this.note,
+    required this.subtaskCount,
     required this.learningDate,
     required this.isMockData,
   });
 
   final int id;
   final String title;
+  final String? description;
   final String? note;
+  final int subtaskCount;
   final DateTime learningDate;
   final bool isMockData;
 }
@@ -38,12 +42,21 @@ final learningSearchResultsProvider =
 
       final dao = ref.read(learningItemDaoProvider);
       final rows = await dao.searchLearningItems(keyword: keyword, limit: 50);
+
+      // v2.6：用于“子任务摘要”展示，避免逐条查询带来的性能问题。
+      final itemIds = rows.map((e) => e.id).toList();
+      final counts = await ref
+          .read(learningSubtaskDaoProvider)
+          .getCountsByLearningItemIds(itemIds);
+
       return rows
           .map(
             (row) => LearningItemSearchResult(
               id: row.id,
               title: row.title,
+              description: row.description,
               note: row.note,
+              subtaskCount: counts[row.id] ?? 0,
               learningDate: row.learningDate,
               isMockData: row.isMockData,
             ),

@@ -37,6 +37,10 @@ class LearningItemRepositoryImpl implements LearningItemRepository {
       LearningItemsCompanion.insert(
         uuid: Value(ensuredUuid),
         title: item.title,
+        description:
+            item.description == null
+                ? const Value.absent()
+                : Value(item.description),
         note: item.note == null ? const Value.absent() : Value(item.note),
         tags: Value(jsonEncode(item.tags)),
         learningDate: item.learningDate,
@@ -61,6 +65,7 @@ class LearningItemRepositoryImpl implements LearningItemRepository {
       operation: 'create',
       data: {
         'title': saved.title,
+        'description': saved.description,
         'note': saved.note,
         'tags': saved.tags,
         'learning_date': saved.learningDate.toIso8601String(),
@@ -68,6 +73,7 @@ class LearningItemRepositoryImpl implements LearningItemRepository {
         'updated_at': (saved.updatedAt ?? saved.createdAt).toIso8601String(),
         'is_deleted': saved.isDeleted,
         'deleted_at': saved.deletedAt?.toIso8601String(),
+        'is_mock_data': saved.isMockData,
       },
       timestampMs: ts,
     );
@@ -148,6 +154,7 @@ class LearningItemRepositoryImpl implements LearningItemRepository {
         id: item.id!,
         uuid: existing.uuid,
         title: item.title,
+        description: item.description,
         note: item.note,
         tags: jsonEncode(item.tags),
         learningDate: item.learningDate,
@@ -177,6 +184,7 @@ class LearningItemRepositoryImpl implements LearningItemRepository {
       operation: 'update',
       data: {
         'title': saved.title,
+        'description': saved.description,
         'note': saved.note,
         'tags': saved.tags,
         'learning_date': saved.learningDate.toIso8601String(),
@@ -184,6 +192,7 @@ class LearningItemRepositoryImpl implements LearningItemRepository {
         'updated_at': (saved.updatedAt ?? saved.createdAt).toIso8601String(),
         'is_deleted': saved.isDeleted,
         'deleted_at': saved.deletedAt?.toIso8601String(),
+        'is_mock_data': saved.isMockData,
       },
       timestampMs: ts,
     );
@@ -226,6 +235,7 @@ class LearningItemRepositoryImpl implements LearningItemRepository {
       operation: 'update',
       data: {
         'title': row.title,
+        'description': row.description,
         'note': row.note,
         'tags': _parseTags(row.tags),
         'learning_date': row.learningDate.toIso8601String(),
@@ -233,6 +243,60 @@ class LearningItemRepositoryImpl implements LearningItemRepository {
         'updated_at': (row.updatedAt ?? row.createdAt).toIso8601String(),
         'is_deleted': row.isDeleted,
         'deleted_at': row.deletedAt?.toIso8601String(),
+        'is_mock_data': row.isMockData,
+      },
+      timestampMs: ts,
+    );
+  }
+
+  @override
+  Future<void> updateDescription({
+    required int id,
+    required String? description,
+  }) async {
+    final existing = await dao.getLearningItemById(id);
+    if (existing == null) {
+      throw StateError('学习内容不存在（id=$id）');
+    }
+    if (existing.isDeleted) {
+      throw StateError('学习内容已停用，无法编辑描述（id=$id）');
+    }
+
+    final normalized =
+        description?.trim().isEmpty == true ? null : description?.trim();
+    final updated = await dao.updateLearningItemDescription(id, normalized);
+    if (updated <= 0) {
+      throw StateError('学习内容描述更新失败（id=$id）');
+    }
+
+    final sync = _sync;
+    if (sync == null || existing.isMockData) return;
+
+    final row = await dao.getLearningItemById(id);
+    if (row == null) return;
+
+    final now = DateTime.now();
+    final ts = now.millisecondsSinceEpoch;
+    final origin = await sync.resolveOriginKey(
+      entityType: 'learning_item',
+      localEntityId: id,
+      appliedAtMs: ts,
+    );
+    await sync.logEvent(
+      origin: origin,
+      entityType: 'learning_item',
+      operation: 'update',
+      data: {
+        'title': row.title,
+        'description': row.description,
+        'note': row.note,
+        'tags': _parseTags(row.tags),
+        'learning_date': row.learningDate.toIso8601String(),
+        'created_at': row.createdAt.toIso8601String(),
+        'updated_at': (row.updatedAt ?? row.createdAt).toIso8601String(),
+        'is_deleted': row.isDeleted,
+        'deleted_at': row.deletedAt?.toIso8601String(),
+        'is_mock_data': row.isMockData,
       },
       timestampMs: ts,
     );
@@ -270,6 +334,7 @@ class LearningItemRepositoryImpl implements LearningItemRepository {
       operation: 'update',
       data: {
         'title': row.title,
+        'description': row.description,
         'note': row.note,
         'tags': _parseTags(row.tags),
         'learning_date': row.learningDate.toIso8601String(),
@@ -277,6 +342,7 @@ class LearningItemRepositoryImpl implements LearningItemRepository {
         'updated_at': (row.updatedAt ?? row.createdAt).toIso8601String(),
         'is_deleted': row.isDeleted,
         'deleted_at': row.deletedAt?.toIso8601String(),
+        'is_mock_data': row.isMockData,
       },
       timestampMs: ts,
     );
@@ -287,6 +353,7 @@ class LearningItemRepositoryImpl implements LearningItemRepository {
       uuid: row.uuid,
       id: row.id,
       title: row.title,
+      description: row.description,
       note: row.note,
       tags: _parseTags(row.tags),
       learningDate: row.learningDate,

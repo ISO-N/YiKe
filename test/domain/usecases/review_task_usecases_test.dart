@@ -45,7 +45,9 @@ class _FakeReviewTaskRepository implements ReviewTaskRepository {
         taskId: 1,
         learningItemId: 1,
         title: 'T1',
+        description: null,
         note: null,
+        subtaskCount: 0,
         tags: <String>[],
         reviewRound: 1,
         scheduledDate: DateTime(2026, 2, 25),
@@ -144,6 +146,10 @@ class _FakeReviewTaskRepository implements ReviewTaskRepository {
 
   @override
   Future<void> addReviewRound(int learningItemId) => throw UnimplementedError();
+
+  @override
+  Future<void> removeLatestReviewRound(int learningItemId) =>
+      throw UnimplementedError();
 }
 
 void main() {

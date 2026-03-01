@@ -40,6 +40,7 @@ class SettingsRepositoryImpl implements SettingsRepository {
   static const String keyNotificationsEnabled = 'notifications_enabled';
   static const String keyNotificationPermissionGuideDismissed =
       'notification_permission_guide_dismissed';
+  static const String keyTopicGuideDismissed = 'topic_guide_dismissed';
 
   // v1.0 MVP 扩展：用于后台防重复发送通知。
   static const String keyLastNotifiedDate = 'last_notified_date';
@@ -64,6 +65,9 @@ class SettingsRepositoryImpl implements SettingsRepository {
     final guideDismissed =
         await _getBool(keyNotificationPermissionGuideDismissed) ??
         AppSettingsEntity.defaults.notificationPermissionGuideDismissed;
+    final topicGuideDismissed =
+        await _getBool(keyTopicGuideDismissed) ??
+        AppSettingsEntity.defaults.topicGuideDismissed;
     final lastNotifiedDate = await _getString(keyLastNotifiedDate);
 
     return AppSettingsEntity(
@@ -72,6 +76,7 @@ class SettingsRepositoryImpl implements SettingsRepository {
       doNotDisturbEnd: dndEnd,
       notificationsEnabled: notificationsEnabled,
       notificationPermissionGuideDismissed: guideDismissed,
+      topicGuideDismissed: topicGuideDismissed,
       lastNotifiedDate: lastNotifiedDate,
     );
   }
@@ -90,6 +95,9 @@ class SettingsRepositoryImpl implements SettingsRepository {
       keyNotificationPermissionGuideDismissed: await _crypto.encrypt(
         jsonEncode(settings.notificationPermissionGuideDismissed),
       ),
+      keyTopicGuideDismissed: await _crypto.encrypt(
+        jsonEncode(settings.topicGuideDismissed),
+      ),
       if (settings.lastNotifiedDate != null)
         keyLastNotifiedDate: await _crypto.encrypt(
           jsonEncode(settings.lastNotifiedDate),
@@ -102,6 +110,7 @@ class SettingsRepositoryImpl implements SettingsRepository {
       'do_not_disturb_start': settings.doNotDisturbStart,
       'do_not_disturb_end': settings.doNotDisturbEnd,
       'notifications_enabled': settings.notificationsEnabled,
+      'topic_guide_dismissed': settings.topicGuideDismissed,
     });
   }
 

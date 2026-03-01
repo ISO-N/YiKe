@@ -6,9 +6,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:yike/domain/entities/learning_item.dart';
 import 'package:yike/domain/entities/review_config.dart';
 import 'package:yike/domain/entities/review_task.dart';
+import 'package:yike/domain/entities/learning_subtask.dart';
 import 'package:yike/domain/entities/task_day_stats.dart';
 import 'package:yike/domain/entities/task_timeline.dart';
 import 'package:yike/domain/repositories/learning_item_repository.dart';
+import 'package:yike/domain/repositories/learning_subtask_repository.dart';
 import 'package:yike/domain/repositories/review_task_repository.dart';
 import 'package:yike/domain/usecases/create_learning_item_usecase.dart';
 
@@ -54,7 +56,42 @@ class _FakeLearningItemRepository implements LearningItemRepository {
       throw UnimplementedError();
 
   @override
+  Future<void> updateDescription({required int id, required String? description}) =>
+      throw UnimplementedError();
+
+  @override
   Future<void> deactivate(int id) => throw UnimplementedError();
+}
+
+/// 用于满足 CreateLearningItemUseCase 的子任务写入依赖（本测试不关注子任务细节）。
+class _FakeLearningSubtaskRepository implements LearningSubtaskRepository {
+  final List<LearningSubtaskEntity> created = [];
+
+  @override
+  Future<LearningSubtaskEntity> create(LearningSubtaskEntity subtask) async {
+    created.add(subtask);
+    return subtask.copyWith(id: created.length);
+  }
+
+  @override
+  Future<void> delete(int id) => throw UnimplementedError();
+
+  @override
+  Future<List<LearningSubtaskEntity>> getByLearningItemId(int learningItemId) =>
+      throw UnimplementedError();
+
+  @override
+  Future<List<LearningSubtaskEntity>> getByLearningItemIds(
+    List<int> learningItemIds,
+  ) => throw UnimplementedError();
+
+  @override
+  Future<void> reorder(int learningItemId, List<int> subtaskIds) =>
+      throw UnimplementedError();
+
+  @override
+  Future<LearningSubtaskEntity> update(LearningSubtaskEntity subtask) =>
+      throw UnimplementedError();
 }
 
 /// 用于验证 CreateLearningItemUseCase 的复习任务批量入库行为。
@@ -165,14 +202,20 @@ class _FakeReviewTaskRepository implements ReviewTaskRepository {
 
   @override
   Future<void> addReviewRound(int learningItemId) => throw UnimplementedError();
+
+  @override
+  Future<void> removeLatestReviewRound(int learningItemId) =>
+      throw UnimplementedError();
 }
 
 void main() {
   test('会清洗 title/note/tags，并按默认间隔生成复习任务', () async {
     final learningRepo = _FakeLearningItemRepository();
+    final subtaskRepo = _FakeLearningSubtaskRepository();
     final taskRepo = _FakeReviewTaskRepository();
     final useCase = CreateLearningItemUseCase(
       learningItemRepository: learningRepo,
+      learningSubtaskRepository: subtaskRepo,
       reviewTaskRepository: taskRepo,
     );
 
@@ -190,6 +233,7 @@ void main() {
     expect(created.title, '标题');
     expect(created.note, null);
     expect(created.tags, const ['a', 'b']);
+    expect(subtaskRepo.created, isEmpty);
 
     // 2) learningDate 会截断到当天零点。
     expect(created.learningDate, DateTime(2026, 2, 25));

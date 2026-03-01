@@ -32,6 +32,13 @@ class LearningItems extends Table {
   /// 备注内容（可选，v1.0 MVP 仅纯文本）。
   TextColumn get note => text().nullable()();
 
+  /// 描述内容（可选，v2.6：替代 note 的结构化入口）。
+  ///
+  /// 说明：
+  /// - 本次变更采用渐进式迁移：保留 note 字段不删除
+  /// - 迁移完成后：旧 note 会被迁移到 description 与 learning_subtasks，并置空 note
+  TextColumn get description => text().nullable()();
+
   /// 标签列表（JSON 字符串，如 ["Java","英语"]）。
   TextColumn get tags => text().withDefault(const Constant('[]'))();
 

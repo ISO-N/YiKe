@@ -46,6 +46,7 @@ class SyncService {
   static const Uuid _uuid = Uuid();
 
   static const String entityLearningItem = 'learning_item';
+  static const String entityLearningSubtask = 'learning_subtask';
   static const String entityReviewTask = 'review_task';
   static const String entityTemplate = 'learning_template';
   static const String entityTopic = 'learning_topic';
@@ -53,7 +54,7 @@ class SyncService {
   static const String entitySettingsBundle = 'settings_bundle';
 
   // 快照完成标记：用于避免每次同步都全表扫描生成快照日志。
-  static const String _snapshotDoneKeyPrefix = 'sync_snapshot_done_v1';
+  static const String _snapshotDoneKeyPrefix = 'sync_snapshot_done_v2';
 
   /// 确保本机“本地源数据”已生成快照日志（用于首次全量同步）。
   ///
@@ -73,6 +74,7 @@ class SyncService {
     if (await _readSnapshotDone(includeMockData: includeMockData)) return;
 
     await _snapshotLearningItems(includeMockData: includeMockData);
+    await _snapshotLearningSubtasks(includeMockData: includeMockData);
     await _snapshotReviewTasks(includeMockData: includeMockData);
     await _snapshotTemplates();
     await _snapshotTopics();
@@ -211,6 +213,9 @@ class SyncService {
       case entityLearningItem:
         await _applyLearningItem(event, mapping);
         return;
+      case entityLearningSubtask:
+        await _applyLearningSubtask(event, mapping);
+        return;
       case entityReviewTask:
         await _applyReviewTask(event, mapping);
         return;
@@ -261,14 +266,17 @@ class SyncService {
     final title = (event.data['title'] as String?)?.trim() ?? '';
     if (title.isEmpty) return;
 
+    final description = event.data['description'] as String?;
     final note = event.data['note'] as String?;
     final isMockData = (event.data['is_mock_data'] as bool?) ?? false;
+    final isDeleted = (event.data['is_deleted'] as bool?) ?? false;
     final tags =
         (event.data['tags'] as List?)?.whereType<String>().toList() ?? const [];
     final learningDate = _parseDateTime(event.data['learning_date']);
     final createdAt =
         _parseDateTime(event.data['created_at']) ?? DateTime.now();
     final updatedAt = _parseDateTime(event.data['updated_at']);
+    final deletedAt = _parseDateTime(event.data['deleted_at']);
 
     final existingLocalId = mapping?.localEntityId;
     if (existingLocalId == null || mapping?.isDeleted == true) {
@@ -278,11 +286,17 @@ class SyncService {
             LearningItemsCompanion.insert(
               uuid: Value(_uuid.v4()),
               title: title,
+              description:
+                  description == null
+                      ? const Value.absent()
+                      : Value(description),
               note: note == null ? const Value.absent() : Value(note),
               tags: Value(jsonEncode(tags)),
               learningDate: learningDate ?? DateTime.now(),
               createdAt: Value(createdAt),
               updatedAt: Value(updatedAt ?? createdAt),
+              isDeleted: Value(isDeleted),
+              deletedAt: Value(deletedAt),
               isMockData: Value(isMockData),
             ),
           );
@@ -301,9 +315,103 @@ class SyncService {
     )..where((t) => t.id.equals(existingLocalId))).write(
       LearningItemsCompanion(
         title: Value(title),
+        description: Value(description),
         note: Value(note),
         tags: Value(jsonEncode(tags)),
         learningDate: Value(learningDate ?? DateTime.now()),
+        updatedAt: Value(updatedAt ?? DateTime.now()),
+        isDeleted: Value(isDeleted),
+        deletedAt: Value(deletedAt),
+        isMockData: Value(isMockData),
+      ),
+    );
+
+    await _upsertMapping(
+      event: event,
+      localEntityId: existingLocalId,
+      appliedAtMs: event.timestampMs,
+      isDeleted: false,
+    );
+  }
+
+  Future<void> _applyLearningSubtask(
+    SyncEvent event,
+    SyncEntityMapping? mapping,
+  ) async {
+    if (event.operation == SyncOperation.delete) {
+      final localId = mapping?.localEntityId;
+      if (localId != null) {
+        await (db.delete(
+          db.learningSubtasks,
+        )..where((t) => t.id.equals(localId))).go();
+        await syncEntityMappingDao.markDeleted(
+          entityType: event.entityType,
+          originDeviceId: event.deviceId,
+          originEntityId: event.entityId,
+          appliedAtMs: event.timestampMs,
+        );
+      }
+      return;
+    }
+
+    final learningOriginDeviceId =
+        event.data['learning_origin_device_id'] as String?;
+    final learningOriginEntityId =
+        event.data['learning_origin_entity_id'] as int?;
+    if (learningOriginDeviceId == null || learningOriginEntityId == null) {
+      return;
+    }
+
+    final learningLocalId = await syncEntityMappingDao.getLocalEntityId(
+      entityType: entityLearningItem,
+      originDeviceId: learningOriginDeviceId,
+      originEntityId: learningOriginEntityId,
+    );
+    if (learningLocalId == null) return;
+
+    final content = (event.data['content'] as String?)?.trim() ?? '';
+    if (content.isEmpty) return;
+
+    final sortOrder = event.data['sort_order'] as int? ?? 0;
+    final uuid = (event.data['uuid'] as String?)?.trim();
+    final isMockData = (event.data['is_mock_data'] as bool?) ?? false;
+    final createdAt =
+        _parseDateTime(event.data['created_at']) ?? DateTime.now();
+    final updatedAt = _parseDateTime(event.data['updated_at']);
+
+    final existingLocalId = mapping?.localEntityId;
+    if (existingLocalId == null || mapping?.isDeleted == true) {
+      final newId = await db
+          .into(db.learningSubtasks)
+          .insert(
+            LearningSubtasksCompanion.insert(
+              uuid: Value((uuid == null || uuid.isEmpty) ? _uuid.v4() : uuid),
+              learningItemId: learningLocalId,
+              content: content,
+              sortOrder: Value(sortOrder),
+              createdAt: createdAt,
+              updatedAt: Value(updatedAt ?? createdAt),
+              isMockData: Value(isMockData),
+            ),
+          );
+
+      await _upsertMapping(
+        event: event,
+        localEntityId: newId,
+        appliedAtMs: event.timestampMs,
+        isDeleted: false,
+      );
+      return;
+    }
+
+    await (db.update(
+      db.learningSubtasks,
+    )..where((t) => t.id.equals(existingLocalId))).write(
+      LearningSubtasksCompanion(
+        learningItemId: Value(learningLocalId),
+        uuid: Value((uuid == null || uuid.isEmpty) ? _uuid.v4() : uuid),
+        content: Value(content),
+        sortOrder: Value(sortOrder),
         updatedAt: Value(updatedAt ?? DateTime.now()),
         isMockData: Value(isMockData),
       ),
@@ -785,11 +893,14 @@ class SyncService {
 
       final data = <String, dynamic>{
         'title': row.title,
+        'description': row.description,
         'note': row.note,
         'tags': _parseStringList(row.tags),
         'learning_date': row.learningDate.toIso8601String(),
         'created_at': row.createdAt.toIso8601String(),
         'updated_at': (row.updatedAt ?? row.createdAt).toIso8601String(),
+        'is_deleted': row.isDeleted,
+        'deleted_at': row.deletedAt?.toIso8601String(),
         // 调试字段：用于保持模拟数据在跨设备同步后仍可一键清理。
         'is_mock_data': row.isMockData,
       };
@@ -810,6 +921,87 @@ class SyncService {
         await syncLogDao.insertLogs(batch);
         batch.clear();
         // 让出事件循环，避免大数据量快照时阻塞 UI。
+        await Future<void>.delayed(Duration.zero);
+      }
+    }
+
+    if (batch.isNotEmpty) {
+      await syncLogDao.insertLogs(batch);
+    }
+  }
+
+  Future<void> _snapshotLearningSubtasks({required bool includeMockData}) async {
+    final rows = await db.select(db.learningSubtasks).get();
+    if (rows.isEmpty) return;
+
+    final mappingByLocalId = await _getMappingsByLocalIds(
+      entityType: entityLearningSubtask,
+      localEntityIds: rows.map((e) => e.id).toList(),
+    );
+
+    final learningItemIds = rows.map((e) => e.learningItemId).toSet().toList();
+    final learningMappingByLocalId = await _getMappingsByLocalIds(
+      entityType: entityLearningItem,
+      localEntityIds: learningItemIds,
+    );
+
+    final batch = <SyncLogsCompanion>[];
+    for (final row in rows) {
+      if (row.isMockData && !includeMockData) continue;
+
+      final mapping = mappingByLocalId[row.id];
+      if (mapping != null &&
+          (mapping.originDeviceId != localDeviceId ||
+              mapping.originEntityId != row.id)) {
+        continue;
+      }
+
+      final learningMapping = learningMappingByLocalId[row.learningItemId];
+      final learningOrigin = learningMapping == null
+          ? await _originForLocal(
+              entityType: entityLearningItem,
+              localEntityId: row.learningItemId,
+            )
+          : _OriginKey(
+              deviceId: learningMapping.originDeviceId,
+              entityId: learningMapping.originEntityId,
+            );
+      if (learningOrigin == null) continue;
+
+      final updatedAt = row.updatedAt ?? row.createdAt;
+      final ts = updatedAt.millisecondsSinceEpoch;
+      await _ensureLocalOriginMapping(
+        entityType: entityLearningSubtask,
+        localEntityId: row.id,
+        appliedAtMs: ts,
+      );
+
+      final data = <String, dynamic>{
+        'uuid': row.uuid,
+        'learning_origin_device_id': learningOrigin.deviceId,
+        'learning_origin_entity_id': learningOrigin.entityId,
+        'content': row.content,
+        'sort_order': row.sortOrder,
+        'created_at': row.createdAt.toIso8601String(),
+        'updated_at': updatedAt.toIso8601String(),
+        'is_mock_data': row.isMockData,
+      };
+
+      batch.add(
+        SyncLogsCompanion(
+          deviceId: Value(localDeviceId),
+          entityType: const Value(entityLearningSubtask),
+          entityId: Value(row.id),
+          operation: const Value('create'),
+          data: Value(jsonEncode(data)),
+          timestampMs: Value(ts),
+          localVersion: const Value(0),
+        ),
+      );
+
+      if (batch.length >= 200) {
+        await syncLogDao.insertLogs(batch);
+        batch.clear();
         await Future<void>.delayed(Duration.zero);
       }
     }

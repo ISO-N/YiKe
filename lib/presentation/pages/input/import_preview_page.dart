@@ -3,14 +3,20 @@
 /// 创建日期：2026-02-26
 library;
 
+import 'dart:io';
+
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/services.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/utils/file_parser.dart';
+import '../../../core/utils/note_migration_parser.dart';
 import '../../widgets/glass_card.dart';
 import 'draft_learning_item.dart';
 
@@ -87,7 +93,12 @@ class _ImportPreviewPageState extends ConsumerState<ImportPreviewPage> {
   Future<void> _editItem(int index) async {
     final current = _items[index];
     final titleController = TextEditingController(text: current.item.title);
-    final noteController = TextEditingController(text: current.item.note ?? '');
+    final descController = TextEditingController(
+      text: current.item.description ?? '',
+    );
+    final subtasksController = TextEditingController(
+      text: current.item.subtasks.join('\n'),
+    );
     final tagsController = TextEditingController(
       text: current.item.tags.join(', '),
     );
@@ -107,10 +118,19 @@ class _ImportPreviewPageState extends ConsumerState<ImportPreviewPage> {
                 ),
                 const SizedBox(height: AppSpacing.md),
                 TextField(
-                  controller: noteController,
+                  controller: descController,
                   minLines: 2,
                   maxLines: 6,
-                  decoration: const InputDecoration(labelText: '备注（选填）'),
+                  decoration: const InputDecoration(labelText: '描述（选填）'),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                TextField(
+                  controller: subtasksController,
+                  minLines: 3,
+                  maxLines: 8,
+                  decoration: const InputDecoration(
+                    labelText: '子任务（选填，每行一条）',
+                  ),
                 ),
                 const SizedBox(height: AppSpacing.md),
                 TextField(
@@ -138,7 +158,8 @@ class _ImportPreviewPageState extends ConsumerState<ImportPreviewPage> {
     if (ok != true) return;
 
     final title = titleController.text.trim();
-    final note = noteController.text.trim();
+    final desc = descController.text.trim();
+    final subtasks = _parseSubtasksText(subtasksController.text);
     final tags = tagsController.text
         .split(RegExp(r'[，,]'))
         .map((e) => e.trim())
@@ -152,7 +173,8 @@ class _ImportPreviewPageState extends ConsumerState<ImportPreviewPage> {
         current.copyWith(
           item: current.item.copyWith(
             title: title,
-            note: note.isEmpty ? null : note,
+            description: desc.isEmpty ? null : desc,
+            subtasks: subtasks,
             tags: tags,
             errorMessage: title.isEmpty ? '标题为空' : null,
           ),
@@ -190,7 +212,12 @@ class _ImportPreviewPageState extends ConsumerState<ImportPreviewPage> {
   }
 
   DraftLearningItem _toDraft(ParsedItem e) {
-    return DraftLearningItem(title: e.title, note: e.note, tags: e.tags);
+    return DraftLearningItem(
+      title: e.title,
+      description: e.description,
+      subtasks: e.subtasks,
+      tags: e.tags,
+    );
   }
 
   Set<String> _findDuplicateTitles(List<ParsedItem> items) {
@@ -257,6 +284,65 @@ class _ImportPreviewPageState extends ConsumerState<ImportPreviewPage> {
     return map.values.toList();
   }
 
+  Widget _buildPreviewSubtitle(BuildContext context, ParsedItem item) {
+    final desc = (item.description ?? '').trim();
+    if (desc.isNotEmpty) {
+      return Text(desc, maxLines: 2, overflow: TextOverflow.ellipsis);
+    }
+    if (item.subtasks.isNotEmpty) {
+      return Text(
+        '${item.subtasks.length} 个子任务',
+        style: AppTypography.bodySecondary(context),
+      );
+    }
+    return Text('无描述', style: AppTypography.bodySecondary(context));
+  }
+
+  List<String> _parseSubtasksText(String raw) {
+    final normalized = raw.replaceAll('\r\n', '\n').replaceAll('\r', '\n');
+    final lines = normalized.split('\n');
+    final result = <String>[];
+    for (final line in lines) {
+      final t = line.trim();
+      if (t.isEmpty) continue;
+      final parsed = NoteMigrationParser.parse(t);
+      if (parsed.subtasks.isNotEmpty) {
+        result.addAll(parsed.subtasks);
+      } else if (parsed.description?.trim().isNotEmpty == true) {
+        result.add(parsed.description!.trim());
+      }
+    }
+    return result;
+  }
+
+  Future<void> _downloadTemplate(_TemplateFormat fmt) async {
+    final assetPath = switch (fmt) {
+      _TemplateFormat.txt => 'assets/templates/import_template.txt',
+      _TemplateFormat.csv => 'assets/templates/import_template.csv',
+      _TemplateFormat.md => 'assets/templates/import_template.md',
+    };
+    final ext = switch (fmt) {
+      _TemplateFormat.txt => 'txt',
+      _TemplateFormat.csv => 'csv',
+      _TemplateFormat.md => 'md',
+    };
+
+    try {
+      final content = await rootBundle.loadString(assetPath);
+      final dir = await getTemporaryDirectory();
+      final file =
+          File('${dir.path}${Platform.pathSeparator}yike_import_template.$ext');
+      await file.writeAsString(content, flush: true);
+
+      await Share.shareXFiles([XFile(file.path)], text: '忆刻批量导入模板（$ext）');
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('下载模板失败：$e')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final selectedCount = _items.where((e) => e.selected).length;
@@ -269,6 +355,19 @@ class _ImportPreviewPageState extends ConsumerState<ImportPreviewPage> {
             tooltip: '选择文件',
             onPressed: _loading ? null : _pickFile,
             icon: const Icon(Icons.folder_open),
+          ),
+          PopupMenuButton<_TemplateFormat>(
+            tooltip: '下载模板',
+            onSelected: (fmt) => _downloadTemplate(fmt),
+            itemBuilder: (context) => const [
+              PopupMenuItem(value: _TemplateFormat.txt, child: Text('TXT 模板')),
+              PopupMenuItem(value: _TemplateFormat.csv, child: Text('CSV 模板')),
+              PopupMenuItem(
+                value: _TemplateFormat.md,
+                child: Text('Markdown 模板'),
+              ),
+            ],
+            icon: const Icon(Icons.download),
           ),
           TextButton(
             onPressed: _loading ? null : _confirmImport,
@@ -308,6 +407,19 @@ class _ImportPreviewPageState extends ConsumerState<ImportPreviewPage> {
                       const SizedBox(height: AppSpacing.sm),
                       Text(
                         '已选 $selectedCount 条 / 共 ${_items.length} 条',
+                        style: AppTypography.bodySecondary(context),
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                      Text(
+                        '格式说明',
+                        style: AppTypography.h2(context).copyWith(fontSize: 14),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'TXT：每行一个标题\n'
+                        'CSV：旧表头（标题,备注,标签）与新表头（标题,描述,子任务,标签）均支持\n'
+                        'Markdown：以 # 标题分段，-/*/• 开头为子任务，标签行以“标签:”或“tags:”开头\n'
+                        '提示：可通过右上角“下载模板”获取三种格式示例。',
                         style: AppTypography.bodySecondary(context),
                       ),
                     ],
@@ -368,19 +480,7 @@ class _ImportPreviewPageState extends ConsumerState<ImportPreviewPage> {
                                           color: AppColors.error,
                                         ),
                                       )
-                                    : (it.item.note == null ||
-                                          it.item.note!.trim().isEmpty)
-                                    ? Text(
-                                        '无备注',
-                                        style: AppTypography.bodySecondary(
-                                          context,
-                                        ),
-                                      )
-                                    : Text(
-                                        it.item.note!,
-                                        maxLines: 2,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
+                                    : _buildPreviewSubtitle(context, it.item),
                                 trailing: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
@@ -446,3 +546,5 @@ class _PreviewItem {
 }
 
 enum _DuplicateAction { skip, overwrite }
+
+enum _TemplateFormat { txt, csv, md }
