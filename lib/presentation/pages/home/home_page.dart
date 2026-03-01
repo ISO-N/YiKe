@@ -22,6 +22,7 @@ import '../../widgets/glass_card.dart';
 import '../../widgets/gradient_background.dart';
 import '../../providers/home_tasks_provider.dart';
 import '../../providers/home_task_filter_provider.dart';
+import '../../providers/home_task_tab_provider.dart';
 import '../../providers/notification_permission_provider.dart';
 import '../../providers/search_provider.dart';
 import '../../providers/settings_provider.dart';
@@ -83,8 +84,7 @@ class _HomePageState extends ConsumerState<HomePage> {
     final settingsState = ref.watch(settingsProvider);
     final permissionAsync = ref.watch(notificationPermissionProvider);
     final syncUi = ref.watch(syncControllerProvider);
-    final uri = GoRouter.of(context).routeInformationProvider.value.uri;
-    final tab = HomeTaskTabX.fromQuery(uri.queryParameters['tab']);
+    final tab = ref.watch(homeTaskTabProvider);
 
     // 首页默认展示“今日”任务；tab=all 时会额外复用 taskHubProvider 的逻辑展示全量任务。
     final state = ref.watch(homeTasksProvider);
@@ -187,12 +187,8 @@ class _HomePageState extends ConsumerState<HomePage> {
     }
 
     void changeTab(HomeTaskTab next) {
-      // 路由约定：`/home` 默认即 today；仅在 all 模式写入 query 参数。
-      if (next == HomeTaskTab.all) {
-        context.go('/home?tab=all');
-      } else {
-        context.go('/home');
-      }
+      // 使用本地状态管理 Tab，避免路由重建触发全量页面刷新。
+      ref.read(homeTaskTabProvider.notifier).state = next;
     }
 
     return Scaffold(
