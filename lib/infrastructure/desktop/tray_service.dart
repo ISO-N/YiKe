@@ -23,6 +23,12 @@ class TrayService with TrayListener {
   TrayService._();
 
   static final TrayService instance = TrayService._();
+  static const String _windowsTrayIconNormalAsset =
+      'assets/icons/tray_icon_normal.ico';
+  static const String _windowsTrayIconSyncingAsset =
+      'assets/icons/tray_icon_syncing.ico';
+  static const String _windowsTrayIconOfflineAsset =
+      'assets/icons/tray_icon_offline.ico';
 
   bool _initialized = false;
   TrayStatus _status = TrayStatus.normal;
@@ -134,6 +140,17 @@ class TrayService with TrayListener {
   }
 
   Future<String> _iconPathForStatus(TrayStatus status) async {
+    // Windows 平台下 tray_manager 最终调用 Win32 LoadImage(..., IMAGE_ICON, ...)，
+    // 该接口需要 .ico 文件；传入 .png 会导致句柄为空，托盘图标显示为空白。
+    if (Platform.isWindows) {
+      final windowsAssetPath = switch (status) {
+        TrayStatus.normal => _windowsTrayIconNormalAsset,
+        TrayStatus.syncing => _windowsTrayIconSyncingAsset,
+        TrayStatus.offline => _windowsTrayIconOfflineAsset,
+      };
+      return _materializeAssetToFile(windowsAssetPath);
+    }
+
     final assetPath = switch (status) {
       TrayStatus.normal => 'assets/icons/app_icon.png',
       TrayStatus.syncing => 'assets/icons/app_icon_syncing.png',
