@@ -84,17 +84,27 @@ void main() {
     expect(() => FileParser.parseFile(file.path), throwsArgumentError);
   });
 
-  test('parseFile: UTF-8 解码失败时回退 GBK（用于历史 CSV/TXT）', () async {
-    final file = File('${tempDir.path}${Platform.pathSeparator}items_gbk.txt');
+  test(
+    'parseFile: UTF-8 解码失败时回退 GBK（用于历史 CSV/TXT）',
+    () async {
+      final file = File(
+        '${tempDir.path}${Platform.pathSeparator}items_gbk.txt',
+      );
 
-    // 说明：写入“确定为 GBK 且严格 UTF-8 必定解码失败”的字节序列，确保走回退分支。
-    // - “中”= D6D0（GBK），“文”= CEC4（GBK）
-    final bytes = <int>[0xD6, 0xD0, 0xCE, 0xC4];
-    expect(() => utf8.decode(bytes, allowMalformed: false), throwsA(anything));
-    await file.writeAsBytes(bytes, flush: true);
+      // 说明：写入“确定为 GBK 且严格 UTF-8 必定解码失败”的字节序列，确保走回退分支。
+      // - “中”= D6D0（GBK），“文”= CEC4（GBK）
+      final bytes = <int>[0xD6, 0xD0, 0xCE, 0xC4];
+      expect(
+        () => utf8.decode(bytes, allowMalformed: false),
+        throwsA(anything),
+      );
+      await file.writeAsBytes(bytes, flush: true);
 
-    final items = await FileParser.parseFile(file.path);
-    expect(items.length, 1);
-    expect(items.single.title.trim(), isNotEmpty);
-  });
+      final items = await FileParser.parseFile(file.path);
+      expect(items.length, 1);
+      expect(items.single.title.trim(), isNotEmpty);
+    },
+    // 说明：该用例涉及系统临时目录与文件删除，在 Windows CI/并发运行下可能偶发慢 IO。
+    timeout: const Timeout(Duration(minutes: 2)),
+  );
 }
