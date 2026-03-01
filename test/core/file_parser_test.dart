@@ -42,18 +42,21 @@ void main() {
     expect(items.length, 2);
 
     expect(items[0].title, 'T1');
-    expect(items[0].note, 'N1');
+    // 说明：旧表头“备注”会走智能迁移规则，短文本迁移到 description。
+    expect(items[0].description, 'N1');
+    expect(items[0].subtasks, isEmpty);
     expect(items[0].tags.toSet(), {'a', 'b', 'c', 'd'});
     expect(items[0].isValid, isTrue);
 
     expect(items[1].title, '');
-    expect(items[1].note, 'N2');
+    expect(items[1].description, 'N2');
+    expect(items[1].subtasks, isEmpty);
     expect(items[1].tags, ['x']);
     expect(items[1].errorMessage, '标题为空');
     expect(items[1].isValid, isFalse);
   });
 
-  test('parseFile: Markdown 以标题行分段，正文合并为备注（保留空行结构）', () async {
+  test('parseFile: Markdown 以标题行分段，解析 description/subtasks（空行切换段落）', () async {
     final file = File('${tempDir.path}${Platform.pathSeparator}items.md');
     await file.writeAsString(
       '# T1\n'
@@ -67,9 +70,11 @@ void main() {
     final items = await FileParser.parseFile(file.path);
     expect(items.length, 2);
     expect(items[0].title, 'T1');
-    expect(items[0].note, 'line1\n\nline2');
+    expect(items[0].description, 'line1');
+    expect(items[0].subtasks, ['line2']);
     expect(items[1].title, 'T2');
-    expect(items[1].note, 'only');
+    expect(items[1].description, 'only');
+    expect(items[1].subtasks, isEmpty);
   });
 
   test('parseFile: 不支持的扩展名会抛 ArgumentError', () async {

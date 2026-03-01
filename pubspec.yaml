@@ -142,6 +142,7 @@ flutter:
   assets:
     - assets/markdown/
     - assets/icons/
+    - assets/templates/
 
   # To add assets to your application, add an assets section, like this:
   # assets:

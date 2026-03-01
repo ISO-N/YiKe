@@ -11,6 +11,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
+import '../../../core/utils/note_migration_parser.dart';
 import '../../../di/providers.dart';
 import '../../../domain/services/ocr_service.dart';
 import '../../widgets/glass_card.dart';
@@ -65,7 +66,8 @@ class _OcrResultPageState extends ConsumerState<OcrResultPage> {
           _OcrDraftControllers(
             imagePath: path,
             title: TextEditingController(text: draft.title),
-            note: TextEditingController(text: draft.note ?? ''),
+            description: TextEditingController(text: draft.description ?? ''),
+            subtasks: TextEditingController(text: draft.subtasks.join('\n')),
             tags: TextEditingController(text: draft.tags.join(', ')),
             confidence: result.confidence,
           ),
@@ -100,12 +102,14 @@ class _OcrResultPageState extends ConsumerState<OcrResultPage> {
       orElse: () => '',
     );
     final idx = lines.indexOf(first);
-    final note = (idx < 0 || idx + 1 >= lines.length)
+    final rest = (idx < 0 || idx + 1 >= lines.length)
         ? ''
         : lines.sublist(idx + 1).join('\n').trim();
+    final parsed = NoteMigrationParser.parse(rest);
     return DraftLearningItem(
       title: first.trim(),
-      note: note.isEmpty ? null : note,
+      description: parsed.description,
+      subtasks: parsed.subtasks,
       tags: const [],
     );
   }
@@ -139,7 +143,8 @@ class _OcrResultPageState extends ConsumerState<OcrResultPage> {
     for (var i = 0; i < _drafts.length; i++) {
       final d = _drafts[i];
       final title = d.title.text.trim();
-      final note = d.note.text.trim();
+      final description = d.description.text.trim();
+      final subtasks = _parseSubtasksText(d.subtasks.text);
       if (title.isEmpty) {
         invalid.add(i + 1);
         continue;
@@ -147,7 +152,8 @@ class _OcrResultPageState extends ConsumerState<OcrResultPage> {
       drafts.add(
         DraftLearningItem(
           title: title,
-          note: note.isEmpty ? null : note,
+          description: description.isEmpty ? null : description,
+          subtasks: subtasks,
           tags: _parseTags(d.tags.text),
         ),
       );
@@ -246,11 +252,20 @@ class _OcrResultPageState extends ConsumerState<OcrResultPage> {
                             ),
                             const SizedBox(height: AppSpacing.md),
                             TextField(
-                              controller: d.note,
+                              controller: d.description,
                               minLines: 3,
                               maxLines: 8,
                               decoration: const InputDecoration(
-                                labelText: '备注（选填）',
+                                labelText: '描述（选填）',
+                              ),
+                            ),
+                            const SizedBox(height: AppSpacing.md),
+                            TextField(
+                              controller: d.subtasks,
+                              minLines: 3,
+                              maxLines: 8,
+                              decoration: const InputDecoration(
+                                labelText: '子任务（选填，每行一条）',
                               ),
                             ),
                             const SizedBox(height: AppSpacing.md),
@@ -286,20 +301,42 @@ class _OcrDraftControllers {
   _OcrDraftControllers({
     required this.imagePath,
     required this.title,
-    required this.note,
+    required this.description,
+    required this.subtasks,
     required this.tags,
     required this.confidence,
   });
 
   final String imagePath;
   final TextEditingController title;
-  final TextEditingController note;
+  final TextEditingController description;
+  final TextEditingController subtasks;
   final TextEditingController tags;
   final double confidence;
 
   void dispose() {
     title.dispose();
-    note.dispose();
+    description.dispose();
+    subtasks.dispose();
     tags.dispose();
+  }
+}
+
+extension on _OcrResultPageState {
+  List<String> _parseSubtasksText(String raw) {
+    final normalized = raw.replaceAll('\r\n', '\n').replaceAll('\r', '\n');
+    final lines = normalized.split('\n');
+    final result = <String>[];
+    for (final line in lines) {
+      final t = line.trim();
+      if (t.isEmpty) continue;
+      final parsed = NoteMigrationParser.parse(t);
+      if (parsed.subtasks.isNotEmpty) {
+        result.addAll(parsed.subtasks);
+      } else if (parsed.description?.trim().isNotEmpty == true) {
+        result.add(parsed.description!.trim());
+      }
+    }
+    return result;
   }
 }

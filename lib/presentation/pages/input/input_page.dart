@@ -11,6 +11,7 @@ import 'package:permission_handler/permission_handler.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_typography.dart';
+import '../../../core/utils/note_migration_parser.dart';
 import '../../../di/providers.dart';
 import '../../../domain/entities/learning_topic.dart';
 import '../../../domain/entities/review_interval_config.dart';
@@ -101,12 +102,17 @@ class _InputPageState extends ConsumerState<InputPage> {
 
       for (final c in _items) {
         final title = c.title.text.trim();
-        final note = c.note.text.trim();
+        final description = c.description.text.trim();
+        final subtasks = c.subtasks
+            .map((e) => e.controller.text.trim())
+            .where((e) => e.isNotEmpty)
+            .toList();
         final tags = _parseTags(c.tags.text);
 
         final params = CreateLearningItemParams(
           title: title,
-          note: note.isEmpty ? null : note,
+          description: description.isEmpty ? null : description,
+          subtasks: subtasks,
           tags: tags,
           reviewIntervals: intervals,
         );
@@ -216,6 +222,31 @@ class _InputPageState extends ConsumerState<InputPage> {
         .toList();
   }
 
+  /// 将“描述 + 子任务列表”拼接成模板的 notePattern（渐进式迁移）。
+  ///
+  /// 说明：
+  /// - 模板表结构仍使用 notePattern 字段保存文本
+  /// - 后续应用模板时会使用与迁移一致的解析规则拆回 description/subtasks
+  String? _buildTemplateNotePattern({
+    required String description,
+    required List<String> subtasks,
+  }) {
+    final desc = description.trim();
+    final list = subtasks.map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
+    final buffer = StringBuffer();
+    if (desc.isNotEmpty) {
+      buffer.writeln(desc);
+    }
+    if (list.isNotEmpty) {
+      if (desc.isNotEmpty) buffer.writeln();
+      for (final s in list) {
+        buffer.writeln('- $s');
+      }
+    }
+    final result = buffer.toString().trim();
+    return result.isEmpty ? null : result;
+  }
+
   void _addItem() {
     setState(() => _items.add(_DraftItemControllers()));
   }
@@ -225,7 +256,17 @@ class _InputPageState extends ConsumerState<InputPage> {
       for (final d in drafts) {
         final c = _DraftItemControllers();
         c.title.text = d.title;
-        c.note.text = d.note ?? '';
+        final hasNewFields =
+            (d.description?.trim().isNotEmpty ?? false) || d.subtasks.isNotEmpty;
+        if (hasNewFields) {
+          c.description.text = d.description ?? '';
+          c.replaceSubtasks(d.subtasks);
+        } else {
+          final legacy = d.note ?? '';
+          final parsed = NoteMigrationParser.parse(legacy);
+          c.description.text = parsed.description ?? '';
+          c.replaceSubtasks(parsed.subtasks);
+        }
         c.tags.text = d.tags.join(', ');
         c.topicId = d.topicId;
         _items.add(c);
@@ -402,12 +443,18 @@ class _InputPageState extends ConsumerState<InputPage> {
                               ),
                               const SizedBox(height: AppSpacing.md),
                               SpeechInputField(
-                                controller: controllers.note,
-                                labelText: '备注（选填）',
-                                hintText: '补充重点、易错点等',
+                                controller: controllers.description,
+                                labelText: '描述（选填）',
+                                hintText: '补充重点、易错点等（可留空）',
                                 minLines: 2,
                                 maxLines: 6,
                                 enabled: !_saving,
+                              ),
+                              const SizedBox(height: AppSpacing.md),
+                              _SubtasksEditor(
+                                controllers: controllers,
+                                enabled: !_saving,
+                                onChanged: () => setState(() {}),
                               ),
                               const SizedBox(height: AppSpacing.md),
                               TextFormField(
@@ -698,7 +745,10 @@ class _InputPageState extends ConsumerState<InputPage> {
                                 );
                                 final c = _items[idx];
                                 c.title.text = applied['title'] ?? '';
-                                c.note.text = applied['note'] ?? '';
+                                final legacy = applied['note'] ?? '';
+                                final parsed = NoteMigrationParser.parse(legacy);
+                                c.description.text = parsed.description ?? '';
+                                c.replaceSubtasks(parsed.subtasks);
                                 c.tags.text = t.tags.join(', ');
                                 Navigator.of(context).pop();
                               },
@@ -780,7 +830,11 @@ class _InputPageState extends ConsumerState<InputPage> {
     final idx = _activeIndex.clamp(0, _items.length - 1);
     final c = _items[idx];
     final title = c.title.text.trim();
-    final note = c.note.text.trim();
+    final description = c.description.text.trim();
+    final subtasks = c.subtasks
+        .map((e) => e.controller.text.trim())
+        .where((e) => e.isNotEmpty)
+        .toList();
     final tags = _parseTags(c.tags.text);
 
     if (title.isEmpty) {
@@ -825,7 +879,12 @@ class _InputPageState extends ConsumerState<InputPage> {
     final params = TemplateParams(
       name: name,
       titlePattern: title,
-      notePattern: note.isEmpty ? null : note,
+      // 说明：模板表仍使用 notePattern 存储（渐进式迁移），这里将 description + subtasks 拼接成可解析文本。
+      notePattern:
+          _buildTemplateNotePattern(
+            description: description,
+            subtasks: subtasks,
+          ),
       tags: tags,
       sortOrder: 0,
     );
@@ -968,23 +1027,172 @@ class _InputPageState extends ConsumerState<InputPage> {
   }
 }
 
+class _SubtasksEditor extends StatelessWidget {
+  /// 子任务编辑器（录入页内使用）。
+  ///
+  /// 说明：
+  /// - 支持新增/删除/拖拽排序
+  /// - 每条子任务使用独立 TextEditingController，便于与其他字段一致的表单体验
+  const _SubtasksEditor({
+    required this.controllers,
+    required this.enabled,
+    required this.onChanged,
+  });
+
+  final _DraftItemControllers controllers;
+  final bool enabled;
+  final VoidCallback onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final list = controllers.subtasks;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                '子任务（选填）',
+                style: AppTypography.h2(context).copyWith(fontSize: 14),
+              ),
+            ),
+            OutlinedButton.icon(
+              onPressed:
+                  enabled
+                      ? () {
+                        controllers.addSubtask();
+                        onChanged();
+                      }
+                      : null,
+              icon: const Icon(Icons.add, size: 18),
+              label: const Text('新增'),
+            ),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        if (list.isEmpty)
+          Text('（无）', style: AppTypography.bodySecondary(context))
+        else
+          ReorderableListView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: list.length,
+            buildDefaultDragHandles: false,
+            onReorder:
+                enabled
+                    ? (oldIndex, newIndex) {
+                      var target = newIndex;
+                      if (newIndex > oldIndex) target = newIndex - 1;
+                      final moved = list.removeAt(oldIndex);
+                      list.insert(target, moved);
+                      onChanged();
+                    }
+                    : (oldIndex, newIndex) {},
+            itemBuilder: (context, index) {
+              final s = list[index];
+              return Padding(
+                key: ValueKey(s.key),
+                padding: const EdgeInsets.only(bottom: 6),
+                child: Row(
+                  children: [
+                    enabled
+                        ? ReorderableDragStartListener(
+                            index: index,
+                            child: const Icon(Icons.drag_handle),
+                          )
+                        : const Icon(Icons.drag_handle, color: Colors.grey),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: TextField(
+                        controller: s.controller,
+                        enabled: enabled,
+                        decoration: const InputDecoration(
+                          hintText: '输入子任务内容',
+                          isDense: true,
+                        ),
+                        onChanged: (_) => onChanged(),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    IconButton(
+                      tooltip: '删除',
+                      onPressed:
+                          enabled
+                              ? () {
+                                final removed = list.removeAt(index);
+                                removed.dispose();
+                                onChanged();
+                              }
+                              : null,
+                      icon: const Icon(Icons.delete_outline, size: 20),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+      ],
+    );
+  }
+}
+
 enum _OcrSource { camera, gallery }
 
 class _DraftItemControllers {
   _DraftItemControllers()
     : title = TextEditingController(),
-      note = TextEditingController(),
+      description = TextEditingController(),
       tags = TextEditingController();
 
   final TextEditingController title;
-  final TextEditingController note;
+  final TextEditingController description;
   final TextEditingController tags;
   int? topicId;
+
+  /// 子任务控制器列表（用于拖拽排序与编辑）。
+  final List<_SubtaskController> subtasks = [];
+
+  /// 用新的子任务列表覆盖当前内容。
+  ///
+  /// 说明：用于导入/OCR/模板应用后批量写入。
+  void replaceSubtasks(List<String> contents) {
+    for (final s in subtasks) {
+      s.dispose();
+    }
+    subtasks.clear();
+    for (final c in contents) {
+      addSubtask(initial: c);
+    }
+  }
+
+  /// 新增一条子任务。
+  void addSubtask({String initial = ''}) {
+    subtasks.add(
+      _SubtaskController(
+        key: 'st_${DateTime.now().microsecondsSinceEpoch}_${subtasks.length}',
+        controller: TextEditingController(text: initial),
+      ),
+    );
+  }
 
   /// 释放控制器资源。
   void dispose() {
     title.dispose();
-    note.dispose();
+    description.dispose();
     tags.dispose();
+    for (final s in subtasks) {
+      s.dispose();
+    }
   }
+}
+
+class _SubtaskController {
+  _SubtaskController({required this.key, required this.controller});
+
+  final String key;
+  final TextEditingController controller;
+
+  void dispose() => controller.dispose();
 }

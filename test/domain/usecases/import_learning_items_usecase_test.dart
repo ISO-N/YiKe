@@ -4,10 +4,12 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:yike/domain/entities/learning_item.dart';
+import 'package:yike/domain/entities/learning_subtask.dart';
 import 'package:yike/domain/entities/review_task.dart';
 import 'package:yike/domain/entities/task_day_stats.dart';
 import 'package:yike/domain/entities/task_timeline.dart';
 import 'package:yike/domain/repositories/learning_item_repository.dart';
+import 'package:yike/domain/repositories/learning_subtask_repository.dart';
 import 'package:yike/domain/repositories/review_task_repository.dart';
 import 'package:yike/domain/usecases/create_learning_item_usecase.dart';
 import 'package:yike/domain/usecases/import_learning_items_usecase.dart';
@@ -17,6 +19,7 @@ void main() {
     final usecase = ImportLearningItemsUseCase(
       create: CreateLearningItemUseCase(
         learningItemRepository: _FakeLearningItemRepository(),
+        learningSubtaskRepository: _FakeLearningSubtaskRepository(),
         reviewTaskRepository: _FakeReviewTaskRepository(),
       ),
     );
@@ -32,6 +35,7 @@ void main() {
     final usecase = ImportLearningItemsUseCase(
       create: CreateLearningItemUseCase(
         learningItemRepository: learningRepo,
+        learningSubtaskRepository: _FakeLearningSubtaskRepository(),
         reviewTaskRepository: _FakeReviewTaskRepository(),
       ),
     );
@@ -102,7 +106,39 @@ class _FakeLearningItemRepository implements LearningItemRepository {
       throw UnimplementedError();
 
   @override
+  Future<void> updateDescription({required int id, required String? description}) =>
+      throw UnimplementedError();
+
+  @override
   Future<void> deactivate(int id) => throw UnimplementedError();
+}
+
+/// 假子任务仓储：用于满足 CreateLearningItemUseCase 的依赖（本测试不关注子任务写入）。
+class _FakeLearningSubtaskRepository implements LearningSubtaskRepository {
+  @override
+  Future<LearningSubtaskEntity> create(LearningSubtaskEntity subtask) async {
+    return subtask.copyWith(id: 1);
+  }
+
+  @override
+  Future<void> delete(int id) => throw UnimplementedError();
+
+  @override
+  Future<List<LearningSubtaskEntity>> getByLearningItemId(int learningItemId) =>
+      throw UnimplementedError();
+
+  @override
+  Future<List<LearningSubtaskEntity>> getByLearningItemIds(
+    List<int> learningItemIds,
+  ) => throw UnimplementedError();
+
+  @override
+  Future<void> reorder(int learningItemId, List<int> subtaskIds) =>
+      throw UnimplementedError();
+
+  @override
+  Future<LearningSubtaskEntity> update(LearningSubtaskEntity subtask) =>
+      throw UnimplementedError();
 }
 
 /// 假复习任务仓储：仅实现 createBatch 以满足 CreateLearningItemUseCase。
@@ -209,4 +245,8 @@ class _FakeReviewTaskRepository implements ReviewTaskRepository {
 
   @override
   Future<void> addReviewRound(int learningItemId) => throw UnimplementedError();
+
+  @override
+  Future<void> removeLatestReviewRound(int learningItemId) =>
+      throw UnimplementedError();
 }
