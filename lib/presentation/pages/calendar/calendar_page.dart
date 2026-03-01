@@ -52,6 +52,7 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
     if (_isDaySheetOpen) {
       Navigator.of(context).pop();
       await Future<void>.delayed(Duration.zero);
+      if (!mounted) return;
     }
 
     setState(() => _isStatsSheetOpen = true);
@@ -77,12 +78,14 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
     if (_isStatsSheetOpen) {
       Navigator.of(context).pop();
       await Future<void>.delayed(Duration.zero);
+      if (!mounted) return;
     }
 
     // 若当日任务 Sheet 已打开，先关闭再重新打开（允许用户切换日期）。
     if (_isDaySheetOpen) {
       Navigator.of(context).pop();
       await Future<void>.delayed(Duration.zero);
+      if (!mounted) return;
     }
 
     setState(() => _isDaySheetOpen = true);

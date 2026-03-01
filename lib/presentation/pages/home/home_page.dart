@@ -271,16 +271,18 @@ class _HomePageState extends ConsumerState<HomePage> {
                 const SizedBox(height: AppSpacing.lg),
                 HomeTabSwitcher(tab: tab, onChanged: changeTab),
                 const SizedBox(height: AppSpacing.lg),
-                if (tab == HomeTaskTab.all) ...[
+                if (tab == HomeTaskTab.all &&
+                    hubState != null &&
+                    hubNotifier != null) ...[
                   TaskFilterBar(
-                    filter: hubState!.filter,
-                    counts: hubState!.counts,
-                    onChanged: (next) => hubNotifier!.setFilter(next),
+                    filter: hubState.filter,
+                    counts: hubState.counts,
+                    onChanged: (next) => hubNotifier.setFilter(next),
                   ),
                   const SizedBox(height: AppSpacing.lg),
                   TaskHubTimelineList(
-                    state: hubState!,
-                    notifier: hubNotifier!,
+                    state: hubState,
+                    notifier: hubNotifier,
                   ),
                   const SizedBox(height: 96),
                 ] else ...[
