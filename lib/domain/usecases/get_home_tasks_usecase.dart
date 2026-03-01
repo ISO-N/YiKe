@@ -38,7 +38,13 @@ class GetHomeTasksUseCase {
     final target = date ?? DateTime.now();
     final todayPending = await _reviewTaskRepository.getTodayPendingTasks();
     final overduePending = await _reviewTaskRepository.getOverduePendingTasks();
-    final (completed, total) = await _reviewTaskRepository.getTaskStats(target);
+    // v1.1.0：完成率口径为 done/(done+pending)，跳过不计入 total（按 scheduledDate 统计）。
+    final start = DateTime(target.year, target.month, target.day);
+    final end = start.add(const Duration(days: 1));
+    final (completed, total) = await _reviewTaskRepository.getTaskStatsInRange(
+      start,
+      end,
+    );
     return HomeTasksResult(
       todayPending: todayPending,
       overduePending: overduePending,

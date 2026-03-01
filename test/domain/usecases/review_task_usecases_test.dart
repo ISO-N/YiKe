@@ -17,6 +17,8 @@ class _FakeReviewTaskRepository implements ReviewTaskRepository {
   int? lastSkipId;
   List<int>? lastSkipIds;
   DateTime? lastStatsDate;
+  DateTime? lastStatsStart;
+  DateTime? lastStatsEnd;
 
   @override
   Future<void> completeTask(int id) async {
@@ -91,7 +93,11 @@ class _FakeReviewTaskRepository implements ReviewTaskRepository {
   Future<(int completed, int total)> getTaskStatsInRange(
     DateTime start,
     DateTime end,
-  ) => throw UnimplementedError();
+  ) async {
+    lastStatsStart = start;
+    lastStatsEnd = end;
+    return (2, 5);
+  }
 
   @override
   Future<List<ReviewTaskEntity>> getAllTasks() => throw UnimplementedError();
@@ -171,15 +177,19 @@ void main() {
     expect(repo.lastSkipIds, [4, 5]);
   });
 
-  test('GetHomeTasksUseCase 会聚合今日/逾期/统计数据，并传递 date 到 getTaskStats', () async {
-    final repo = _FakeReviewTaskRepository();
-    final uc = GetHomeTasksUseCase(reviewTaskRepository: repo);
-    final target = DateTime(2026, 2, 25, 8, 0);
-    final result = await uc.execute(date: target);
-    expect(result.todayPending.length, 1);
-    expect(result.overduePending.length, 0);
-    expect(result.completedCount, 2);
-    expect(result.totalCount, 5);
-    expect(repo.lastStatsDate, target);
-  });
+  test(
+    'GetHomeTasksUseCase 会聚合今日/逾期/统计数据，并按当天范围调用 getTaskStatsInRange',
+    () async {
+      final repo = _FakeReviewTaskRepository();
+      final uc = GetHomeTasksUseCase(reviewTaskRepository: repo);
+      final target = DateTime(2026, 2, 25, 8, 0);
+      final result = await uc.execute(date: target);
+      expect(result.todayPending.length, 1);
+      expect(result.overduePending.length, 0);
+      expect(result.completedCount, 2);
+      expect(result.totalCount, 5);
+      expect(repo.lastStatsStart, DateTime(2026, 2, 25));
+      expect(repo.lastStatsEnd, DateTime(2026, 2, 26));
+    },
+  );
 }

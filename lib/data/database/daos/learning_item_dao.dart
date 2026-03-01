@@ -45,10 +45,7 @@ class LearningItemDao {
   Future<int> updateLearningItemNote(int id, String? note) {
     final now = DateTime.now();
     return (db.update(db.learningItems)..where((t) => t.id.equals(id))).write(
-      LearningItemsCompanion(
-        note: Value(note),
-        updatedAt: Value(now),
-      ),
+      LearningItemsCompanion(note: Value(note), updatedAt: Value(now)),
     );
   }
 
@@ -109,10 +106,30 @@ class LearningItemDao {
   /// 返回值：学习内容列表。
   /// 异常：数据库查询失败时可能抛出异常。
   Future<List<LearningItem>> getAllLearningItems() {
-    return (db.select(
-      db.learningItems,
-    )..where((t) => t.isDeleted.equals(false))
-      ..orderBy([(t) => OrderingTerm.desc(t.createdAt)])).get();
+    return (db.select(db.learningItems)
+          ..where((t) => t.isDeleted.equals(false))
+          ..orderBy([(t) => OrderingTerm.desc(t.createdAt)]))
+        .get();
+  }
+
+  /// 获取全库学习内容数量（排除已停用）。
+  ///
+  /// 说明：
+  /// - 用于首页空状态“冷启动/常规空态”的判定口径
+  /// - 仅统计 is_deleted=0 的学习内容
+  /// - 不区分是否为模拟数据（is_mock_data），避免 Debug 数据存在时误判为冷启动
+  ///
+  /// 返回值：学习内容数量。
+  /// 异常：数据库查询失败时可能抛出异常。
+  Future<int> getLearningItemCount() async {
+    final t = db.learningItems;
+    final exp = t.id.count();
+    final row =
+        await (db.selectOnly(t)
+              ..addColumns([exp])
+              ..where(t.isDeleted.equals(false)))
+            .getSingle();
+    return row.read(exp) ?? 0;
   }
 
   /// F14.1：按关键词搜索学习内容（title/note）。

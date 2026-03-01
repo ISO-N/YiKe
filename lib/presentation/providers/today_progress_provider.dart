@@ -11,7 +11,7 @@ import 'home_tasks_provider.dart';
 /// 今日复习进度 Provider（completed/total）。
 ///
 /// 说明：
-/// - 数据源为 ReviewTaskDao.getTaskStats（通过仓储层调用）
+/// - 数据源为 ReviewTaskDao.getTaskStatsInRange（通过仓储层调用）
 /// - 依赖 homeTasksProvider 的刷新，用于在任务状态变化后自动触发重新计算
 final todayProgressProvider =
     FutureProvider.autoDispose<(int completed, int total)>((ref) async {
@@ -23,5 +23,8 @@ final todayProgressProvider =
       );
 
       final repo = ref.read(reviewTaskRepositoryProvider);
-      return repo.getTaskStats(DateTime.now());
+      final now = DateTime.now();
+      final start = DateTime(now.year, now.month, now.day);
+      final end = start.add(const Duration(days: 1));
+      return repo.getTaskStatsInRange(start, end);
     });

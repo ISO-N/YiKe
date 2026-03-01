@@ -3,6 +3,8 @@
 /// 创建日期：2026-02-26
 library;
 
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -105,78 +107,193 @@ class _ProgressMain extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 为满足 v1.1.0「进度环动画增强」，将主进度区域拆分为可维护前后值的内部组件。
+    return _AnimatedProgressMain(
+      completed: completed,
+      total: total,
+      expanded: expanded,
+      showLoading: showLoading,
+      stats: stats,
+    );
+  }
+}
+
+class _AnimatedProgressMain extends StatefulWidget {
+  const _AnimatedProgressMain({
+    required this.completed,
+    required this.total,
+    required this.expanded,
+    required this.showLoading,
+    required this.stats,
+  });
+
+  final int completed;
+  final int total;
+  final bool expanded;
+  final bool showLoading;
+  final StatisticsState? stats;
+
+  @override
+  State<_AnimatedProgressMain> createState() => _AnimatedProgressMainState();
+}
+
+class _AnimatedProgressMainState extends State<_AnimatedProgressMain> {
+  // v1.1.0：首次从“无数据→有数据”不动画，因此需要记录是否已完成首次加载。
+  bool _hasLoadedOnce = false;
+
+  // 用于同步动画的起始值（由 didUpdateWidget 赋值为“上一帧 end”）。
+  double? _fromProgress;
+  int? _fromCompleted;
+  int? _fromTotal;
+
+  @override
+  void didUpdateWidget(covariant _AnimatedProgressMain oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    // loading → data：首次展示不动画（起始值直接等于目标值）。
+    if (!_hasLoadedOnce && !widget.showLoading) {
+      return;
+    }
+
+    // 仅在数值发生变化时记录上一帧值，作为下一次动画的 begin。
+    if (oldWidget.completed != widget.completed ||
+        oldWidget.total != widget.total) {
+      _fromCompleted = oldWidget.completed;
+      _fromTotal = oldWidget.total;
+      final oldProgress = oldWidget.total <= 0
+          ? 0.0
+          : (oldWidget.completed / oldWidget.total).clamp(0.0, 1.0);
+      _fromProgress = oldProgress;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final primary = isDark ? AppColors.primaryLight : AppColors.primary;
 
     final ringColor = _ringColor(
       primary: primary,
-      completed: completed,
-      total: total,
+      completed: widget.completed,
+      total: widget.total,
     );
-    final progress = total <= 0 ? 0.0 : (completed / total).clamp(0.0, 1.0);
+    final progress = widget.total <= 0
+        ? 0.0
+        : (widget.completed / widget.total).clamp(0.0, 1.0);
 
-    final percentText = total <= 0 ? '0' : (progress * 100).toStringAsFixed(0);
+    final disableAnimations = MediaQuery.of(context).disableAnimations;
+
+    // 首次加载：从“无数据”到“有数据”不动画，避免造成误导性反馈。
+    if (!_hasLoadedOnce && !widget.showLoading) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        setState(() {
+          _hasLoadedOnce = true;
+          _fromCompleted = widget.completed;
+          _fromTotal = widget.total;
+          _fromProgress = progress;
+        });
+      });
+    }
+
+    final shouldAnimate =
+        !disableAnimations && _hasLoadedOnce && !widget.showLoading;
+    final duration = shouldAnimate
+        ? const Duration(milliseconds: 300)
+        : Duration.zero;
+
+    final fromCompleted = _fromCompleted ?? widget.completed;
+    final fromTotal = _fromTotal ?? widget.total;
+    final fromProgress = _fromProgress ?? progress;
 
     return Column(
       children: [
-        Row(
-          children: [
-            SizedBox(
-              width: 80,
-              height: 80,
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  CircularProgressIndicator(
-                    value: progress,
-                    strokeWidth: 8,
-                    backgroundColor: ringColor.withValues(alpha: 0.12),
-                    valueColor: AlwaysStoppedAnimation<Color>(ringColor),
-                  ),
-                  Text(
-                    '$percentText%',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w800,
-                      color: ringColor,
+        TweenAnimationBuilder<double>(
+          tween: Tween<double>(begin: 0, end: 1),
+          duration: duration,
+          curve: Curves.easeOutCubic,
+          builder: (context, t, _) {
+            final animatedProgress = lerpDouble(
+              fromProgress,
+              progress,
+              t,
+            )!.clamp(0.0, 1.0);
+            final animatedCompleted =
+                (fromCompleted + (widget.completed - fromCompleted) * t)
+                    .round();
+            final animatedTotal = (fromTotal + (widget.total - fromTotal) * t)
+                .round();
+            final percentText = (animatedProgress * 100).toStringAsFixed(0);
+
+            return Row(
+              children: [
+                RepaintBoundary(
+                  child: SizedBox(
+                    width: 80,
+                    height: 80,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        CircularProgressIndicator(
+                          value: animatedProgress,
+                          strokeWidth: 8,
+                          backgroundColor: ringColor.withValues(alpha: 0.12),
+                          valueColor: AlwaysStoppedAnimation<Color>(ringColor),
+                        ),
+                        Text(
+                          '$percentText%',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                            color: ringColor,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                ],
-              ),
-            ),
-            const SizedBox(width: AppSpacing.lg),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '$completed / $total',
-                    style: AppTypography.h2(context).copyWith(fontSize: 24),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    _statusText(completed: completed, total: total),
-                    style: AppTypography.bodySecondary(context),
-                  ),
-                ],
-              ),
-            ),
-            if (showLoading)
-              const Padding(
-                padding: EdgeInsets.only(left: AppSpacing.sm),
-                child: SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(strokeWidth: 2),
                 ),
-              ),
-          ],
+                const SizedBox(width: AppSpacing.lg),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '$animatedCompleted / $animatedTotal',
+                        style: AppTypography.h2(context).copyWith(fontSize: 24),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        _statusText(
+                          completed: animatedCompleted,
+                          total: animatedTotal,
+                        ),
+                        style: AppTypography.bodySecondary(context),
+                      ),
+                    ],
+                  ),
+                ),
+                if (widget.showLoading)
+                  const Padding(
+                    padding: EdgeInsets.only(left: AppSpacing.sm),
+                    child: SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  ),
+              ],
+            );
+          },
         ),
-        if (expanded) ...[
+        if (widget.expanded) ...[
           const SizedBox(height: AppSpacing.lg),
           const Divider(height: 1),
           const SizedBox(height: AppSpacing.lg),
-          _DetailRows(completed: completed, total: total, stats: stats),
+          _DetailRows(
+            completed: widget.completed,
+            total: widget.total,
+            stats: widget.stats,
+          ),
         ],
       ],
     );

@@ -7,11 +7,12 @@
 ///
 /// 可选参数：
 ///   --skip-flutter-build        跳过 `flutter build windows --release`
-///   --inno-script=<path>        指定 .iss 脚本路径（默认：tool/installer/windows/yike.iss）
-///   --iscc=<path>               指定 ISCC.exe 路径（默认：自动从 PATH/常见目录查找）
+///   `--inno-script=<path>`      指定 .iss 脚本路径（默认：tool/installer/windows/yike.iss）
+///   `--iscc=<path>`             指定 ISCC.exe 路径（默认：自动从 PATH/常见目录查找）
 ///
 /// 说明：
 /// - 本仓库要求 UTF-8（无 BOM），因此优先使用 Dart 脚本承载中文输出，避免 Windows PowerShell 5.1 的编码兼容坑。
+library;
 
 import 'dart:io';
 
@@ -89,11 +90,9 @@ Future<int> runCommand(
 Future<String> findIsccPath() async {
   // 1) 通过 PATH（where ISCC）
   if (Platform.isWindows) {
-    final whereResult = await Process.run(
-      'where',
-      const ['ISCC'],
-      runInShell: true,
-    );
+    final whereResult = await Process.run('where', const [
+      'ISCC',
+    ], runInShell: true);
     if (whereResult.exitCode == 0) {
       final out = (whereResult.stdout ?? '').toString().trim();
       if (out.isNotEmpty) {
@@ -126,12 +125,13 @@ Future<String> findIsccPath() async {
 /// 函数用途：从输出目录中找到最新生成的安装包（.exe）。
 File? findLatestInstallerExe(Directory outputDir) {
   if (!outputDir.existsSync()) return null;
-  final exeFiles = outputDir
-      .listSync(recursive: false)
-      .whereType<File>()
-      .where((f) => f.path.toLowerCase().endsWith('.exe'))
-      .toList()
-    ..sort((a, b) => b.lastModifiedSync().compareTo(a.lastModifiedSync()));
+  final exeFiles =
+      outputDir
+          .listSync(recursive: false)
+          .whereType<File>()
+          .where((f) => f.path.toLowerCase().endsWith('.exe'))
+          .toList()
+        ..sort((a, b) => b.lastModifiedSync().compareTo(a.lastModifiedSync()));
   return exeFiles.isEmpty ? null : exeFiles.first;
 }
 
@@ -141,10 +141,19 @@ Future<void> main(List<String> args) async {
 
   final projectRoot = findProjectRoot();
   final innoScriptPath =
-      flags['inno-script'] ?? joinPathAll([projectRoot.path, 'tool', 'installer', 'windows', 'yike.iss']);
+      flags['inno-script'] ??
+      joinPathAll([
+        projectRoot.path,
+        'tool',
+        'installer',
+        'windows',
+        'yike.iss',
+      ]);
   final isccPath = flags['iscc'] ?? await findIsccPath();
 
-  final outputDir = Directory(joinPathAll([projectRoot.path, 'build', 'installer', 'windows']));
+  final outputDir = Directory(
+    joinPathAll([projectRoot.path, 'build', 'installer', 'windows']),
+  );
   if (!outputDir.existsSync()) {
     outputDir.createSync(recursive: true);
   }
@@ -161,11 +170,11 @@ Future<void> main(List<String> args) async {
 
   if (!skipFlutterBuild) {
     stdout.writeln('开始构建 Windows Release：flutter build windows --release');
-    final buildExit = await runCommand(
-      'flutter',
-      const ['build', 'windows', '--release'],
-      workingDirectory: projectRoot.path,
-    );
+    final buildExit = await runCommand('flutter', const [
+      'build',
+      'windows',
+      '--release',
+    ], workingDirectory: projectRoot.path);
     if (buildExit != 0) {
       stderr.writeln('flutter build 失败，退出码：$buildExit');
       exitCode = buildExit;
@@ -176,11 +185,9 @@ Future<void> main(List<String> args) async {
   }
 
   stdout.writeln('开始编译 Inno 脚本生成安装包...');
-  final innoExit = await runCommand(
-    isccPath,
-    [innoScriptPath],
-    workingDirectory: projectRoot.path,
-  );
+  final innoExit = await runCommand(isccPath, [
+    innoScriptPath,
+  ], workingDirectory: projectRoot.path);
   if (innoExit != 0) {
     stderr.writeln('ISCC 编译失败，退出码：$innoExit');
     exitCode = innoExit;
