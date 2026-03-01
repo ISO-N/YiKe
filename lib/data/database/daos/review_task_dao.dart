@@ -64,12 +64,11 @@ class ReviewTaskDao {
   /// - [reviewRound] 目标轮次
   /// 返回值：删除行数。
   Future<int> deleteReviewTaskByRound(int learningItemId, int reviewRound) {
-    return (db.delete(db.reviewTasks)
-          ..where(
-            (t) =>
-                t.learningItemId.equals(learningItemId) &
-                t.reviewRound.equals(reviewRound),
-          ))
+    return (db.delete(db.reviewTasks)..where(
+          (t) =>
+              t.learningItemId.equals(learningItemId) &
+              t.reviewRound.equals(reviewRound),
+        ))
         .go();
   }
 
@@ -312,7 +311,10 @@ class ReviewTaskDao {
           ..where(task.status.equals('skipped'))
           ..where(task.skippedAt.isBiggerOrEqualValue(start))
           ..where(task.skippedAt.isSmallerThanValue(end))
-          ..orderBy([OrderingTerm.desc(task.skippedAt), OrderingTerm.desc(task.id)]);
+          ..orderBy([
+            OrderingTerm.desc(task.skippedAt),
+            OrderingTerm.desc(task.id),
+          ]);
 
     final rows = await query.get();
     return rows
@@ -362,15 +364,17 @@ class ReviewTaskDao {
     required String action,
     required DateTime occurredAt,
   }) async {
-    await db.into(db.reviewRecords).insert(
-      ReviewRecordsCompanion.insert(
-        uuid: Value(_uuid.v4()),
-        reviewTaskId: reviewTaskId,
-        action: action,
-        occurredAt: occurredAt,
-        createdAt: Value(occurredAt),
-      ),
-    );
+    await db
+        .into(db.reviewRecords)
+        .insert(
+          ReviewRecordsCompanion.insert(
+            uuid: Value(_uuid.v4()),
+            reviewTaskId: reviewTaskId,
+            action: action,
+            occurredAt: occurredAt,
+            createdAt: Value(occurredAt),
+          ),
+        );
   }
 
   /// 批量插入复习记录（同一 action/occurredAt）。
@@ -411,7 +415,9 @@ FROM review_tasks rt
 INNER JOIN learning_items li ON li.id = rt.learning_item_id
 WHERE li.is_deleted = 0
 ''';
-    final row = await db.customSelect(sql, readsFrom: {db.reviewTasks, db.learningItems}).getSingle();
+    final row = await db
+        .customSelect(sql, readsFrom: {db.reviewTasks, db.learningItems})
+        .getSingle();
     return (
       row.read<int?>('all_count') ?? 0,
       row.read<int?>('pending_count') ?? 0,
@@ -463,7 +469,8 @@ END
       cursorVars.add(Variable<int>(cursorTaskId));
     }
 
-    final sql = '''
+    final sql =
+        '''
  SELECT * FROM (
   SELECT
     rt.id AS "rt.id",
@@ -500,24 +507,23 @@ END
  LIMIT ?
  ''';
 
-    final rows =
-        await db.customSelect(
+    final rows = await db
+        .customSelect(
           sql,
           variables: [...variables, ...cursorVars, Variable<int>(limit)],
           readsFrom: {db.reviewTasks, db.learningItems},
-        ).get();
+        )
+        .get();
 
-    return rows
-        .map((row) {
-          final task = db.reviewTasks.map(row.data, tablePrefix: 'rt');
-          final item = db.learningItems.map(row.data, tablePrefix: 'li');
-          final occurredAt = row.read<DateTime>('occurred_at');
-          return ReviewTaskTimelineModel(
-            model: ReviewTaskWithItemModel(task: task, item: item),
-            occurredAt: occurredAt,
-          );
-        })
-        .toList();
+    return rows.map((row) {
+      final task = db.reviewTasks.map(row.data, tablePrefix: 'rt');
+      final item = db.learningItems.map(row.data, tablePrefix: 'li');
+      final occurredAt = row.read<DateTime>('occurred_at');
+      return ReviewTaskTimelineModel(
+        model: ReviewTaskWithItemModel(task: task, item: item),
+        occurredAt: occurredAt,
+      );
+    }).toList();
   }
 
   /// 查询学习内容关联的所有复习任务。
@@ -542,7 +548,10 @@ END
             innerJoin(item, item.id.equalsExp(task.learningItemId)),
           ])
           ..where(item.id.equals(learningItemId))
-          ..orderBy([OrderingTerm.asc(task.reviewRound), OrderingTerm.asc(task.id)]);
+          ..orderBy([
+            OrderingTerm.asc(task.reviewRound),
+            OrderingTerm.asc(task.id),
+          ]);
 
     final rows = await query.get();
     return rows
@@ -564,6 +573,39 @@ END
           ..where((t) => t.learningItemId.equals(learningItemId))
           ..where((t) => t.reviewRound.equals(reviewRound)))
         .getSingleOrNull();
+  }
+
+  /// 批量查询指定学习内容的“目标轮次”任务计划日期（scheduledDate）。
+  ///
+  /// 说明：
+  /// - 用于首页「复习间隔预览增强」：在 done/skipped 卡片上展示“下次复习时间”
+  /// - 仅查询 review_tasks 表，不做 learning_items 关联过滤（上层列表已保证 is_deleted=0）
+  /// - 参数为“学习内容 → 目标轮次”的映射（每个学习内容最多查询 1 条）
+  ///
+  /// 参数：
+  /// - [targets] key=learningItemId，value=目标 reviewRound（通常为 lastRound + 1）
+  /// 返回值：Map（key=learningItemId，value=scheduledDate）。
+  /// 异常：数据库查询失败时可能抛出异常。
+  Future<Map<int, DateTime>> getScheduledDatesByLearningItemAndRounds(
+    Map<int, int> targets,
+  ) async {
+    if (targets.isEmpty) return const <int, DateTime>{};
+
+    final t = db.reviewTasks;
+    final predicates = <Expression<bool>>[];
+    for (final e in targets.entries) {
+      predicates.add(
+        t.learningItemId.equals(e.key) & t.reviewRound.equals(e.value),
+      );
+    }
+    final predicate = predicates.reduce((a, b) => a | b);
+
+    final rows = await (db.select(t)..where((_) => predicate)).get();
+    final result = <int, DateTime>{};
+    for (final row in rows) {
+      result[row.learningItemId] = row.scheduledDate;
+    }
+    return result;
   }
 
   /// 更新指定轮次的 scheduledDate（定位键：learningItemId + reviewRound）。
@@ -614,11 +656,13 @@ WHERE li.is_deleted = 0
   AND rt.scheduled_date >= ?
   AND rt.scheduled_date < ?
 ''';
-    final row = await db.customSelect(
-      sql,
-      variables: [Variable<DateTime>(start), Variable<DateTime>(end)],
-      readsFrom: {db.reviewTasks, db.learningItems},
-    ).getSingle();
+    final row = await db
+        .customSelect(
+          sql,
+          variables: [Variable<DateTime>(start), Variable<DateTime>(end)],
+          readsFrom: {db.reviewTasks, db.learningItems},
+        )
+        .getSingle();
     return (
       row.read<int?>('completed_count') ?? 0,
       row.read<int?>('total_count') ?? 0,
@@ -647,11 +691,13 @@ WHERE li.is_deleted = 0
   AND rt.scheduled_date >= ?
   AND rt.scheduled_date < ?
 ''';
-    final rows = await db.customSelect(
-      sql,
-      variables: [Variable<DateTime>(start), Variable<DateTime>(end)],
-      readsFrom: {db.reviewTasks, db.learningItems},
-    ).get();
+    final rows = await db
+        .customSelect(
+          sql,
+          variables: [Variable<DateTime>(start), Variable<DateTime>(end)],
+          readsFrom: {db.reviewTasks, db.learningItems},
+        )
+        .get();
     final map = <DateTime, _DayStatsAccumulator>{};
     for (final row in rows) {
       final scheduled = row.read<DateTime>('scheduled_date');
@@ -740,8 +786,8 @@ WHERE li.is_deleted = 0
     // 找到最早的“done/pending”任务日期作为遍历下界，避免无穷回溯。
     final earliestRow =
         await (db.select(task).join([
-              innerJoin(item, item.id.equalsExp(task.learningItemId)),
-            ])
+                innerJoin(item, item.id.equalsExp(task.learningItemId)),
+              ])
               ..where(item.isDeleted.equals(false))
               ..where(task.scheduledDate.isSmallerThanValue(todayEnd))
               ..where(task.status.isIn(const ['done', 'pending']))
@@ -756,8 +802,8 @@ WHERE li.is_deleted = 0
     // 一次性拉取范围内的 done/pending 任务，再在 Dart 侧按天聚合（排除已停用学习内容）。
     final joined =
         await (db.select(task).join([
-              innerJoin(item, item.id.equalsExp(task.learningItemId)),
-            ])
+                innerJoin(item, item.id.equalsExp(task.learningItemId)),
+              ])
               ..where(item.isDeleted.equals(false))
               ..where(task.scheduledDate.isBiggerOrEqualValue(earliestStart))
               ..where(task.scheduledDate.isSmallerThanValue(todayEnd))
@@ -818,11 +864,13 @@ WHERE li.is_deleted = 0
   AND rt.scheduled_date >= ?
   AND rt.scheduled_date < ?
 ''';
-    final row = await db.customSelect(
-      sql,
-      variables: [Variable<DateTime>(start), Variable<DateTime>(end)],
-      readsFrom: {db.reviewTasks, db.learningItems},
-    ).getSingle();
+    final row = await db
+        .customSelect(
+          sql,
+          variables: [Variable<DateTime>(start), Variable<DateTime>(end)],
+          readsFrom: {db.reviewTasks, db.learningItems},
+        )
+        .getSingle();
     final total = row.read<int?>('total_count') ?? 0;
     final completed = row.read<int?>('completed_count') ?? 0;
     return (completed, total);
@@ -893,12 +941,13 @@ WHERE li.is_deleted = 0
     final task = db.reviewTasks;
     final item = db.learningItems;
 
-    final q = db.select(task).join([
-      innerJoin(item, item.id.equalsExp(task.learningItemId)),
-    ])
-      ..where(task.id.isIn(taskIds))
-      ..where(item.isDeleted.equals(true))
-      ..limit(1);
+    final q =
+        db.select(task).join([
+            innerJoin(item, item.id.equalsExp(task.learningItemId)),
+          ])
+          ..where(task.id.isIn(taskIds))
+          ..where(item.isDeleted.equals(true))
+          ..limit(1);
 
     final hit = await q.getSingleOrNull();
     if (hit != null) {
