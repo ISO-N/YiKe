@@ -6,10 +6,12 @@ library;
 import 'package:uuid/uuid.dart';
 
 import '../entities/learning_item.dart';
+import '../entities/learning_subtask.dart';
 import '../entities/review_config.dart';
 import '../entities/review_interval_config.dart';
 import '../entities/review_task.dart';
 import '../repositories/learning_item_repository.dart';
+import '../repositories/learning_subtask_repository.dart';
 import '../repositories/review_task_repository.dart';
 
 /// 创建学习内容参数。
@@ -17,6 +19,8 @@ class CreateLearningItemParams {
   /// 构造函数。
   CreateLearningItemParams({
     required this.title,
+    this.description,
+    this.subtasks = const [],
     this.note,
     this.tags = const [],
     this.reviewIntervals,
@@ -24,6 +28,8 @@ class CreateLearningItemParams {
   }) : learningDate = learningDate ?? DateTime.now();
 
   final String title;
+  final String? description;
+  final List<String> subtasks;
   final String? note;
   final List<String> tags;
   final DateTime learningDate;
@@ -56,11 +62,14 @@ class CreateLearningItemUseCase {
   /// 构造函数。
   const CreateLearningItemUseCase({
     required LearningItemRepository learningItemRepository,
+    required LearningSubtaskRepository learningSubtaskRepository,
     required ReviewTaskRepository reviewTaskRepository,
   }) : _learningItemRepository = learningItemRepository,
+       _learningSubtaskRepository = learningSubtaskRepository,
        _reviewTaskRepository = reviewTaskRepository;
 
   final LearningItemRepository _learningItemRepository;
+  final LearningSubtaskRepository _learningSubtaskRepository;
   final ReviewTaskRepository _reviewTaskRepository;
 
   static const Uuid _uuid = Uuid();
@@ -82,6 +91,11 @@ class CreateLearningItemUseCase {
     final item = LearningItemEntity(
       uuid: _uuid.v4(),
       title: params.title.trim(),
+      description:
+          params.description?.trim().isEmpty == true
+              ? null
+              : params.description?.trim(),
+      // note 字段渐进式废弃：仍允许外部传入（兼容旧入口），但推荐走 description/subtasks。
       note: params.note?.trim().isEmpty == true ? null : params.note?.trim(),
       tags: params.tags
           .map((e) => e.trim())
@@ -93,6 +107,29 @@ class CreateLearningItemUseCase {
     );
 
     final saved = await _learningItemRepository.create(item);
+
+    // v2.6：保存子任务（只做清单能力，不做完成态）。
+    final normalizedSubtasks =
+        params.subtasks
+            .map((e) => e.trim())
+            .where((e) => e.isNotEmpty)
+            .toList();
+    if (normalizedSubtasks.isNotEmpty) {
+      // 说明：按输入顺序写入 sortOrder（0..n-1）。
+      for (var i = 0; i < normalizedSubtasks.length; i++) {
+        await _learningSubtaskRepository.create(
+          LearningSubtaskEntity(
+            uuid: _uuid.v4(),
+            learningItemId: saved.id!,
+            content: normalizedSubtasks[i],
+            sortOrder: i,
+            createdAt: now,
+            updatedAt: now,
+            isMockData: saved.isMockData,
+          ),
+        );
+      }
+    }
 
     final configs = _normalizeIntervals(params.reviewIntervals);
 
