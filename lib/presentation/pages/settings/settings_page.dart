@@ -48,7 +48,7 @@ class SettingsPage extends ConsumerWidget {
     }
 
     Future<void> openNotificationSettings() async {
-      // v1.0 MVP：优先打开“通知”面板；若平台不支持，插件会降级处理。
+      // 优先打开”通知”面板；若平台不支持，插件会降级处理。
       await AppSettings.openAppSettings(type: AppSettingsType.notification);
       // 打开系统设置返回后，刷新一次设置页的权限状态。
       ref.invalidate(notificationPermissionProvider);
@@ -101,7 +101,7 @@ class SettingsPage extends ConsumerWidget {
                       Text('通知与提醒', style: AppTypography.h2(context)),
                       const SizedBox(height: AppSpacing.sm),
                       Text(
-                        'v1.0 MVP：使用后台定时检查方式提醒，时间精度约 ±30 分钟。',
+                        '使用后台定时检查方式提醒，时间精度约 ±30 分钟。',
                         style: AppTypography.bodySecondary(context),
                       ),
                     ],
