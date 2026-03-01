@@ -53,6 +53,26 @@ class ReviewTaskDao {
     return db.update(db.reviewTasks).replace(task);
   }
 
+  /// 按轮次删除复习任务（物理删除）。
+  ///
+  /// 说明：
+  /// - 用于“减少复习轮次”能力（删除最大轮次对应的 review_task）
+  /// - review_records 对 review_tasks 具有外键级联，删除任务会同步删除行为历史
+  ///
+  /// 参数：
+  /// - [learningItemId] 学习内容 ID
+  /// - [reviewRound] 目标轮次
+  /// 返回值：删除行数。
+  Future<int> deleteReviewTaskByRound(int learningItemId, int reviewRound) {
+    return (db.delete(db.reviewTasks)
+          ..where(
+            (t) =>
+                t.learningItemId.equals(learningItemId) &
+                t.reviewRound.equals(reviewRound),
+          ))
+        .go();
+  }
+
   /// 更新任务状态。
   ///
   /// 参数：

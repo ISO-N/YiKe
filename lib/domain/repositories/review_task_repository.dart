@@ -128,4 +128,12 @@ abstract class ReviewTaskRepository {
 
   /// 为指定学习内容增加 1 轮复习任务（最大轮次由上层校验）。
   Future<void> addReviewRound(int learningItemId);
+
+  /// 为指定学习内容减少 1 轮复习任务（删除最大轮次）。
+  ///
+  /// 说明：
+  /// - 由上层负责校验最小轮次（至少保留 1 轮）
+  /// - 该操作会物理删除 review_tasks，并级联删除 review_records
+  /// - 成功后必须写入同步 delete 日志，避免远端数据漂移
+  Future<void> removeLatestReviewRound(int learningItemId);
 }

@@ -129,7 +129,9 @@ class ReviewTaskViewEntity {
     required this.taskId,
     required this.learningItemId,
     required this.title,
+    required this.description,
     required this.note,
+    required this.subtaskCount,
     required this.tags,
     required this.reviewRound,
     required this.scheduledDate,
@@ -143,7 +145,9 @@ class ReviewTaskViewEntity {
   final int taskId;
   final int learningItemId;
   final String title;
+  final String? description;
   final String? note;
+  final int subtaskCount;
   final List<String> tags;
   final int reviewRound;
   final DateTime scheduledDate;
