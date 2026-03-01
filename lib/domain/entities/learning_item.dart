@@ -13,6 +13,7 @@ class LearningItemEntity {
   /// - [uuid] 业务唯一标识（用于备份合并去重，稳定且跨设备）
   /// - [id] 数据库 ID（新建时可为 null）
   /// - [title] 标题（必填，≤50字）
+  /// - [description] 描述（可选，v2.6：替代 note 的结构化入口）
   /// - [note] 备注（可选，v1.0 仅纯文本）
   /// - [tags] 标签列表（可为空）
   /// - [learningDate] 学习日期（用于生成复习节点）
@@ -25,6 +26,7 @@ class LearningItemEntity {
     required this.uuid,
     this.id,
     required this.title,
+    this.description,
     this.note,
     required this.tags,
     required this.learningDate,
@@ -44,6 +46,7 @@ class LearningItemEntity {
 
   final int? id;
   final String title;
+  final String? description;
   final String? note;
   final List<String> tags;
   final DateTime learningDate;
@@ -63,6 +66,7 @@ class LearningItemEntity {
     String? uuid,
     int? id,
     String? title,
+    String? description,
     String? note,
     List<String>? tags,
     DateTime? learningDate,
@@ -76,6 +80,7 @@ class LearningItemEntity {
       uuid: uuid ?? this.uuid,
       id: id ?? this.id,
       title: title ?? this.title,
+      description: description ?? this.description,
       note: note ?? this.note,
       tags: tags ?? this.tags,
       learningDate: learningDate ?? this.learningDate,

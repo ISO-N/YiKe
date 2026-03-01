@@ -21,6 +21,14 @@ abstract class LearningItemRepository {
   /// 说明：用于任务详情中的“编辑备注”。
   Future<void> updateNote({required int id, required String? note});
 
+  /// 更新学习内容描述（仅更新 description 字段）。
+  ///
+  /// 说明：v2.6 起 UI 主入口从 note 切换为 description + subtasks。
+  Future<void> updateDescription({
+    required int id,
+    required String? description,
+  });
+
   /// 停用学习内容（软删除）。
   ///
   /// 说明：设置 isDeleted=true 并写入 deletedAt，不物理删除数据。
