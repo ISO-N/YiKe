@@ -173,11 +173,6 @@ class _HomePageState extends ConsumerState<HomePage> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => context.push('/input'),
-        icon: const Icon(Icons.add),
-        label: const Text(AppStrings.input),
-      ),
       body: GradientBackground(
         child: SafeArea(
           child: RefreshIndicator(

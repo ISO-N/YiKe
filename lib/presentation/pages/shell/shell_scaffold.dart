@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_strings.dart';
+import 'shell_fab.dart';
 
 class ShellScaffold extends StatelessWidget {
   /// 底部导航壳层。
@@ -45,8 +46,11 @@ class ShellScaffold extends StatelessWidget {
       context,
     ).routeInformationProvider.value.uri.toString();
     final currentIndex = _locationToIndex(location);
+    final shouldShowFab = !location.startsWith('/settings');
     return Scaffold(
       body: child,
+      // 交互规范：录入入口由 Shell 层统一提供；设置页不显示 FAB。
+      floatingActionButton: shouldShowFab ? const ShellFAB() : null,
       bottomNavigationBar: NavigationBar(
         selectedIndex: currentIndex,
         onDestinationSelected: (index) => _onTap(context, index),
