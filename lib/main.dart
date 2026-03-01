@@ -12,6 +12,7 @@ import 'package:window_manager/window_manager.dart';
 
 import 'app.dart';
 import 'di/injection.dart';
+import 'di/providers.dart';
 import 'infrastructure/desktop/tray_service.dart';
 import 'infrastructure/notification/background_task_service.dart';
 import 'infrastructure/notification/notification_service.dart';
@@ -26,6 +27,13 @@ Future<void> main() async {
 
   // 初始化依赖注入容器（如数据库、Repository、UseCase）。
   final container = await AppInjection.createContainer();
+
+  // v2.6：任务结构迁移（note → description + subtasks）。
+  //
+  // 说明：
+  // - 必须在 UI 首次读取学习内容/任务之前执行，避免 note/description 显示闪烁
+  // - 迁移幂等：成功后会将 note 置空
+  await container.read(migrateNoteToSubtasksUseCaseProvider).execute();
 
   // 初始化通知与后台任务（v1.0 MVP：允许 ±30 分钟误差）。
   await NotificationService.instance.initialize();
