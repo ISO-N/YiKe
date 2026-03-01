@@ -101,7 +101,9 @@ class _TaskHubPageState extends ConsumerState<TaskHubPage> {
           taskId: item.task.taskId,
           learningItemId: item.task.learningItemId,
           title: item.task.title,
-          note: item.task.note,
+          description: item.task.description,
+          legacyNote: item.task.note,
+          subtaskCount: item.task.subtaskCount,
           tags: item.task.tags,
           reviewRound: item.task.reviewRound,
           scheduledDate: item.task.scheduledDate,
@@ -251,7 +253,9 @@ class _TaskTimelineItem {
     required this.taskId,
     required this.learningItemId,
     required this.title,
-    required this.note,
+    required this.description,
+    required this.legacyNote,
+    required this.subtaskCount,
     required this.tags,
     required this.reviewRound,
     required this.scheduledDate,
@@ -264,7 +268,9 @@ class _TaskTimelineItem {
   final int taskId;
   final int learningItemId;
   final String title;
-  final String? note;
+  final String? description;
+  final String? legacyNote;
+  final int subtaskCount;
   final List<String> tags;
   final int reviewRound;
   final DateTime scheduledDate;
@@ -307,6 +313,9 @@ class _TaskTimelineCard extends StatelessWidget {
     };
 
     final subtitle = _subtitleText(context);
+    final info = _infoText();
+    final detailLabel = _expandedDetailLabel();
+    final detailText = _expandedDetailText();
 
     return InkWell(
       onTap: onToggleExpanded,
@@ -332,6 +341,15 @@ class _TaskTimelineCard extends StatelessWidget {
                         ),
                         const SizedBox(height: AppSpacing.xs),
                         Text(subtitle, style: AppTypography.bodySecondary(context)),
+                        if (info != null) ...[
+                          const SizedBox(height: 6),
+                          Text(
+                            info,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppTypography.bodySecondary(context),
+                          ),
+                        ],
                       ],
                     ),
                   ),
@@ -385,10 +403,16 @@ class _TaskTimelineCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      if (item.note?.trim().isNotEmpty ?? false) ...[
-                        Text('备注', style: AppTypography.h2(context).copyWith(fontSize: 14)),
+                      if (detailLabel != null && detailText != null) ...[
+                        Text(
+                          detailLabel,
+                          style: AppTypography.h2(context).copyWith(fontSize: 14),
+                        ),
                         const SizedBox(height: 6),
-                        Text(item.note!.trim(), style: AppTypography.bodySecondary(context)),
+                        Text(
+                          detailText,
+                          style: AppTypography.bodySecondary(context),
+                        ),
                         const SizedBox(height: AppSpacing.md),
                       ],
                       Row(
@@ -444,6 +468,41 @@ class _TaskTimelineCard extends StatelessWidget {
             ? '已跳过'
             : '跳过于 ${TimeOfDay.fromDateTime(item.skippedAt!).format(context)}',
     };
+  }
+
+  /// 生成时间线卡片的信息摘要（v2.6：description 优先，其次子任务数量，最后 fallback 到旧 note）。
+  String? _infoText() {
+    final desc = (item.description ?? '').trim();
+    if (desc.isNotEmpty) return desc;
+
+    if (item.subtaskCount > 0) return '${item.subtaskCount} 个子任务';
+
+    final legacy = (item.legacyNote ?? '').trim();
+    if (legacy.isNotEmpty) return '旧备注：$legacy';
+
+    return null;
+  }
+
+  String? _expandedDetailLabel() {
+    final desc = (item.description ?? '').trim();
+    if (desc.isNotEmpty) return '描述';
+
+    final legacy = (item.legacyNote ?? '').trim();
+    if (legacy.isNotEmpty) return '旧备注（待迁移）';
+
+    if (item.subtaskCount > 0) return '子任务';
+    return null;
+  }
+
+  String? _expandedDetailText() {
+    final desc = (item.description ?? '').trim();
+    if (desc.isNotEmpty) return desc;
+
+    final legacy = (item.legacyNote ?? '').trim();
+    if (legacy.isNotEmpty) return legacy;
+
+    if (item.subtaskCount > 0) return '共 ${item.subtaskCount} 个子任务（详见任务详情）';
+    return null;
   }
 }
 

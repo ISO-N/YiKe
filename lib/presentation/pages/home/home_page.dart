@@ -706,13 +706,13 @@ class _SearchResultsCard extends StatelessWidget {
                         highlightStyle: highlightStyle,
                       ),
                     ),
-                    subtitle: item.note == null || item.note!.trim().isEmpty
+                    subtitle: _subtitleOf(item) == null
                         ? null
                         : RichText(
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                             text: buildHighlightedTextSpan(
-                              text: item.note!,
+                              text: _subtitleOf(item)!,
                               keyword: keyword,
                               normalStyle: normalNote,
                               highlightStyle: highlightStyle,
@@ -729,6 +729,21 @@ class _SearchResultsCard extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  /// 生成搜索结果的副标题（v2.6：description 优先，其次子任务摘要，最后 fallback 到旧 note）。
+  String? _subtitleOf(LearningItemSearchResult item) {
+    final desc = (item.description ?? '').trim();
+    if (desc.isNotEmpty) return desc;
+
+    if (item.subtaskCount > 0) {
+      return '${item.subtaskCount} 个子任务';
+    }
+
+    final legacy = (item.note ?? '').trim();
+    if (legacy.isNotEmpty) return '旧备注：$legacy';
+
+    return null;
   }
 }
 
@@ -859,7 +874,9 @@ class _TaskGrid extends StatelessWidget {
                 child: _TaskCard(
                   taskId: t.taskId,
                   title: t.title,
-                  note: t.note,
+                  description: t.description,
+                  legacyNote: t.note,
+                  subtaskCount: t.subtaskCount,
                   tags: t.tags,
                   reviewRound: t.reviewRound,
                   scheduledDate: t.scheduledDate,
@@ -883,7 +900,8 @@ class _TaskGrid extends StatelessWidget {
     }
 
     // 桌面/宽屏：多列网格，关闭滑动（桌面端用按钮/快捷键更符合预期）。
-    final itemExtent = selectionMode ? 168.0 : 156.0;
+    // v2.6：副标题增加“描述/子任务摘要”，桌面端卡片略增高以避免溢出。
+    final itemExtent = selectionMode ? 184.0 : 172.0;
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -899,7 +917,9 @@ class _TaskGrid extends StatelessWidget {
         return _TaskCard(
           taskId: t.taskId,
           title: t.title,
-          note: t.note,
+          description: t.description,
+          legacyNote: t.note,
+          subtaskCount: t.subtaskCount,
           tags: t.tags,
           reviewRound: t.reviewRound,
           scheduledDate: t.scheduledDate,
@@ -926,7 +946,9 @@ class _TaskCard extends StatelessWidget {
   const _TaskCard({
     required this.taskId,
     required this.title,
-    required this.note,
+    required this.description,
+    required this.legacyNote,
+    required this.subtaskCount,
     required this.tags,
     required this.reviewRound,
     required this.scheduledDate,
@@ -947,7 +969,9 @@ class _TaskCard extends StatelessWidget {
 
   final int taskId;
   final String title;
-  final String? note;
+  final String? description;
+  final String? legacyNote;
+  final int subtaskCount;
   final List<String> tags;
   final int reviewRound;
   final DateTime scheduledDate;
@@ -978,7 +1002,12 @@ class _TaskCard extends StatelessWidget {
     final borderColor = status == ReviewTaskStatus.pending && isOverdue
         ? AppColors.warning
         : normalBorderColor;
-    final subtitleText = _subtitleText(context);
+    final statusText = _subtitleText(context);
+    final infoText = _infoText();
+    final subtitleText =
+        infoText == null ? statusText : '$statusText · $infoText';
+    final detailLabel = _expandedDetailLabel();
+    final detailText = _expandedDetailText();
 
     final statusTag = switch (status) {
       ReviewTaskStatus.done => _StatusTag(
@@ -1066,6 +1095,8 @@ class _TaskCard extends StatelessWidget {
                           const SizedBox(height: AppSpacing.xs),
                           Text(
                             subtitleText,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
                             style: AppTypography.bodySecondary(context),
                           ),
                           if (tags.isNotEmpty) ...[
@@ -1116,16 +1147,16 @@ class _TaskCard extends StatelessWidget {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  if (note?.trim().isNotEmpty ?? false) ...[
+                                  if (detailLabel != null && detailText != null) ...[
                                     Text(
-                                      '备注',
+                                      detailLabel,
                                       style: AppTypography.h2(
                                         context,
                                       ).copyWith(fontSize: 14),
                                     ),
                                     const SizedBox(height: 6),
                                     Text(
-                                      note!.trim(),
+                                      detailText,
                                       style: AppTypography.bodySecondary(
                                         context,
                                       ),
@@ -1224,6 +1255,41 @@ class _TaskCard extends StatelessWidget {
         final formatted = TimeOfDay.fromDateTime(time).format(context);
         return '跳过于 $formatted';
     }
+  }
+
+  /// 生成任务信息摘要（v2.6：description 优先，其次子任务数量，最后 fallback 到旧 note）。
+  String? _infoText() {
+    final desc = (description ?? '').trim();
+    if (desc.isNotEmpty) return desc;
+
+    if (subtaskCount > 0) return '$subtaskCount 个子任务';
+
+    final legacy = (legacyNote ?? '').trim();
+    if (legacy.isNotEmpty) return '旧备注：$legacy';
+
+    return null;
+  }
+
+  String? _expandedDetailLabel() {
+    final desc = (description ?? '').trim();
+    if (desc.isNotEmpty) return '描述';
+
+    final legacy = (legacyNote ?? '').trim();
+    if (legacy.isNotEmpty) return '旧备注（待迁移）';
+
+    if (subtaskCount > 0) return '子任务';
+    return null;
+  }
+
+  String? _expandedDetailText() {
+    final desc = (description ?? '').trim();
+    if (desc.isNotEmpty) return desc;
+
+    final legacy = (legacyNote ?? '').trim();
+    if (legacy.isNotEmpty) return legacy;
+
+    if (subtaskCount > 0) return '共 $subtaskCount 个子任务（详见任务详情）';
+    return null;
   }
 
   String _dueText() {
