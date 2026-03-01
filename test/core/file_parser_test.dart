@@ -2,6 +2,7 @@
 // 作者：Codex
 // 创建日期：2026-02-26
 
+import 'dart:async';
 import 'dart:io';
 import 'dart:convert';
 
@@ -16,7 +17,13 @@ void main() {
   });
 
   tearDown(() async {
-    await tempDir.delete(recursive: true);
+    // 说明：Windows 下临时目录删除可能受杀毒软件/索引服务影响而偶发卡住。
+    // 测试全局 timeout 为 10s，因此这里做“尽力清理 + 超时忽略”，避免用例被误判超时失败。
+    try {
+      await tempDir.delete(recursive: true).timeout(const Duration(seconds: 2));
+    } catch (_) {
+      // 忽略：仅影响临时目录清理，不应影响解析逻辑的正确性判定。
+    }
   });
 
   test('parseFile: TXT 每行一条标题（忽略空行与首尾空白）', () async {
