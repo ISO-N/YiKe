@@ -11,7 +11,6 @@ import 'package:app_settings/app_settings.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_spacing.dart';
-import '../../../core/constants/app_strings.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/utils/time_utils.dart';
 import '../../../domain/entities/app_settings.dart';
@@ -21,6 +20,7 @@ import '../../providers/settings_provider.dart';
 import '../../providers/sync_provider.dart';
 import '../../providers/theme_provider.dart';
 import '../../widgets/glass_card.dart';
+import 'widgets/data_management_section.dart';
 import 'widgets/theme_mode_sheet.dart';
 
 class SettingsPage extends ConsumerWidget {
@@ -178,7 +178,7 @@ class SettingsPage extends ConsumerWidget {
                       title: const Text('帮助'),
                       subtitle: const Text('查看忆刻学习指南与使用说明'),
                       trailing: const Icon(Icons.chevron_right),
-                      onTap: () => context.push('/settings/help'),
+                      onTap: () => context.push('/help'),
                     ),
                   ],
                 ),
@@ -314,50 +314,28 @@ class SettingsPage extends ConsumerWidget {
                 ),
               ),
               const SizedBox(height: AppSpacing.lg),
+              DataManagementSection(syncState: syncUi.state),
+              const SizedBox(height: AppSpacing.lg),
               GlassCard(
                 child: Padding(
                   padding: const EdgeInsets.all(AppSpacing.lg),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('数据', style: AppTypography.h2(context)),
+                      Text('主题与内容', style: AppTypography.h2(context)),
                       const SizedBox(height: AppSpacing.sm),
                       Text(
-                        '将学习内容与复习任务导出为文件，可用于备份或分析。',
+                        '管理主题与内容关联，用于筛选与结构化复习。',
                         style: AppTypography.bodySecondary(context),
                       ),
                       const SizedBox(height: AppSpacing.md),
                       ListTile(
                         contentPadding: EdgeInsets.zero,
-                        title: const Text(AppStrings.exportData),
-                        subtitle: const Text('导出为 JSON / CSV 并分享到其他应用'),
-                        trailing: const Icon(Icons.chevron_right),
-                        onTap: () => context.push('/settings/export'),
-                      ),
-                      const Divider(height: 1),
-                      ListTile(
-                        contentPadding: EdgeInsets.zero,
+                        leading: const Icon(Icons.topic_outlined),
                         title: const Text('主题管理'),
                         subtitle: const Text('管理主题与内容关联（v2.1）'),
                         trailing: const Icon(Icons.chevron_right),
                         onTap: () => context.push('/topics'),
-                      ),
-                      const Divider(height: 1),
-                      ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        leading: const Icon(Icons.sync),
-                        title: const Text('局域网同步'),
-                        subtitle: Text(_syncSubtitle(syncUi.state)),
-                        trailing: const Icon(Icons.chevron_right),
-                        onTap: () => context.push('/settings/sync'),
-                      ),
-                      const Divider(height: 1),
-                      ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        title: const Text('备份与恢复'),
-                        subtitle: const Text('导出备份、导入恢复、管理历史'),
-                        trailing: const Icon(Icons.chevron_right),
-                        onTap: () => context.push('/settings/backup'),
                       ),
                     ],
                   ),
@@ -412,20 +390,4 @@ class SettingsPage extends ConsumerWidget {
     );
   }
 
-  String _syncSubtitle(SyncState state) {
-    switch (state) {
-      case SyncState.disconnected:
-        return '未配对（可配对并同步）';
-      case SyncState.connecting:
-        return '连接中…';
-      case SyncState.connected:
-        return '已配对';
-      case SyncState.syncing:
-        return '同步中…';
-      case SyncState.synced:
-        return '同步完成';
-      case SyncState.error:
-        return '同步失败（点击查看详情）';
-    }
-  }
 }
