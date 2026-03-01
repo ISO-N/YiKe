@@ -1,4 +1,4 @@
-/// 文件用途：底部导航壳层（Home/Settings），承载子路由页面。
+/// 文件用途：底部导航壳层（Home/Calendar/Settings），承载子路由页面。
 /// 作者：Codex
 /// 创建日期：2026-02-25
 library;
@@ -20,9 +20,7 @@ class ShellScaffold extends StatelessWidget {
   final Widget child;
 
   int _locationToIndex(String location) {
-    if (location.startsWith('/settings')) return 4;
-    if (location.startsWith('/tasks')) return 3;
-    if (location.startsWith('/statistics')) return 2;
+    if (location.startsWith('/settings')) return 2;
     if (location.startsWith('/calendar')) return 1;
     return 0;
   }
@@ -36,12 +34,6 @@ class ShellScaffold extends StatelessWidget {
         context.go('/calendar');
         return;
       case 2:
-        context.go('/statistics');
-        return;
-      case 3:
-        context.go('/tasks');
-        return;
-      case 4:
         context.go('/settings');
         return;
     }
@@ -68,16 +60,6 @@ class ShellScaffold extends StatelessWidget {
             icon: Icon(Icons.calendar_month_outlined),
             selectedIcon: Icon(Icons.calendar_month),
             label: AppStrings.calendar,
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.bar_chart_outlined),
-            selectedIcon: Icon(Icons.bar_chart),
-            label: AppStrings.statistics,
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.list_alt_outlined),
-            selectedIcon: Icon(Icons.list_alt),
-            label: AppStrings.tasks,
           ),
           NavigationDestination(
             icon: Icon(Icons.settings_outlined),

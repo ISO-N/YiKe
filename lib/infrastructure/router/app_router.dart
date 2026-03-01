@@ -22,7 +22,6 @@ import '../../presentation/pages/settings/export_page.dart';
 import '../../presentation/pages/settings/backup_page.dart';
 import '../../presentation/pages/settings/settings_page.dart';
 import '../../presentation/pages/settings/sync_settings_page.dart';
-import '../../presentation/pages/statistics/statistics_page.dart';
 import '../../presentation/pages/topics/topic_detail_page.dart';
 import '../../presentation/pages/topics/topics_page.dart';
 import '../../presentation/pages/shell/shell_scaffold.dart';
@@ -48,28 +47,28 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                 const NoTransitionPage(child: CalendarPage()),
           ),
           GoRoute(
-            path: '/statistics',
-            pageBuilder: (context, state) =>
-                const NoTransitionPage(child: StatisticsPage()),
-          ),
-          GoRoute(
-            path: '/tasks',
-            pageBuilder: (context, state) =>
-                const NoTransitionPage(child: TaskHubPage()),
-          ),
-          GoRoute(
-            path: '/settings/help',
-            pageBuilder: (context, state) =>
-                const NoTransitionPage(child: HelpPage()),
-          ),
-          GoRoute(
             path: '/settings',
             pageBuilder: (context, state) =>
                 const NoTransitionPage(child: SettingsPage()),
           ),
         ],
       ),
-      GoRoute(path: '/help', redirect: (context, state) => '/settings/help'),
+      // 帮助页：真实全屏页面，不在 Shell 内（不显示底部导航栏）。
+      GoRoute(
+        path: '/help',
+        pageBuilder: (context, state) => const MaterialPage(child: HelpPage()),
+      ),
+
+      // 旧路由兼容：通过 redirect 迁移到新的导航结构，避免深链/历史入口断裂。
+      GoRoute(path: '/tasks', redirect: (context, state) => '/home?tab=all'),
+      GoRoute(
+        path: '/statistics',
+        redirect: (context, state) => '/calendar?openStats=1',
+      ),
+      GoRoute(
+        path: '/settings/help',
+        redirect: (context, state) => '/help',
+      ),
       GoRoute(
         path: '/tasks/detail/:learningItemId',
         pageBuilder: (context, state) {

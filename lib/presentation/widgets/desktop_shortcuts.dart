@@ -12,6 +12,7 @@ import '../providers/calendar_provider.dart';
 import '../providers/home_tasks_provider.dart';
 import '../providers/settings_provider.dart';
 import '../providers/statistics_provider.dart';
+import '../providers/task_hub_provider.dart';
 
 /// 桌面端快捷键包装器。
 ///
@@ -78,19 +79,22 @@ class DesktopShortcuts extends StatelessWidget {
   void _refreshByRoute(BuildContext context) {
     // 关键逻辑：按当前路由前缀选择刷新目标，避免全局无差别刷新导致重复请求。
     final container = ProviderScope.containerOf(context);
-    final location = GoRouter.of(
-      context,
-    ).routeInformationProvider.value.uri.toString();
+    final uri = GoRouter.of(context).routeInformationProvider.value.uri;
+    final location = uri.toString();
 
     if (location.startsWith('/home')) {
-      container.invalidate(homeTasksProvider);
+      // 兼容首页二级切换：tab=all 时，刷新目标应为任务中心 Provider。
+      final tab = uri.queryParameters['tab'];
+      if (tab == 'all') {
+        container.invalidate(taskHubProvider);
+      } else {
+        container.invalidate(homeTasksProvider);
+      }
       return;
     }
     if (location.startsWith('/calendar')) {
       container.invalidate(calendarProvider);
-      return;
-    }
-    if (location.startsWith('/statistics')) {
+      // 日历页顶部统计栏依赖 statisticsProvider，刷新日历时同步刷新统计口径。
       container.invalidate(statisticsProvider);
       return;
     }
