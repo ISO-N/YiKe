@@ -26,10 +26,13 @@ import '../../providers/notification_permission_provider.dart';
 import '../../providers/search_provider.dart';
 import '../../providers/settings_provider.dart';
 import '../../providers/sync_provider.dart';
+import '../../providers/task_hub_provider.dart';
 import '../../providers/task_filter_provider.dart';
 import '../../widgets/review_progress.dart';
 import '../../widgets/search_bar.dart';
 import '../../widgets/task_filter_bar.dart';
+import '../tasks/widgets/task_hub_timeline_list.dart';
+import 'widgets/home_tab_switcher.dart';
 
 class HomePage extends ConsumerStatefulWidget {
   /// 首页（今日复习）。
@@ -46,17 +49,52 @@ class _HomePageState extends ConsumerState<HomePage> {
   // 防止弹窗在一次会话内重复出现。
   bool _permissionDialogShown = false;
 
+  // tab=all 使用独立滚动控制器，以支持“接近底部自动加载下一页”的游标分页。
+  final ScrollController _allTasksScrollController = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    _allTasksScrollController.addListener(_onAllTasksScroll);
+  }
+
+  @override
+  void dispose() {
+    _allTasksScrollController.removeListener(_onAllTasksScroll);
+    _allTasksScrollController.dispose();
+    super.dispose();
+  }
+
+  void _onAllTasksScroll() {
+    // 游标分页：接近底部时自动加载下一页（仅 tab=all 时会挂载该 controller）。
+    if (!_allTasksScrollController.hasClients) return;
+    final position = _allTasksScrollController.position;
+    if (position.maxScrollExtent <= 0) return;
+    if (position.pixels >= position.maxScrollExtent - 240) {
+      ref.read(taskHubProvider.notifier).loadMore();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final primary = isDark ? AppColors.primaryLight : AppColors.primary;
 
-    final state = ref.watch(homeTasksProvider);
-    final notifier = ref.read(homeTasksProvider.notifier);
-    final homeFilter = ref.watch(homeTaskFilterProvider);
     final settingsState = ref.watch(settingsProvider);
     final permissionAsync = ref.watch(notificationPermissionProvider);
     final syncUi = ref.watch(syncControllerProvider);
+    final uri = GoRouter.of(context).routeInformationProvider.value.uri;
+    final tab = HomeTaskTabX.fromQuery(uri.queryParameters['tab']);
+
+    // 首页默认展示“今日”任务；tab=all 时会额外复用 taskHubProvider 的逻辑展示全量任务。
+    final state = ref.watch(homeTasksProvider);
+    final notifier = ref.read(homeTasksProvider.notifier);
+    final homeFilter = ref.watch(homeTaskFilterProvider);
+
+    final TaskHubState? hubState =
+        tab == HomeTaskTab.all ? ref.watch(taskHubProvider) : null;
+    final TaskHubNotifier? hubNotifier =
+        tab == HomeTaskTab.all ? ref.read(taskHubProvider.notifier) : null;
 
     final statusCounts = TaskStatusCounts(
       all:
@@ -70,9 +108,10 @@ class _HomePageState extends ConsumerState<HomePage> {
     );
 
     // 首页仅对“待复习”提供批量选择能力，已完成/已跳过列表默认禁止批量操作。
-    final effectiveSelectionMode = homeFilter == ReviewTaskFilter.pending
-        ? state.isSelectionMode
-        : false;
+    final effectiveSelectionMode =
+        tab == HomeTaskTab.today && homeFilter == ReviewTaskFilter.pending
+            ? state.isSelectionMode
+            : false;
 
     void showSnack(String text) {
       if (!context.mounted) return;
@@ -136,6 +175,26 @@ class _HomePageState extends ConsumerState<HomePage> {
       });
     }
 
+    Future<void> refresh() {
+      // 按当前 tab 选择刷新目标：
+      // - today：刷新首页（今日/逾期）列表
+      // - all：刷新任务中心时间线
+      if (tab == HomeTaskTab.all) {
+        final n = hubNotifier;
+        return n == null ? Future.value() : n.refresh();
+      }
+      return notifier.load();
+    }
+
+    void changeTab(HomeTaskTab next) {
+      // 路由约定：`/home` 默认即 today；仅在 all 模式写入 query 参数。
+      if (next == HomeTaskTab.all) {
+        context.go('/home?tab=all');
+      } else {
+        context.go('/home');
+      }
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text(AppStrings.todayReview),
@@ -148,41 +207,56 @@ class _HomePageState extends ConsumerState<HomePage> {
               color: _syncColor(context, syncUi.state),
             ),
           ),
-          IconButton(
-            tooltip: state.topicFilterId == null
-                ? '筛选：全部'
-                : '筛选：主题 #${state.topicFilterId}',
-            onPressed: state.isLoading ? null : () => _showTopicFilterSheet(),
-            icon: Icon(
-              Icons.filter_list,
-              color: state.topicFilterId == null
-                  ? null
-                  : Theme.of(context).colorScheme.primary,
+          if (tab == HomeTaskTab.today)
+            IconButton(
+              tooltip:
+                  state.topicFilterId == null
+                      ? '筛选：全部'
+                      : '筛选：主题 #${state.topicFilterId}',
+              onPressed: state.isLoading ? null : () => _showTopicFilterSheet(),
+              icon: Icon(
+                Icons.filter_list,
+                color:
+                    state.topicFilterId == null
+                        ? null
+                        : Theme.of(context).colorScheme.primary,
+              ),
             ),
-          ),
           IconButton(
             tooltip: '刷新',
-            onPressed: state.isLoading ? null : () => notifier.load(),
+            onPressed:
+                (tab == HomeTaskTab.all
+                            ? (hubState?.isLoading ?? false)
+                            : state.isLoading) ==
+                        true
+                    ? null
+                    : () => refresh(),
             icon: const Icon(Icons.refresh),
           ),
-          TextButton(
-            onPressed: state.isLoading || homeFilter != ReviewTaskFilter.pending
-                ? null
-                : () => notifier.toggleSelectionMode(),
-            child: Text(effectiveSelectionMode ? '完成' : '批量'),
-          ),
+          if (tab == HomeTaskTab.today)
+            TextButton(
+              onPressed:
+                      state.isLoading || homeFilter != ReviewTaskFilter.pending
+                          ? null
+                          : () => notifier.toggleSelectionMode(),
+                  child: Text(effectiveSelectionMode ? '完成' : '批量'),
+                ),
         ],
       ),
       body: GradientBackground(
         child: SafeArea(
           child: RefreshIndicator(
-            onRefresh: notifier.load,
+            onRefresh: refresh,
             child: ListView(
+              controller: tab == HomeTaskTab.all ? _allTasksScrollController : null,
               padding: const EdgeInsets.all(AppSpacing.lg),
               children: [
                 LearningSearchBar(
                   query: searchQuery,
-                  enabled: !state.isLoading,
+                  enabled:
+                      tab == HomeTaskTab.all
+                          ? !(hubState?.isLoading ?? false)
+                          : !state.isLoading,
                   onChanged: (v) => searchQueryNotifier.state = v,
                   onClear: () => searchQueryNotifier.state = '',
                 ),
@@ -195,19 +269,34 @@ class _HomePageState extends ConsumerState<HomePage> {
                   ),
                 ],
                 const SizedBox(height: AppSpacing.lg),
-                const _DateHeader(),
+                HomeTabSwitcher(tab: tab, onChanged: changeTab),
                 const SizedBox(height: AppSpacing.lg),
-                const ReviewProgressWidget(),
-                const SizedBox(height: AppSpacing.lg),
-                TaskFilterBar(
-                  filter: homeFilter,
-                  counts: statusCounts,
-                  onChanged: (next) {
-                    ref.read(homeTaskFilterProvider.notifier).state = next;
-                  },
-                ),
-                const SizedBox(height: AppSpacing.lg),
-                if (state.errorMessage != null) ...[
+                if (tab == HomeTaskTab.all) ...[
+                  TaskFilterBar(
+                    filter: hubState!.filter,
+                    counts: hubState!.counts,
+                    onChanged: (next) => hubNotifier!.setFilter(next),
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                  TaskHubTimelineList(
+                    state: hubState!,
+                    notifier: hubNotifier!,
+                  ),
+                  const SizedBox(height: 96),
+                ] else ...[
+                  const _DateHeader(),
+                  const SizedBox(height: AppSpacing.lg),
+                  const ReviewProgressWidget(),
+                  const SizedBox(height: AppSpacing.lg),
+                  TaskFilterBar(
+                    filter: homeFilter,
+                    counts: statusCounts,
+                    onChanged: (next) {
+                      ref.read(homeTaskFilterProvider.notifier).state = next;
+                    },
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                  if (state.errorMessage != null) ...[
                   GlassCard(
                     child: Padding(
                       padding: const EdgeInsets.all(AppSpacing.lg),
@@ -218,15 +307,15 @@ class _HomePageState extends ConsumerState<HomePage> {
                     ),
                   ),
                   const SizedBox(height: AppSpacing.lg),
-                ],
-                if (state.isLoading) ...[
+                  ],
+                  if (state.isLoading) ...[
                   const Center(
                     child: Padding(
                       padding: EdgeInsets.all(24),
                       child: CircularProgressIndicator(),
                     ),
                   ),
-                ] else ...[
+                  ] else ...[
                   if ((homeFilter == ReviewTaskFilter.pending ||
                           homeFilter == ReviewTaskFilter.all) &&
                       state.todayPending.length + state.overduePending.length >
@@ -458,6 +547,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                     ],
                   ],
                   const SizedBox(height: 96),
+                  ],
                 ],
               ],
             ),
