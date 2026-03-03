@@ -12,6 +12,7 @@ import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../providers/settings_provider.dart';
 import '../../providers/topics_provider.dart';
+import '../../widgets/error_card.dart';
 import '../../widgets/glass_card.dart';
 import '../../../domain/usecases/manage_topic_usecase.dart';
 
@@ -160,15 +161,7 @@ class _TopicsPageState extends ConsumerState<TopicsPage> {
           child: Column(
             children: [
               if (state.errorMessage != null) ...[
-                GlassCard(
-                  child: Padding(
-                    padding: const EdgeInsets.all(AppSpacing.md),
-                    child: Text(
-                      '加载失败：${state.errorMessage}',
-                      style: const TextStyle(color: AppColors.error),
-                    ),
-                  ),
-                ),
+                ErrorCard(message: state.errorMessage!),
                 const SizedBox(height: AppSpacing.lg),
               ],
               Expanded(

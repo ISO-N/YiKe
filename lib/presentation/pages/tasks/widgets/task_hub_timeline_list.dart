@@ -12,6 +12,7 @@ import '../../../../core/constants/app_typography.dart';
 import '../../../../core/utils/date_utils.dart';
 import '../../../../domain/entities/review_task.dart';
 import '../../../providers/task_hub_provider.dart';
+import '../../../widgets/error_card.dart';
 import '../../../widgets/glass_card.dart';
 
 /// 任务中心时间线列表（不包含筛选栏与滚动容器）。
@@ -102,15 +103,7 @@ class TaskHubTimelineSliver extends StatelessWidget {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          GlassCard(
-            child: Padding(
-              padding: const EdgeInsets.all(AppSpacing.lg),
-              child: Text(
-                '加载失败：${state.errorMessage}',
-                style: const TextStyle(color: Colors.red),
-              ),
-            ),
-          ),
+          ErrorCard(message: state.errorMessage!),
           const SizedBox(height: AppSpacing.lg),
         ],
       );

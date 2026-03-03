@@ -6,10 +6,10 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../providers/templates_provider.dart';
+import '../../widgets/error_card.dart';
 import '../../widgets/glass_card.dart';
 import 'template_edit_page.dart';
 import 'template_sort_page.dart';
@@ -74,15 +74,7 @@ class TemplatesPage extends ConsumerWidget {
           child: Column(
             children: [
               if (state.errorMessage != null) ...[
-                GlassCard(
-                  child: Padding(
-                    padding: const EdgeInsets.all(AppSpacing.md),
-                    child: Text(
-                      '加载失败：${state.errorMessage}',
-                      style: const TextStyle(color: AppColors.error),
-                    ),
-                  ),
-                ),
+                ErrorCard(message: state.errorMessage!),
                 const SizedBox(height: AppSpacing.lg),
               ],
               Expanded(

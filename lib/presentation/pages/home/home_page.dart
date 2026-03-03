@@ -20,6 +20,7 @@ import '../../../domain/entities/app_settings.dart';
 import '../../../domain/entities/learning_topic.dart';
 import '../../../domain/entities/review_task.dart';
 import '../../widgets/glass_card.dart';
+import '../../widgets/error_card.dart';
 import '../../widgets/gradient_background.dart';
 import '../../widgets/completion_animation.dart';
 import '../../providers/home_tasks_provider.dart';
@@ -97,7 +98,7 @@ class _HomePageState extends ConsumerState<HomePage> {
 
     final settingsState = ref.watch(settingsProvider);
     final permissionAsync = ref.watch(notificationPermissionProvider);
-    final syncUi = ref.watch(syncControllerProvider);
+    final syncUiState = ref.watch(syncControllerProvider.select((s) => s.state));
     final tab = ref.watch(homeTaskTabProvider);
     final blurEnabled = ref.watch(taskListBlurEnabledProvider);
 
@@ -339,11 +340,11 @@ class _HomePageState extends ConsumerState<HomePage> {
         title: const Text(AppStrings.todayReview),
         actions: [
           IconButton(
-            tooltip: _syncTooltip(syncUi.state),
+            tooltip: _syncTooltip(syncUiState),
             onPressed: () => context.push('/settings/sync'),
             icon: Icon(
-              _syncIcon(syncUi.state),
-              color: _syncColor(context, syncUi.state),
+              _syncIcon(syncUiState),
+              color: _syncColor(context, syncUiState),
             ),
           ),
           if (tab == HomeTaskTab.today)
@@ -527,15 +528,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                   ),
                   const SizedBox(height: AppSpacing.lg),
                   if (state.errorMessage != null) ...[
-                    GlassCard(
-                      child: Padding(
-                        padding: const EdgeInsets.all(AppSpacing.lg),
-                        child: Text(
-                          '加载失败：${state.errorMessage}',
-                          style: const TextStyle(color: AppColors.error),
-                        ),
-                      ),
-                    ),
+                    ErrorCard(message: state.errorMessage!),
                     const SizedBox(height: AppSpacing.lg),
                   ],
                   if (state.isLoading) ...[

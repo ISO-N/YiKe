@@ -10,6 +10,7 @@ import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_spacing.dart';
 import '../../core/constants/app_typography.dart';
 import '../providers/statistics_provider.dart';
+import 'error_card.dart';
 import 'glass_card.dart';
 
 /// 统计详情内容（可复用）。
@@ -69,15 +70,7 @@ class StatisticsContent extends StatelessWidget {
         _TagPieChart(distribution: state.tagDistribution),
         if (state.errorMessage != null) ...[
           const SizedBox(height: AppSpacing.lg),
-          GlassCard(
-            child: Padding(
-              padding: const EdgeInsets.all(AppSpacing.lg),
-              child: Text(
-                '加载失败：${state.errorMessage}',
-                style: const TextStyle(color: AppColors.error),
-              ),
-            ),
-          ),
+          ErrorCard(message: state.errorMessage!),
         ],
         if (state.isLoading) ...[
           const SizedBox(height: 24),

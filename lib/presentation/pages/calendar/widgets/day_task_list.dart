@@ -13,6 +13,7 @@ import '../../../../core/utils/date_utils.dart';
 import '../../../../domain/entities/review_task.dart';
 import '../../../providers/calendar_provider.dart';
 import '../../../providers/task_filter_provider.dart';
+import '../../../widgets/error_card.dart';
 import '../../../widgets/glass_card.dart';
 import '../../../widgets/task_filter_bar.dart';
 
@@ -31,7 +32,16 @@ class DayTaskListSheet extends ConsumerWidget {
     final secondaryText =
         Theme.of(context).textTheme.bodySmall?.color ?? AppColors.textSecondary;
 
-    final state = ref.watch(calendarProvider);
+    // 使用 select 精准获取当日任务相关字段，避免月统计数据变化触发重建。
+    final taskState = ref.watch(
+      calendarProvider.select(
+        (s) => (
+          isLoadingTasks: s.isLoadingTasks,
+          errorMessage: s.errorMessage,
+          selectedDayTasks: s.selectedDayTasks,
+        ),
+      ),
+    );
     final notifier = ref.read(calendarProvider.notifier);
 
     final filter = ref.watch(reviewTaskFilterProvider);
@@ -65,7 +75,7 @@ class DayTaskListSheet extends ConsumerWidget {
                   style: AppTypography.bodySecondary(context),
                 ),
                 const SizedBox(height: AppSpacing.lg),
-                if (!state.isLoadingTasks && state.errorMessage == null) ...[
+                if (!taskState.isLoadingTasks && taskState.errorMessage == null) ...[
                   TaskFilterBar(
                     filter: filter,
                     counts: counts,
@@ -75,24 +85,16 @@ class DayTaskListSheet extends ConsumerWidget {
                   ),
                   const SizedBox(height: AppSpacing.lg),
                 ],
-                if (state.isLoadingTasks) ...[
+                if (taskState.isLoadingTasks) ...[
                   const Center(
                     child: Padding(
                       padding: EdgeInsets.all(24),
                       child: CircularProgressIndicator(),
                     ),
                   ),
-                ] else if (state.errorMessage != null) ...[
-                  GlassCard(
-                    child: Padding(
-                      padding: const EdgeInsets.all(AppSpacing.lg),
-                      child: Text(
-                        '加载失败：${state.errorMessage}',
-                        style: const TextStyle(color: AppColors.error),
-                      ),
-                    ),
-                  ),
-                ] else if (state.selectedDayTasks.isEmpty) ...[
+                ] else if (taskState.errorMessage != null) ...[
+                  ErrorCard(message: taskState.errorMessage!),
+                ] else if (taskState.selectedDayTasks.isEmpty) ...[
                   GlassCard(
                     child: Padding(
                       padding: const EdgeInsets.all(AppSpacing.xl),

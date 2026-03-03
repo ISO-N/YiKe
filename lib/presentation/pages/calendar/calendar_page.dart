@@ -14,6 +14,7 @@ import '../../../core/constants/app_typography.dart';
 import '../../../core/utils/date_utils.dart';
 import '../../providers/calendar_provider.dart';
 import '../../widgets/statistics_sheet.dart';
+import '../../widgets/error_card.dart';
 import '../../widgets/glass_card.dart';
 import '../../widgets/gradient_background.dart';
 import 'widgets/calendar_grid.dart';
@@ -104,7 +105,18 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
 
   @override
   Widget build(BuildContext context) {
-    final state = ref.watch(calendarProvider);
+    // 使用 select 精准获取页面所需的字段，避免 selectedDayTasks 变化触发整页重建。
+    final state = ref.watch(
+      calendarProvider.select(
+        (s) => (
+          focusedMonth: s.focusedMonth,
+          selectedDay: s.selectedDay,
+          monthStats: s.monthStats,
+          isLoadingMonth: s.isLoadingMonth,
+          errorMessage: s.errorMessage,
+        ),
+      ),
+    );
     final notifier = ref.read(calendarProvider.notifier);
     final uri = GoRouter.of(context).routeInformationProvider.value.uri;
     final openStats = uri.queryParameters['openStats'] == '1';
@@ -185,15 +197,7 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
               const _LegendCard(),
               if (state.errorMessage != null) ...[
                 const SizedBox(height: AppSpacing.lg),
-                GlassCard(
-                  child: Padding(
-                    padding: const EdgeInsets.all(AppSpacing.lg),
-                    child: Text(
-                      '加载失败：${state.errorMessage}',
-                      style: const TextStyle(color: AppColors.error),
-                    ),
-                  ),
-                ),
+                ErrorCard(message: state.errorMessage!),
               ],
               const SizedBox(height: 96),
             ],
