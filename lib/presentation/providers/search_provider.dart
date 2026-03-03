@@ -37,14 +37,28 @@ final learningSearchResultsProvider =
       final keyword = ref.watch(learningSearchQueryProvider).trim();
       if (keyword.isEmpty) return const <LearningItemSearchResult>[];
 
+      // 性能优化（spec-performance-optimization.md / Phase 2）：可取消防抖。
+      //
+      // 背景：Future.delayed 无法被真正取消，用户快速输入时会产生多次“无意义查询”。
+      // 处理：利用 autoDispose 的 onDispose 标记 + 二次校验关键词，确保旧请求在真正查询前短路返回。
+      var canceled = false;
+      ref.onDispose(() => canceled = true);
+
       // v3.1：防抖，减少数据库查询频率。
       await Future<void>.delayed(const Duration(milliseconds: 300));
+      if (canceled) return const <LearningItemSearchResult>[];
+
+      // 关键逻辑：若关键词已变化，直接短路，避免旧查询占用 DB 资源。
+      final latest = ref.read(learningSearchQueryProvider).trim();
+      if (latest != keyword) return const <LearningItemSearchResult>[];
 
       final dao = ref.read(learningItemDaoProvider);
       final rows = await dao.searchLearningItems(keyword: keyword, limit: 50);
+      if (canceled) return const <LearningItemSearchResult>[];
 
       // v2.6：用于“子任务摘要”展示，避免逐条查询带来的性能问题。
       final itemIds = rows.map((e) => e.id).toList();
+      if (itemIds.isEmpty) return const <LearningItemSearchResult>[];
       final counts = await ref
           .read(learningSubtaskDaoProvider)
           .getCountsByLearningItemIds(itemIds);
