@@ -9,6 +9,7 @@ import 'package:table_calendar/table_calendar.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/utils/date_utils.dart';
 import '../../../../domain/entities/task_day_stats.dart';
+import '../../../widgets/skeleton_loader.dart';
 
 /// 日历网格组件。
 class CalendarGrid extends StatelessWidget {
@@ -27,6 +28,7 @@ class CalendarGrid extends StatelessWidget {
     required this.selectedDay,
     required this.dayStats,
     required this.isLoading,
+    required this.skeletonStrategy,
     required this.onPageChanged,
     required this.onDaySelected,
   });
@@ -35,15 +37,27 @@ class CalendarGrid extends StatelessWidget {
   final DateTime? selectedDay;
   final Map<DateTime, TaskDayStats> dayStats;
   final bool isLoading;
+  final String skeletonStrategy;
   final ValueChanged<DateTime> onPageChanged;
   final ValueChanged<DateTime> onDaySelected;
 
   @override
   Widget build(BuildContext context) {
     if (isLoading) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: 24),
-        child: Center(child: CircularProgressIndicator()),
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        child: SkeletonLoader(
+          isLoading: true,
+          strategy: skeletonStrategy,
+          skeleton: const SkeletonShimmer(child: _CalendarGridSkeleton()),
+          child:
+              skeletonStrategy == 'off'
+                  ? const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 24),
+                      child: Center(child: CircularProgressIndicator()),
+                    )
+                  : const SizedBox.shrink(),
+        ),
       );
     }
 
@@ -166,5 +180,41 @@ class CalendarGrid extends StatelessWidget {
 
     // 无 pending 视为“已处理”（done 或 skipped）。
     return AppColors.success;
+  }
+}
+
+class _CalendarGridSkeleton extends StatelessWidget {
+  const _CalendarGridSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    // 6 行 x 7 列：模拟 TableCalendar 月视图高度。
+    const cell = 34.0;
+    const gap = 8.0;
+    return Column(
+      children: [
+        Row(
+          children: const [
+            SkeletonBox(width: 120, height: 16),
+            Spacer(),
+            SkeletonBox(width: 28, height: 28, radius: 8),
+            SizedBox(width: 10),
+            SkeletonBox(width: 28, height: 28, radius: 8),
+          ],
+        ),
+        const SizedBox(height: 12),
+        for (var r = 0; r < 6; r++) ...[
+          Row(
+            children: [
+              for (var c = 0; c < 7; c++) ...[
+                const SkeletonBox(width: cell, height: cell, radius: 10),
+                if (c != 6) const SizedBox(width: gap),
+              ],
+            ],
+          ),
+          if (r != 5) const SizedBox(height: gap),
+        ],
+      ],
+    );
   }
 }

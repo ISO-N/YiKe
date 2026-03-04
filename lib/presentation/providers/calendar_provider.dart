@@ -149,6 +149,16 @@ class CalendarNotifier extends StateNotifier<CalendarState> {
     }
   }
 
+  /// 撤销任务状态（done/skipped → pending），并刷新当日列表与月份统计。
+  Future<void> undoTaskStatus(int taskId) async {
+    try {
+      await _ref.read(undoTaskStatusUseCaseProvider).execute(taskId);
+      await _refreshAfterStatusChanged();
+    } catch (e) {
+      state = state.copyWith(errorMessage: e.toString());
+    }
+  }
+
   Future<void> _refreshAfterStatusChanged() async {
     final selected = state.selectedDay;
     await loadMonth(state.focusedMonth.year, state.focusedMonth.month);

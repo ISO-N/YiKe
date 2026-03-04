@@ -772,6 +772,69 @@ WHERE li.is_deleted = 0
     );
   }
 
+  /// F7：获取指定日期范围内，每天的任务状态统计（用于趋势图/热力图/统计导出）。
+  ///
+  /// 说明：
+  /// - 口径按 scheduledDate 归因到自然日（以本地 00:00 为日界线）
+  /// - 返回的 key 为当天 00:00:00
+  /// - 仅统计 learning_items.is_deleted=0 的任务
+  ///
+  /// 参数：
+  /// - [start] 起始时间（包含）
+  /// - [end] 结束时间（不包含）
+  /// 返回值：Map（key=当天 00:00，value=TaskDayStats）
+  Future<Map<DateTime, TaskDayStats>> getTaskDayStatsInRange(
+    DateTime start,
+    DateTime end,
+  ) async {
+    const sql = '''
+SELECT rt.scheduled_date AS scheduled_date, rt.status AS status
+FROM review_tasks rt
+INNER JOIN learning_items li ON li.id = rt.learning_item_id
+WHERE li.is_deleted = 0
+  AND rt.scheduled_date >= ?
+  AND rt.scheduled_date < ?
+''';
+    final rows = await db
+        .customSelect(
+          sql,
+          variables: [Variable<DateTime>(start), Variable<DateTime>(end)],
+          readsFrom: {db.reviewTasks, db.learningItems},
+        )
+        .get();
+
+    final map = <DateTime, _DayStatsAccumulator>{};
+    for (final row in rows) {
+      final scheduled = row.read<DateTime>('scheduled_date');
+      final status = row.read<String?>('status') ?? 'pending';
+      final day = YikeDateUtils.atStartOfDay(scheduled);
+      final stats = map.putIfAbsent(day, _DayStatsAccumulator.new);
+      switch (status) {
+        case 'done':
+          stats.done++;
+          break;
+        case 'skipped':
+          stats.skipped++;
+          break;
+        case 'pending':
+        default:
+          stats.pending++;
+          break;
+      }
+    }
+
+    return map.map(
+      (day, stats) => MapEntry(
+        day,
+        TaskDayStats(
+          pendingCount: stats.pending,
+          doneCount: stats.done,
+          skippedCount: stats.skipped,
+        ),
+      ),
+    );
+  }
+
   /// F6：获取指定日期范围的任务列表（join 学习内容）。
   ///
   /// 参数：
@@ -1006,7 +1069,7 @@ WHERE li.is_deleted = 0
     if (c.occurredAt.present) return c;
 
     final scheduled = c.scheduledDate.value;
-    final status = c.status.present ? (c.status.value ?? 'pending') : 'pending';
+    final status = c.status.present ? c.status.value : 'pending';
     final completed = c.completedAt.present ? c.completedAt.value : null;
     final skipped = c.skippedAt.present ? c.skippedAt.value : null;
 

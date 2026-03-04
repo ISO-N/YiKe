@@ -1,6 +1,7 @@
-/// 文件用途：主题模式状态管理 Provider（深色/浅色/跟随系统）。
+/// 文件用途：主题设置状态管理 Provider（主题模式/主题色/AMOLED）。
 /// 作者：Codex
 /// 创建日期：2026-02-26
+/// 最后更新：2026-03-04（支持自定义主题色与 AMOLED 深色模式）
 library;
 
 import 'package:flutter/material.dart';
@@ -45,54 +46,73 @@ enum AppThemeMode {
   }
 }
 
-/// 主题模式 Provider。
-final themeModeProvider =
-    StateNotifierProvider<ThemeModeNotifier, AppThemeMode>((ref) {
+/// 主题设置 Provider（mode/seedColor/amoled）。
+final themeSettingsProvider =
+    StateNotifierProvider<ThemeSettingsNotifier, ThemeSettingsEntity>((ref) {
       final repository = ref.read(themeSettingsRepositoryProvider);
-      return ThemeModeNotifier(repository);
+      return ThemeSettingsNotifier(repository);
     });
 
-/// 主题模式状态管理器。
+/// 主题模式 Provider（仅暴露产品层枚举，便于 UI 直接使用 label）。
+final themeModeProvider = Provider<AppThemeMode>((ref) {
+  final settings = ref.watch(themeSettingsProvider);
+  return AppThemeMode.fromValue(settings.mode);
+});
+
+/// 主题设置状态管理器。
 ///
 /// 负责：
 /// 1. 启动时从 Repository 加载用户偏好
-/// 2. 提供切换主题的方法
-/// 3. 持久化用户选择到数据库
-/// 4. "跟随系统"模式下，Flutter 会自动响应 platformBrightness 变化
-class ThemeModeNotifier extends StateNotifier<AppThemeMode> {
-  ThemeModeNotifier(this._repository) : super(AppThemeMode.system) {
-    _loadThemeMode();
+/// 2. 提供切换主题模式/主题色/AMOLED 的方法
+/// 3. 持久化用户选择到数据库（settings 表）
+class ThemeSettingsNotifier extends StateNotifier<ThemeSettingsEntity> {
+  ThemeSettingsNotifier(this._repository) : super(ThemeSettingsEntity.defaults()) {
+    _load();
   }
 
   final ThemeSettingsRepository _repository;
 
-  /// 从 Repository 加载主题模式。
+  /// 从 Repository 加载主题设置。
   ///
   /// 返回值：Future（无返回值）。
   /// 异常：数据库异常时使用默认主题。
-  Future<void> _loadThemeMode() async {
+  Future<void> _load() async {
     try {
       final settings = await _repository.getThemeSettings();
-      state = AppThemeMode.fromValue(settings.mode);
+      state = settings;
     } catch (_) {
-      state = AppThemeMode.system;
+      state = ThemeSettingsEntity.defaults();
+    }
+  }
+
+  /// 保存主题设置（整体覆盖）。
+  ///
+  /// 参数：
+  /// - [settings] 新设置
+  /// 返回值：Future（无返回值）。
+  /// 异常：数据库写入失败时只更新内存状态。
+  Future<void> save(ThemeSettingsEntity settings) async {
+    state = settings;
+    try {
+      await _repository.saveThemeSettings(settings);
+    } catch (_) {
+      // 写入失败时只更新内存状态；下次启动会回退到持久化值或默认值。
     }
   }
 
   /// 切换主题模式。
-  ///
-  /// 参数：
-  /// - [mode] 新的主题模式
-  /// 返回值：Future（无返回值）。
-  /// 异常：数据库写入失败时只更新内存状态。
   Future<void> setThemeMode(AppThemeMode mode) async {
-    state = mode;
-    try {
-      await _repository.saveThemeSettings(
-        ThemeSettingsEntity(mode: mode.value),
-      );
-    } catch (_) {
-      // 数据库写入失败时只更新内存状态，下次启动会回退到持久化值或默认值。
-    }
+    await save(state.copyWith(mode: mode.value));
+  }
+
+  /// 设置主题种子色（HEX：#RRGGBB）。
+  Future<void> setSeedColorHex(String hex) async {
+    await save(state.copyWith(seedColorHex: hex));
+  }
+
+  /// 设置 AMOLED 深色模式开关。
+  Future<void> setAmoled(bool enabled) async {
+    await save(state.copyWith(amoled: enabled));
   }
 }
+

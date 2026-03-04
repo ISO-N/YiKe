@@ -10,6 +10,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'core/utils/color_utils.dart';
 import 'core/theme/app_theme.dart';
 import 'infrastructure/router/app_router.dart';
 import 'presentation/providers/theme_provider.dart';
@@ -28,6 +29,9 @@ class YiKeApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(appRouterProvider);
     final themeMode = ref.watch(themeModeProvider);
+    final themeSettings = ref.watch(themeSettingsProvider);
+    final seedColor =
+        ColorUtils.tryParseHex(themeSettings.seedColorHex) ?? const Color(0xFF2196F3);
 
     // 关键逻辑：尊重系统“减少动态效果”设置；若系统要求关闭动画则禁用主题切换动画。
     final features =
@@ -39,8 +43,11 @@ class YiKeApp extends ConsumerWidget {
         : const Duration(milliseconds: 300);
     return MaterialApp.router(
       title: '忆刻',
-      theme: AppTheme.light(),
-      darkTheme: AppTheme.dark(),
+      theme: AppTheme.light(seedColor: seedColor),
+      darkTheme: AppTheme.dark(
+        seedColor: seedColor,
+        amoled: themeSettings.amoled,
+      ),
       themeMode: themeMode.toThemeMode(),
       themeAnimationDuration: themeAnimationDuration,
       themeAnimationCurve: Curves.easeInOut,
@@ -52,6 +59,10 @@ class YiKeApp extends ConsumerWidget {
         final isWidgetTest = bindingName.contains('TestWidgetsFlutterBinding');
         if (isWidgetTest) return content;
 
+        // 同步启动器：在应用根部接入同步/监听（避免在各页面重复绑定）。
+        //
+        // 说明：UX 启动器（预加载/通知点击导航/启动通知检查）在后续交互与通知模块中接入，
+        // 这里保持 builder 层的职责单一，便于拆分提交与回归验证。
         final bootstrapped = SyncBootstrap(child: content);
         if (kIsWeb) return content;
 
@@ -74,7 +85,14 @@ class YiKeApp extends ConsumerWidget {
           );
         }
 
-        // 其他平台保持默认行为（避免不同桌面平台标题栏风格差异带来的适配风险）。
+        // 交互优化（spec-user-experience-improvements.md 3.4.x）：
+        // - macOS 使用 Command 修饰键（DesktopShortcuts 内部自适配）
+        // - Windows 之外的桌面平台不启用自定义标题栏，但可以启用快捷键能力
+        if (Platform.isMacOS || Platform.isLinux) {
+          return DesktopShortcuts(child: bootstrapped);
+        }
+
+        // 其他平台保持默认行为（避免移动端外接键盘导致“全局抢焦点”等歧义）。
         return bootstrapped;
       },
       debugShowCheckedModeBanner: false,

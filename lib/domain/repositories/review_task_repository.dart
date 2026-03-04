@@ -61,6 +61,22 @@ abstract class ReviewTaskRepository {
   /// 返回值：以“当天 00:00:00”为 key 的统计 Map。
   Future<Map<DateTime, TaskDayStats>> getMonthlyTaskStats(int year, int month);
 
+  /// F7：获取指定日期范围内，每天的任务状态统计（用于趋势图/热力图/统计导出）。
+  ///
+  /// 口径：
+  /// - 按 scheduledDate 归因到自然日（以本地 00:00 为日界线）
+  /// - 统计 pending/done/skipped 三种状态数量
+  ///
+  /// 参数：
+  /// - [start] 起始时间（包含）
+  /// - [end] 结束时间（不包含）
+  /// 返回值：以“当天 00:00:00”为 key 的统计 Map。
+  /// 异常：数据库查询失败时可能抛出异常。
+  Future<Map<DateTime, TaskDayStats>> getTaskDayStatsInRange(
+    DateTime start,
+    DateTime end,
+  );
+
   /// F6：获取指定日期范围的任务列表（含学习内容信息）。
   ///
   /// 参数：

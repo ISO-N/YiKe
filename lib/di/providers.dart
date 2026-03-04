@@ -21,6 +21,7 @@ import '../data/repositories/learning_item_repository_impl.dart';
 import '../data/repositories/learning_subtask_repository_impl.dart';
 import '../data/repositories/learning_template_repository_impl.dart';
 import '../data/repositories/learning_topic_repository_impl.dart';
+import '../data/repositories/goal_settings_repository_impl.dart';
 import '../data/repositories/review_task_repository_impl.dart';
 import '../data/repositories/settings_repository_impl.dart';
 import '../data/repositories/task_structure_migration_repository_impl.dart';
@@ -32,6 +33,7 @@ import '../domain/repositories/learning_item_repository.dart';
 import '../domain/repositories/learning_subtask_repository.dart';
 import '../domain/repositories/learning_template_repository.dart';
 import '../domain/repositories/learning_topic_repository.dart';
+import '../domain/repositories/goal_settings_repository.dart';
 import '../domain/repositories/review_task_repository.dart';
 import '../domain/repositories/settings_repository.dart';
 import '../domain/repositories/task_structure_migration_repository.dart';
@@ -47,8 +49,10 @@ import '../infrastructure/sync/device_identity_service.dart';
 import '../domain/usecases/complete_review_task_usecase.dart';
 import '../domain/usecases/create_learning_item_usecase.dart';
 import '../domain/usecases/export_data_usecase.dart';
+import '../domain/usecases/export_statistics_csv_usecase.dart';
 import '../domain/usecases/get_calendar_tasks_usecase.dart';
 import '../domain/usecases/get_home_tasks_usecase.dart';
+import '../domain/usecases/get_statistics_insights_usecase.dart';
 import '../domain/usecases/get_statistics_usecase.dart';
 import '../domain/usecases/get_tasks_by_time_usecase.dart';
 import '../domain/usecases/get_today_completed_tasks_usecase.dart';
@@ -73,6 +77,7 @@ import '../domain/usecases/adjust_review_date_usecase.dart';
 import '../domain/usecases/add_review_round_usecase.dart';
 import '../infrastructure/ocr/ocr_service.dart' as infra_ocr;
 import '../infrastructure/speech/speech_service.dart';
+import '../infrastructure/notification/notification_dedup_store.dart';
 
 /// 数据库 Provider（需要在启动时 override 注入真实实例）。
 final appDatabaseProvider = Provider<AppDatabase>((ref) {
@@ -147,6 +152,14 @@ final backupStorageProvider = Provider<BackupStorage>((ref) {
   return const BackupStorage();
 });
 
+/// 通知去重存储 Provider（本机，不参与同步）。
+final notificationDedupStoreProvider = Provider<NotificationDedupStore>((ref) {
+  return NotificationDedupStore(
+    dao: ref.read(settingsDaoProvider),
+    secureStorageService: ref.read(secureStorageServiceProvider),
+  );
+});
+
 /// 设备身份服务 Provider（用于同步/配对）。
 final deviceIdentityServiceProvider = Provider<DeviceIdentityService>((ref) {
   return DeviceIdentityService(
@@ -206,6 +219,15 @@ final reviewTaskRepositoryProvider = Provider<ReviewTaskRepository>((ref) {
 
 final settingsRepositoryProvider = Provider<SettingsRepository>((ref) {
   return SettingsRepositoryImpl(
+    dao: ref.read(settingsDaoProvider),
+    secureStorageService: ref.read(secureStorageServiceProvider),
+    syncLogWriter: ref.read(syncLogWriterProvider),
+  );
+});
+
+/// 学习目标设置仓储 Provider（参与 settings_bundle 同步）。
+final goalSettingsRepositoryProvider = Provider<GoalSettingsRepository>((ref) {
+  return GoalSettingsRepositoryImpl(
     dao: ref.read(settingsDaoProvider),
     secureStorageService: ref.read(secureStorageServiceProvider),
     syncLogWriter: ref.read(syncLogWriterProvider),
@@ -434,6 +456,14 @@ final getStatisticsUseCaseProvider = Provider<GetStatisticsUseCase>((ref) {
   );
 });
 
+/// v1.4.0：统计增强（趋势图/热力图/对比分析）UseCase Provider。
+final getStatisticsInsightsUseCaseProvider =
+    Provider<GetStatisticsInsightsUseCase>((ref) {
+      return GetStatisticsInsightsUseCase(
+        reviewTaskRepository: ref.read(reviewTaskRepositoryProvider),
+      );
+    });
+
 final exportDataUseCaseProvider = Provider<ExportDataUseCase>((ref) {
   return ExportDataUseCase(
     learningItemRepository: ref.read(learningItemRepositoryProvider),
@@ -441,6 +471,14 @@ final exportDataUseCaseProvider = Provider<ExportDataUseCase>((ref) {
     reviewTaskRepository: ref.read(reviewTaskRepositoryProvider),
   );
 });
+
+/// v1.4.0：统计数据导出（按天聚合 CSV）UseCase Provider。
+final exportStatisticsCsvUseCaseProvider =
+    Provider<ExportStatisticsCsvUseCase>((ref) {
+      return ExportStatisticsCsvUseCase(
+        reviewTaskRepository: ref.read(reviewTaskRepositoryProvider),
+      );
+    });
 
 /// v1.5：备份与恢复 UseCase Providers
 final exportBackupUseCaseProvider = Provider<ExportBackupUseCase>((ref) {

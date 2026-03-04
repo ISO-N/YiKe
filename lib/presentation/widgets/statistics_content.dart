@@ -5,13 +5,22 @@ library;
 
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_spacing.dart';
 import '../../core/constants/app_typography.dart';
+import '../providers/statistics_insights_provider.dart';
 import '../providers/statistics_provider.dart';
+import '../../domain/entities/statistics_insights.dart';
+import '../providers/ui_preferences_provider.dart';
 import 'error_card.dart';
 import 'glass_card.dart';
+import 'goal_progress_card.dart';
+import 'skeleton_loader.dart';
+import 'statistics_heatmap.dart';
+import 'statistics_trend_chart.dart';
+import 'yike_refresh_indicator.dart';
 
 /// 统计详情内容（可复用）。
 ///
@@ -43,6 +52,9 @@ class StatisticsContent extends StatelessWidget {
     final list = ListView(
       padding: padding,
       children: [
+        // 统计增强（P0）：目标进度（展示在统计详情顶部）。
+        const GoalProgressCard(),
+        const SizedBox(height: AppSpacing.lg),
         _StreakCard(days: state.consecutiveCompletedDays),
         const SizedBox(height: AppSpacing.lg),
         Row(
@@ -67,6 +79,39 @@ class StatisticsContent extends StatelessWidget {
           ],
         ),
         const SizedBox(height: AppSpacing.lg),
+        // 统计增强（P0）：趋势图 + 对比分析。
+        Consumer(
+          builder: (context, ref, _) {
+            final async = ref.watch(statisticsInsightsProvider);
+            final skeletonStrategy = ref.watch(skeletonStrategyProvider);
+            return async.when(
+              loading: () => SkeletonLoader(
+                isLoading: true,
+                strategy: skeletonStrategy,
+                skeleton: const SkeletonShimmer(child: _StatisticsInsightsSkeleton()),
+                child:
+                    skeletonStrategy == 'off'
+                        ? const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 12),
+                            child: Center(child: CircularProgressIndicator()),
+                          )
+                        : const SizedBox.shrink(),
+              ),
+              error: (e, _) => ErrorCard(message: '趋势数据加载失败：$e'),
+              data: (insights) => Column(
+                children: [
+                  StatisticsTrendChart(insights: insights),
+                  const SizedBox(height: AppSpacing.lg),
+                  _WeekCompareCard(compare: insights.weekCompare),
+                ],
+              ),
+            );
+          },
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        // 统计增强（P0）：年度热力图。
+        StatisticsHeatmap(),
+        const SizedBox(height: AppSpacing.lg),
         _TagPieChart(distribution: state.tagDistribution),
         if (state.errorMessage != null) ...[
           const SizedBox(height: AppSpacing.lg),
@@ -81,7 +126,16 @@ class StatisticsContent extends StatelessWidget {
     );
 
     if (onRefresh == null) return list;
-    return RefreshIndicator(onRefresh: onRefresh!, child: list);
+    return Consumer(
+      builder: (context, ref, _) {
+        final hapticEnabled = ref.watch(hapticFeedbackEnabledProvider);
+        return YiKeRefreshIndicator(
+          hapticEnabledByUser: hapticEnabled,
+          onRefresh: onRefresh!,
+          child: list,
+        );
+      },
+    );
   }
 }
 
@@ -171,6 +225,123 @@ class _CompletionCard extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               '${percent.toStringAsFixed(0)}%',
+              style: AppTypography.bodySecondary(context),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _StatisticsInsightsSkeleton extends StatelessWidget {
+  const _StatisticsInsightsSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: const [
+        GlassCard(
+          child: Padding(
+            padding: EdgeInsets.all(AppSpacing.lg),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SkeletonBox(width: 120, height: 18),
+                SizedBox(height: AppSpacing.md),
+                SkeletonBox(width: double.infinity, height: 220, radius: 14),
+              ],
+            ),
+          ),
+        ),
+        SizedBox(height: AppSpacing.lg),
+        GlassCard(
+          child: Padding(
+            padding: EdgeInsets.all(AppSpacing.lg),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SkeletonBox(width: 120, height: 18),
+                SizedBox(height: AppSpacing.md),
+                SkeletonBox(width: 240, height: 12),
+                SizedBox(height: 10),
+                SkeletonBox(width: 180, height: 22),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _WeekCompareCard extends StatelessWidget {
+  const _WeekCompareCard({required this.compare});
+
+  final WeekCompareEntity compare;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final upColor = AppColors.success;
+    final downColor = AppColors.error;
+
+    final hasCompare = compare.hasCompareData;
+    final diff = compare.diffCompleted;
+    final diffRate = compare.diffRatePercent;
+
+    final isUp = diff > 0 || (diff == 0 && diffRate > 0);
+    final isDown = diff < 0 || (diff == 0 && diffRate < 0);
+    final color = isUp ? upColor : (isDown ? downColor : AppColors.textSecondary);
+
+    final arrow = isUp
+        ? Icons.trending_up
+        : (isDown ? Icons.trending_down : Icons.trending_flat);
+
+    final subtitle = compare.isInProgress
+        ? '进行中 ${compare.daysInPeriod}/7 天（对比上周同期）'
+        : '已结束（对比上周）';
+
+    String headline;
+    if (!hasCompare) {
+      headline = '无对比数据';
+    } else {
+      final sign = diff > 0 ? '+' : '';
+      headline =
+          '$sign$diff  ·  ${diffRate >= 0 ? '+' : ''}${diffRate.toStringAsFixed(0)}%';
+    }
+
+    return GlassCard(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(child: Text('本周对比', style: AppTypography.h2(context))),
+                Icon(arrow, color: color),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Text(subtitle, style: AppTypography.bodySecondary(context)),
+            const SizedBox(height: AppSpacing.md),
+            Text(
+              headline,
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: hasCompare
+                    ? color
+                    : (isDark
+                        ? AppColors.darkTextSecondary
+                        : AppColors.textSecondary),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              '本周：${compare.thisCompleted}/${compare.thisTotal}（${compare.thisRatePercent.toStringAsFixed(0)}%）\n'
+              '上周：${compare.lastCompleted}/${compare.lastTotal}（${compare.lastRatePercent.toStringAsFixed(0)}%）',
               style: AppTypography.bodySecondary(context),
             ),
           ],

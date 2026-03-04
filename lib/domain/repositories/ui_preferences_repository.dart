@@ -22,5 +22,32 @@ abstract class UiPreferencesRepository {
   /// 返回值：Future（无返回值）。
   /// 异常：写入失败时可能抛出异常。
   Future<void> setTaskListBlurEnabled(bool enabled);
+
+  /// 读取“撤销 Snackbar”开关。
+  ///
+  /// 返回值：是否启用撤销提示（默认 true）。
+  /// 异常：读取失败时应返回默认值（由实现兜底）。
+  Future<bool> getUndoSnackbarEnabled();
+
+  /// 保存“撤销 Snackbar”开关。
+  Future<void> setUndoSnackbarEnabled(bool enabled);
+
+  /// 读取“触觉反馈”开关。
+  ///
+  /// 返回值：是否启用触觉反馈（默认 true）。
+  /// 异常：读取失败时应返回默认值（由实现兜底）。
+  Future<bool> getHapticFeedbackEnabled();
+
+  /// 保存“触觉反馈”开关。
+  Future<void> setHapticFeedbackEnabled(bool enabled);
+
+  /// 读取“骨架屏策略”。
+  ///
+  /// 返回值：策略字符串（"auto" | "on" | "off"，默认 "auto"）。
+  /// 异常：读取失败时应返回默认值（由实现兜底）。
+  Future<String> getSkeletonStrategy();
+
+  /// 保存“骨架屏策略”。
+  Future<void> setSkeletonStrategy(String strategy);
 }
 

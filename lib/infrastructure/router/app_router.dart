@@ -20,6 +20,8 @@ import '../../presentation/pages/tasks/task_hub_page.dart';
 import '../../presentation/pages/tasks/task_detail_sheet.dart';
 import '../../presentation/pages/settings/export_page.dart';
 import '../../presentation/pages/settings/backup_page.dart';
+import '../../presentation/pages/settings/goal_settings_page.dart';
+import '../../presentation/pages/settings/theme_settings_page.dart';
 import '../../presentation/pages/settings/settings_page.dart';
 import '../../presentation/pages/settings/sync_settings_page.dart';
 import '../../presentation/pages/topics/topic_detail_page.dart';
@@ -146,6 +148,18 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             fullscreenDialog: true,
             child: ExportPage(),
           );
+        },
+      ),
+      GoRoute(
+        path: '/settings/goals',
+        pageBuilder: (context, state) {
+          return const MaterialPage(child: GoalSettingsPage());
+        },
+      ),
+      GoRoute(
+        path: '/settings/theme',
+        pageBuilder: (context, state) {
+          return const MaterialPage(child: ThemeSettingsPage());
         },
       ),
       GoRoute(

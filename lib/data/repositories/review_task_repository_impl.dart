@@ -288,6 +288,14 @@ class ReviewTaskRepositoryImpl implements ReviewTaskRepository {
   }
 
   @override
+  Future<Map<DateTime, TaskDayStats>> getTaskDayStatsInRange(
+    DateTime start,
+    DateTime end,
+  ) {
+    return dao.getTaskDayStatsInRange(start, end);
+  }
+
+  @override
   Future<List<ReviewTaskViewEntity>> getTasksInRange(
     DateTime start,
     DateTime end,

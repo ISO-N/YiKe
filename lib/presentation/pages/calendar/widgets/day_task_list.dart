@@ -10,9 +10,11 @@ import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/constants/app_typography.dart';
 import '../../../../core/utils/date_utils.dart';
+import '../../../../core/utils/haptic_utils.dart';
 import '../../../../domain/entities/review_task.dart';
 import '../../../providers/calendar_provider.dart';
 import '../../../providers/task_filter_provider.dart';
+import '../../../providers/ui_preferences_provider.dart';
 import '../../../widgets/error_card.dart';
 import '../../../widgets/glass_card.dart';
 import '../../../widgets/task_filter_bar.dart';
@@ -43,6 +45,38 @@ class DayTaskListSheet extends ConsumerWidget {
       ),
     );
     final notifier = ref.read(calendarProvider.notifier);
+    final undoSnackbarEnabled = ref.watch(undoSnackbarEnabledProvider);
+    final hapticEnabled = ref.watch(hapticFeedbackEnabledProvider);
+
+    void showSnack(String text) {
+      if (!context.mounted) return;
+      final messenger = ScaffoldMessenger.of(context);
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(SnackBar(content: Text(text)));
+    }
+
+    void showUndoSnack({required String text, required int taskId}) {
+      if (!context.mounted) return;
+      final messenger = ScaffoldMessenger.of(context);
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(text),
+          duration: const Duration(seconds: 5),
+          action: SnackBarAction(
+            label: '撤销',
+            onPressed: () async {
+              try {
+                await notifier.undoTaskStatus(taskId);
+                showSnack('已撤销');
+              } catch (_) {
+                showSnack('撤销失败，请重试');
+              }
+            },
+          ),
+        ),
+      );
+    }
 
     final filter = ref.watch(reviewTaskFilterProvider);
     final counts = ref.watch(selectedDayTaskCountsProvider);
@@ -142,9 +176,18 @@ class DayTaskListSheet extends ConsumerWidget {
                           ? () async {
                               await notifier.completeTask(task.taskId);
                               if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('已完成')),
+                                HapticUtils.lightImpact(
+                                  context,
+                                  enabledByUser: hapticEnabled,
                                 );
+                                if (undoSnackbarEnabled) {
+                                  showUndoSnack(
+                                    text: '任务已完成',
+                                    taskId: task.taskId,
+                                  );
+                                } else {
+                                  showSnack('任务已完成');
+                                }
                               }
                             }
                           : null,
@@ -152,9 +195,18 @@ class DayTaskListSheet extends ConsumerWidget {
                           ? () async {
                               await notifier.skipTask(task.taskId);
                               if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('已跳过')),
+                                HapticUtils.lightImpact(
+                                  context,
+                                  enabledByUser: hapticEnabled,
                                 );
+                                if (undoSnackbarEnabled) {
+                                  showUndoSnack(
+                                    text: '任务已跳过',
+                                    taskId: task.taskId,
+                                  );
+                                } else {
+                                  showSnack('任务已跳过');
+                                }
                               }
                             }
                           : null,

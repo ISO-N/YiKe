@@ -48,3 +48,93 @@ final taskListBlurEnabledProvider = StateNotifierProvider<TaskListBlurNotifier, 
   return TaskListBlurNotifier(repo);
 });
 
+/// 撤销 Snackbar 开关 Notifier（默认开启）。
+class UndoSnackbarNotifier extends StateNotifier<bool> {
+  /// 构造函数。
+  ///
+  /// 参数：
+  /// - [repository] UI 偏好仓储
+  UndoSnackbarNotifier(this._repository) : super(true) {
+    _load();
+  }
+
+  final UiPreferencesRepository _repository;
+
+  Future<void> _load() async {
+    state = await _repository.getUndoSnackbarEnabled();
+  }
+
+  Future<void> setEnabled(bool enabled) async {
+    if (state == enabled) return;
+    state = enabled;
+    await _repository.setUndoSnackbarEnabled(enabled);
+  }
+}
+
+/// 撤销 Snackbar 开关 Provider。
+final undoSnackbarEnabledProvider =
+    StateNotifierProvider<UndoSnackbarNotifier, bool>((ref) {
+      final repo = ref.read(uiPreferencesRepositoryProvider);
+      return UndoSnackbarNotifier(repo);
+    });
+
+/// 触觉反馈开关 Notifier（默认开启）。
+class HapticFeedbackNotifier extends StateNotifier<bool> {
+  /// 构造函数。
+  ///
+  /// 参数：
+  /// - [repository] UI 偏好仓储
+  HapticFeedbackNotifier(this._repository) : super(true) {
+    _load();
+  }
+
+  final UiPreferencesRepository _repository;
+
+  Future<void> _load() async {
+    state = await _repository.getHapticFeedbackEnabled();
+  }
+
+  Future<void> setEnabled(bool enabled) async {
+    if (state == enabled) return;
+    state = enabled;
+    await _repository.setHapticFeedbackEnabled(enabled);
+  }
+}
+
+/// 触觉反馈开关 Provider。
+final hapticFeedbackEnabledProvider =
+    StateNotifierProvider<HapticFeedbackNotifier, bool>((ref) {
+      final repo = ref.read(uiPreferencesRepositoryProvider);
+      return HapticFeedbackNotifier(repo);
+    });
+
+/// 骨架屏策略 Notifier（"auto" | "on" | "off"）。
+class SkeletonStrategyNotifier extends StateNotifier<String> {
+  /// 构造函数。
+  ///
+  /// 参数：
+  /// - [repository] UI 偏好仓储
+  SkeletonStrategyNotifier(this._repository) : super('auto') {
+    _load();
+  }
+
+  final UiPreferencesRepository _repository;
+
+  Future<void> _load() async {
+    state = await _repository.getSkeletonStrategy();
+  }
+
+  Future<void> setStrategy(String strategy) async {
+    if (state == strategy) return;
+    state = strategy;
+    await _repository.setSkeletonStrategy(strategy);
+  }
+}
+
+/// 骨架屏策略 Provider。
+final skeletonStrategyProvider =
+    StateNotifierProvider<SkeletonStrategyNotifier, String>((ref) {
+      final repo = ref.read(uiPreferencesRepositoryProvider);
+      return SkeletonStrategyNotifier(repo);
+    });
+

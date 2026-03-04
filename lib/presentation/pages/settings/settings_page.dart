@@ -40,9 +40,41 @@ class SettingsPage extends ConsumerWidget {
     final syncUi = ref.watch(syncControllerProvider);
     final taskListBlurEnabled = ref.watch(taskListBlurEnabledProvider);
     final taskListBlurNotifier = ref.read(taskListBlurEnabledProvider.notifier);
+    final undoSnackbarEnabled = ref.watch(undoSnackbarEnabledProvider);
+    final undoSnackbarNotifier = ref.read(
+      undoSnackbarEnabledProvider.notifier,
+    );
+    final hapticEnabled = ref.watch(hapticFeedbackEnabledProvider);
+    final hapticNotifier = ref.read(hapticFeedbackEnabledProvider.notifier);
+    final skeletonStrategy = ref.watch(skeletonStrategyProvider);
+    final skeletonStrategyNotifier = ref.read(
+      skeletonStrategyProvider.notifier,
+    );
 
     Future<void> save(AppSettingsEntity next) async {
       await notifier.save(next);
+
+      // v1.4.0：精准定时通知（zonedSchedule）。
+      //
+      // 说明：
+      // - 只要用户在设置页保存了提醒时间/开关，就尝试重新调度一次，确保“修改后立即生效”
+      // - 调度失败不应影响设置保存主流程（例如平台不支持/权限被拒绝）
+      try {
+        await NotificationService.instance.initialize();
+        if (next.notificationsEnabled) {
+          final t = TimeUtils.parseHHmm(next.reminderTime);
+          await NotificationService.instance.scheduleDailyReviewReminder(
+            id: 1,
+            time: t,
+            title: '今日复习提醒',
+            body: '打开忆刻开始复习吧',
+            payloadRoute: '/home',
+          );
+        } else {
+          await NotificationService.instance.cancelAll();
+        }
+      } catch (_) {}
+
       if (context.mounted) {
         ScaffoldMessenger.of(
           context,
@@ -63,6 +95,57 @@ class SettingsPage extends ConsumerWidget {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('已更新任务列表外观设置')),
+          );
+        }
+      } catch (_) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('保存失败，请重试')),
+          );
+        }
+      }
+    }
+
+    Future<void> saveUndoSnackbarEnabled(bool enabled) async {
+      try {
+        await undoSnackbarNotifier.setEnabled(enabled);
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('已更新撤销提示设置')),
+          );
+        }
+      } catch (_) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('保存失败，请重试')),
+          );
+        }
+      }
+    }
+
+    Future<void> saveHapticEnabled(bool enabled) async {
+      try {
+        await hapticNotifier.setEnabled(enabled);
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('已更新触觉反馈设置')),
+          );
+        }
+      } catch (_) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('保存失败，请重试')),
+          );
+        }
+      }
+    }
+
+    Future<void> saveSkeletonStrategy(String next) async {
+      try {
+        await skeletonStrategyNotifier.setStrategy(next);
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('已更新骨架屏策略')),
           );
         }
       } catch (_) {
@@ -108,10 +191,11 @@ class SettingsPage extends ConsumerWidget {
         ],
       ),
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.lg),
-          child: ListView(
-            children: [
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            child: ListView(
+              key: const PageStorageKey('settings_scroll'),
+              children: [
               GlassCard(
                 child: Padding(
                   padding: const EdgeInsets.all(AppSpacing.lg),
@@ -121,7 +205,7 @@ class SettingsPage extends ConsumerWidget {
                       Text('通知与提醒', style: AppTypography.h2(context)),
                       const SizedBox(height: AppSpacing.sm),
                       Text(
-                        '使用后台定时检查方式提醒，时间精度约 ±30 分钟。',
+                        '移动端优先使用精准定时提醒（系统可能允许少量延迟）；桌面端会按平台能力降级。',
                         style: AppTypography.bodySecondary(context),
                       ),
                     ],
@@ -186,6 +270,48 @@ class SettingsPage extends ConsumerWidget {
                                 state.settings.copyWith(doNotDisturbEnd: v),
                               ),
                             ),
+                    ),
+                    const Divider(height: 1),
+                    SwitchListTile(
+                      title: const Text('任务逾期通知'),
+                      subtitle: const Text('启动时检测逾期超过 3 天的任务并提醒'),
+                      value: state.settings.overdueNotificationEnabled,
+                      onChanged:
+                          state.isLoading
+                              ? null
+                              : (v) => save(
+                                state.settings.copyWith(
+                                  overdueNotificationEnabled: v,
+                                ),
+                              ),
+                    ),
+                    const Divider(height: 1),
+                    SwitchListTile(
+                      title: const Text('目标达成通知'),
+                      subtitle: const Text('达成学习目标时提醒，并支持跳转到统计页查看详情'),
+                      value: state.settings.goalNotificationEnabled,
+                      onChanged:
+                          state.isLoading
+                              ? null
+                              : (v) => save(
+                                state.settings.copyWith(
+                                  goalNotificationEnabled: v,
+                                ),
+                              ),
+                    ),
+                    const Divider(height: 1),
+                    SwitchListTile(
+                      title: const Text('打卡里程碑通知'),
+                      subtitle: const Text('连续打卡 7/30/100 天时提醒'),
+                      value: state.settings.streakNotificationEnabled,
+                      onChanged:
+                          state.isLoading
+                              ? null
+                              : (v) => save(
+                                state.settings.copyWith(
+                                  streakNotificationEnabled: v,
+                                ),
+                              ),
                     ),
                   ],
                 ),
@@ -330,12 +456,62 @@ class SettingsPage extends ConsumerWidget {
                         onTap: showThemeModeSheet,
                       ),
                       const Divider(height: 1),
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: const Icon(Icons.color_lens_outlined),
+                        title: const Text('主题颜色与AMOLED'),
+                        subtitle: const Text('自定义主题色并支持 AMOLED 深色'),
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: () => context.push('/settings/theme'),
+                      ),
+                      const Divider(height: 1),
                       SwitchListTile(
                         contentPadding: EdgeInsets.zero,
                         title: const Text('任务列表毛玻璃效果'),
                         subtitle: const Text('关闭可提升滚动流畅度（仅本机设置，不参与同步）'),
                         value: taskListBlurEnabled,
                         onChanged: saveTaskListBlurEnabled,
+                      ),
+                      const Divider(height: 1),
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text('撤销提示（Snackbar）'),
+                        subtitle: const Text('完成/跳过后显示可撤销提示（仅本机设置）'),
+                        value: undoSnackbarEnabled,
+                        onChanged: saveUndoSnackbarEnabled,
+                      ),
+                      const Divider(height: 1),
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text('触觉反馈'),
+                        subtitle: const Text('关键交互点触发触觉反馈（仅移动端，受系统减少动效影响）'),
+                        value: hapticEnabled,
+                        onChanged: saveHapticEnabled,
+                      ),
+                      const Divider(height: 1),
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: const Icon(Icons.layers_outlined),
+                        title: const Text('骨架屏策略'),
+                        subtitle: Text(
+                          switch (skeletonStrategy) {
+                            'on' => '总是显示',
+                            'off' => '从不显示',
+                            _ => '自动（加载 ≥200ms 显示）',
+                          },
+                        ),
+                        trailing: DropdownButton<String>(
+                          value: skeletonStrategy,
+                          items: const [
+                            DropdownMenuItem(value: 'auto', child: Text('自动')),
+                            DropdownMenuItem(value: 'on', child: Text('总是')),
+                            DropdownMenuItem(value: 'off', child: Text('关闭')),
+                          ],
+                          onChanged: (v) {
+                            if (v == null) return;
+                            saveSkeletonStrategy(v);
+                          },
+                        ),
                       ),
                     ],
                   ),
@@ -357,6 +533,15 @@ class SettingsPage extends ConsumerWidget {
                         style: AppTypography.bodySecondary(context),
                       ),
                       const SizedBox(height: AppSpacing.md),
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: const Icon(Icons.flag_outlined),
+                        title: const Text('学习目标'),
+                        subtitle: const Text('设置每日完成/连续打卡/本周完成率目标'),
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: () => context.push('/settings/goals'),
+                      ),
+                      const Divider(height: 1),
                       ListTile(
                         contentPadding: EdgeInsets.zero,
                         leading: const Icon(Icons.topic_outlined),

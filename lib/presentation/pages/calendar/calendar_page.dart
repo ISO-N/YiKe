@@ -20,6 +20,7 @@ import '../../widgets/gradient_background.dart';
 import 'widgets/calendar_grid.dart';
 import 'widgets/compact_stats_bar.dart';
 import 'widgets/day_task_list.dart';
+import '../../providers/ui_preferences_provider.dart';
 
 /// 日历视图页面（Tab）。
 class CalendarPage extends ConsumerStatefulWidget {
@@ -118,6 +119,7 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
       ),
     );
     final notifier = ref.read(calendarProvider.notifier);
+    final skeletonStrategy = ref.watch(skeletonStrategyProvider);
     final uri = GoRouter.of(context).routeInformationProvider.value.uri;
     final openStats = uri.queryParameters['openStats'] == '1';
 
@@ -152,6 +154,7 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
       body: GradientBackground(
         child: SafeArea(
           child: ListView(
+            key: const PageStorageKey('calendar_scroll'),
             padding: const EdgeInsets.all(AppSpacing.lg),
             children: [
               GlassCard(
@@ -181,6 +184,7 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
                         selectedDay: state.selectedDay,
                         dayStats: state.monthStats,
                         isLoading: state.isLoadingMonth,
+                        skeletonStrategy: skeletonStrategy,
                         onPageChanged: (focused) =>
                             notifier.loadMonth(focused.year, focused.month),
                         onDaySelected: (day) async {

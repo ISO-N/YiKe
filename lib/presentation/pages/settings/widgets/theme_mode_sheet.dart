@@ -26,7 +26,7 @@ class ThemeModeSheet extends ConsumerWidget {
         groupValue: currentMode,
         onChanged: (value) async {
           if (value == null) return;
-          await ref.read(themeModeProvider.notifier).setThemeMode(value);
+          await ref.read(themeSettingsProvider.notifier).setThemeMode(value);
           if (context.mounted) Navigator.pop(context);
         },
         child: Padding(

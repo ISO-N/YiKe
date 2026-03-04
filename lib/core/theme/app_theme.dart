@@ -13,14 +13,15 @@ class AppTheme {
 
   /// 构建浅色主题。
   ///
+  /// 参数：
+  /// - [seedColor] 主题种子色（为空则使用默认品牌色）
   /// 返回值：`ThemeData`。
   /// 异常：无。
-  static ThemeData light() {
+  static ThemeData light({Color? seedColor}) {
+    final seed = seedColor ?? AppColors.primary;
     final colorScheme = ColorScheme.fromSeed(
-      seedColor: AppColors.primary,
+      seedColor: seed,
       brightness: Brightness.light,
-      primary: AppColors.primary,
-      secondary: AppColors.cta,
       surface: Colors.white,
     );
 
@@ -65,7 +66,7 @@ class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+          borderSide: BorderSide(color: colorScheme.primary, width: 1.5),
         ),
       ),
     );
@@ -73,21 +74,29 @@ class AppTheme {
 
   /// 构建深色主题。
   ///
+  /// 参数：
+  /// - [seedColor] 主题种子色（为空则使用默认品牌色）
+  /// - [amoled] 是否启用 AMOLED 深色模式（纯黑背景）
   /// 返回值：`ThemeData`。
   /// 异常：无。
-  static ThemeData dark() {
+  static ThemeData dark({Color? seedColor, bool amoled = false}) {
+    final seed = seedColor ?? AppColors.primaryLight;
+
+    // AMOLED 深色模式：按规格使用更深的背景与层级。
+    final background = amoled ? Colors.black : AppColors.darkBackground;
+    final surface = amoled ? const Color(0xFF121212) : AppColors.darkSurface;
+    final divider = amoled ? const Color(0xFF333333) : AppColors.darkDivider;
+
     final colorScheme = ColorScheme.fromSeed(
-      seedColor: AppColors.primaryLight,
+      seedColor: seed,
       brightness: Brightness.dark,
-      primary: AppColors.primaryLight,
-      secondary: AppColors.cta,
-      surface: AppColors.darkSurface,
+      surface: surface,
     );
 
     return ThemeData(
       useMaterial3: true,
       colorScheme: colorScheme,
-      scaffoldBackgroundColor: AppColors.darkBackground,
+      scaffoldBackgroundColor: background,
       appBarTheme: const AppBarTheme(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -100,7 +109,7 @@ class AppTheme {
         iconTheme: IconThemeData(color: AppColors.darkTextPrimary),
       ),
       cardTheme: CardThemeData(
-        color: AppColors.darkSurface,
+        color: surface,
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
@@ -109,7 +118,7 @@ class AppTheme {
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: AppColors.darkSurface,
+        fillColor: surface,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: AppColors.darkGlassBorder),
@@ -120,10 +129,7 @@ class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(
-            color: AppColors.primaryLight,
-            width: 1.5,
-          ),
+          borderSide: BorderSide(color: colorScheme.primary, width: 1.5),
         ),
         labelStyle: const TextStyle(color: AppColors.darkTextSecondary),
         hintStyle: const TextStyle(color: AppColors.darkTextSecondary),
@@ -137,19 +143,16 @@ class AppTheme {
         bodyMedium: TextStyle(color: AppColors.darkTextPrimary),
         bodySmall: TextStyle(color: AppColors.darkTextSecondary),
       ),
-      dividerTheme: const DividerThemeData(
-        color: AppColors.darkDivider,
-        thickness: 1,
-      ),
+      dividerTheme: DividerThemeData(color: divider, thickness: 1),
 
       /// Material3 NavigationBar 主题（替代 BottomNavigationBar）。
       navigationBarTheme: NavigationBarThemeData(
-        backgroundColor: AppColors.darkSurface,
-        indicatorColor: AppColors.primaryLight.withValues(alpha: 0.2),
+        backgroundColor: surface,
+        indicatorColor: colorScheme.primary.withValues(alpha: 0.2),
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
-            return const TextStyle(
-              color: AppColors.primaryLight,
+            return TextStyle(
+              color: colorScheme.primary,
               fontSize: 12,
               fontWeight: FontWeight.w500,
             );
@@ -161,16 +164,16 @@ class AppTheme {
         }),
         iconTheme: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
-            return const IconThemeData(color: AppColors.primaryLight);
+            return IconThemeData(color: colorScheme.primary);
           }
           return const IconThemeData(color: AppColors.darkTextSecondary);
         }),
       ),
 
       /// 底部弹窗主题。
-      bottomSheetTheme: const BottomSheetThemeData(
-        backgroundColor: AppColors.darkSurface,
-        modalBackgroundColor: AppColors.darkSurface,
+      bottomSheetTheme: BottomSheetThemeData(
+        backgroundColor: surface,
+        modalBackgroundColor: surface,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
@@ -178,11 +181,11 @@ class AppTheme {
 
       /// 对话框主题。
       dialogTheme: DialogThemeData(
-        backgroundColor: AppColors.darkSurface,
+        backgroundColor: surface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       ),
       snackBarTheme: SnackBarThemeData(
-        backgroundColor: AppColors.darkSurface,
+        backgroundColor: surface,
         contentTextStyle: const TextStyle(color: AppColors.darkTextPrimary),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         behavior: SnackBarBehavior.floating,
