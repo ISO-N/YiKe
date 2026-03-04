@@ -1,6 +1,8 @@
 /// 文件用途：日历视图页面（F6），以月历展示每日任务状态并支持点击查看当日任务。
+/// 文件用途：日历视图页面（Tab）——月历 + 当日任务列表 + 统计入口。
 /// 作者：Codex
 /// 创建日期：2026-02-25
+/// 最后更新：2026-03-04（统计入口改为独立 /statistics Tab）
 library;
 
 import 'package:flutter/material.dart';
@@ -13,7 +15,6 @@ import '../../../core/constants/app_strings.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/utils/date_utils.dart';
 import '../../providers/calendar_provider.dart';
-import '../../widgets/statistics_sheet.dart';
 import '../../widgets/error_card.dart';
 import '../../widgets/glass_card.dart';
 import '../../widgets/gradient_background.dart';
@@ -35,54 +36,10 @@ class CalendarPage extends ConsumerStatefulWidget {
 }
 
 class _CalendarPageState extends ConsumerState<CalendarPage> {
-  // 统计 Sheet 打开状态：用于“弹出期间禁用再次触发”以及与当日任务 Sheet 互斥处理。
-  bool _isStatsSheetOpen = false;
-
-  // 当日任务 Sheet 打开状态：避免与统计 Sheet 叠加。
+  // 当日任务 Sheet 打开状态：避免重复叠加弹出。
   bool _isDaySheetOpen = false;
 
-  // 防止 openStats=1 在同一次构建周期内重复触发。
-  bool _didAutoOpenStats = false;
-
-  Future<void> _openStatisticsSheet({
-    required bool removeQueryAfterClose,
-  }) async {
-    // 弹出期间禁用再次触发。
-    if (_isStatsSheetOpen) return;
-
-    // Sheet 冲突处理：若当日任务 Sheet 已打开，先关闭再打开统计。
-    if (_isDaySheetOpen) {
-      Navigator.of(context).pop();
-      await Future<void>.delayed(Duration.zero);
-      if (!mounted) return;
-    }
-
-    setState(() => _isStatsSheetOpen = true);
-    await showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      showDragHandle: true,
-      builder: (_) => const StatisticsSheet(),
-    ).whenComplete(() {
-      if (!mounted) return;
-      setState(() => _isStatsSheetOpen = false);
-    });
-
-    // openStats=1 触发的自动弹出：关闭后应移除参数，避免返回/重建时重复弹出。
-    if (!mounted) return;
-    if (removeQueryAfterClose) {
-      context.go('/calendar');
-    }
-  }
-
   Future<void> _openDayTaskListSheet(DateTime day) async {
-    // 若统计 Sheet 已打开，先关闭再打开当日任务 Sheet。
-    if (_isStatsSheetOpen) {
-      Navigator.of(context).pop();
-      await Future<void>.delayed(Duration.zero);
-      if (!mounted) return;
-    }
-
     // 若当日任务 Sheet 已打开，先关闭再重新打开（允许用户切换日期）。
     if (_isDaySheetOpen) {
       Navigator.of(context).pop();
@@ -120,20 +77,6 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
     );
     final notifier = ref.read(calendarProvider.notifier);
     final skeletonStrategy = ref.watch(skeletonStrategyProvider);
-    final uri = GoRouter.of(context).routeInformationProvider.value.uri;
-    final openStats = uri.queryParameters['openStats'] == '1';
-
-    if (!openStats) {
-      _didAutoOpenStats = false;
-    }
-
-    if (openStats && !_didAutoOpenStats) {
-      _didAutoOpenStats = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        _openStatisticsSheet(removeQueryAfterClose: true);
-      });
-    }
 
     return Scaffold(
       appBar: AppBar(
@@ -171,12 +114,8 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
                       ),
                       const SizedBox(height: AppSpacing.lg),
                       CompactStatsBar(
-                        onTap:
-                            _isStatsSheetOpen
-                                ? null
-                                : () => _openStatisticsSheet(
-                                  removeQueryAfterClose: false,
-                                ),
+                        // 统计已改为独立 Tab：直接跳转。
+                        onTap: () => context.go('/statistics'),
                       ),
                       const SizedBox(height: AppSpacing.lg),
                       CalendarGrid(

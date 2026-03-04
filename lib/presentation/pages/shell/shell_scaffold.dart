@@ -32,7 +32,8 @@ class _ShellScaffoldState extends State<ShellScaffold> {
   final PageStorageBucket _bucket = PageStorageBucket();
 
   int _locationToIndex(String location) {
-    if (location.startsWith('/settings')) return 2;
+    if (location.startsWith('/settings')) return 3;
+    if (location.startsWith('/statistics')) return 2;
     if (location.startsWith('/calendar')) return 1;
     return 0;
   }
@@ -46,6 +47,9 @@ class _ShellScaffoldState extends State<ShellScaffold> {
         context.go('/calendar');
         return;
       case 2:
+        context.go('/statistics');
+        return;
+      case 3:
         context.go('/settings');
         return;
     }
@@ -75,6 +79,11 @@ class _ShellScaffoldState extends State<ShellScaffold> {
             icon: Icon(Icons.calendar_month_outlined),
             selectedIcon: Icon(Icons.calendar_month),
             label: AppStrings.calendar,
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.bar_chart_outlined),
+            selectedIcon: Icon(Icons.bar_chart),
+            label: AppStrings.statistics,
           ),
           NavigationDestination(
             icon: Icon(Icons.settings_outlined),

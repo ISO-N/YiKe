@@ -46,7 +46,11 @@ class DeferredVisibilityBuilder extends StatefulWidget {
 class _DeferredVisibilityBuilderState extends State<DeferredVisibilityBuilder> {
   Timer? _delayTimer;
   bool _delayPassed = false;
-  bool _isVisible = false;
+  // 关键逻辑：只要“曾经可见过一次”，就允许触发构建。
+  //
+  // 背景：用户快速滚动可能导致“短暂可见 → 立刻不可见”，如果此时还未过 minDelay，
+  // 旧实现会把 _isVisible 置回 false，从而在 delay 到期后无法构建，用户再次滚回时看到空白占位。
+  bool _hasBeenVisible = false;
   bool _built = false;
 
   @override
@@ -73,23 +77,29 @@ class _DeferredVisibilityBuilderState extends State<DeferredVisibilityBuilder> {
   }
 
   void _onVisibilityChanged(VisibilityInfo info) {
-    _isVisible = info.visibleFraction >= widget.visibleFractionThreshold;
+    // 只记录“可见过一次”的事实，避免快速滚动场景下反复置回不可见导致延迟构建失效。
+    if (info.visibleFraction >= widget.visibleFractionThreshold) {
+      _hasBeenVisible = true;
+    }
     _tryBuild();
   }
 
   void _tryBuild() {
     if (_built) return;
     if (!_delayPassed) return;
-    if (!_isVisible) return;
+    if (!_hasBeenVisible) return;
     setState(() => _built = true);
   }
 
   @override
   Widget build(BuildContext context) {
+    // 关键逻辑：一旦构建完成，就不再依赖 VisibilityDetector，避免不必要的回调与潜在副作用。
+    if (_built) return Builder(builder: widget.builder);
+
     return VisibilityDetector(
       key: ValueKey<String>('deferred_${widget.id}'),
       onVisibilityChanged: _onVisibilityChanged,
-      child: _built ? Builder(builder: widget.builder) : widget.placeholder,
+      child: widget.placeholder,
     );
   }
 }

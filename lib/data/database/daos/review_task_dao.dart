@@ -875,11 +875,12 @@ WHERE li.is_deleted = 0
 
   /// F7：获取连续打卡天数（从今天往前计算）。
   ///
-  /// 口径：
-  /// - 连续每天至少完成 1 条任务即算打卡成功（done>=1 记 1 天）
-  /// - 某天存在 pending 且 done=0 则断签
-  /// - skipped 不计入断签，也不计入完成
-  /// - 某天没有任务，不中断打卡链
+  /// 口径（连续打卡：兼容“无任务不间断”）：
+  /// - **计数按完成日**：仅按 [completedAt]（实际完成时间）所在日期计入打卡，不再使用 scheduledDate 计数
+  /// - **每天至少完成 1 条任务**（done>=1）计 1 天
+  /// - **无任务不间断**：某天若没有任何任务，或当天任务全部为 skipped，则不计入天数但也不打断连续链
+  /// - **断签规则**：某天存在非 skipped 任务（pending/done），但当天没有完成（done=0），则断签
+  /// - **链尾选择**：若今天未完成但昨天有完成，则从昨天作为链尾开始累计（避免“今天还有 pending 未做完，连续直接变 0”）
   Future<int> getConsecutiveCompletedDays({DateTime? today}) async {
     final now = today ?? DateTime.now();
     final todayStart = YikeDateUtils.atStartOfDay(now);
@@ -888,63 +889,97 @@ WHERE li.is_deleted = 0
     final task = db.reviewTasks;
     final item = db.learningItems;
 
-    // 找到最早的“done/pending”任务日期作为遍历下界，避免无穷回溯。
+    // 找到最早的“done 且 completedAt 有值”的记录作为遍历下界，避免无穷回溯。
     final earliestRow =
         await (db.select(task).join([
                 innerJoin(item, item.id.equalsExp(task.learningItemId)),
               ])
               ..where(item.isDeleted.equals(false))
-              ..where(task.scheduledDate.isSmallerThanValue(todayEnd))
-              ..where(task.status.isIn(const ['done', 'pending']))
-              ..orderBy([OrderingTerm.asc(task.scheduledDate)])
+              ..where(task.completedAt.isNotNull())
+              ..where(task.completedAt.isSmallerThanValue(todayEnd))
+              ..where(task.status.equals('done'))
+              ..orderBy([OrderingTerm.asc(task.completedAt)])
               ..limit(1))
             .getSingleOrNull();
 
-    final earliest = earliestRow?.readTable(task).scheduledDate;
+    final earliest = earliestRow?.readTable(task).completedAt;
     if (earliest == null) return 0;
     final earliestStart = YikeDateUtils.atStartOfDay(earliest);
 
-    // 一次性拉取范围内的 done/pending 任务，再在 Dart 侧按天聚合（排除已停用学习内容）。
+    // 一次性拉取范围内的 done 任务，再在 Dart 侧按天聚合（排除已停用学习内容）。
     final joined =
+        await (db.select(task).join([
+                innerJoin(item, item.id.equalsExp(task.learningItemId)),
+              ])
+              ..where(item.isDeleted.equals(false))
+              ..where(task.completedAt.isNotNull())
+              ..where(task.completedAt.isBiggerOrEqualValue(earliestStart))
+              ..where(task.completedAt.isSmallerThanValue(todayEnd))
+              ..where(task.status.equals('done')))
+            .get();
+    final tasks = joined.map((r) => r.readTable(task)).toList();
+
+    final completedDays = <DateTime>{};
+    for (final t in tasks) {
+      final completedAt = t.completedAt;
+      if (completedAt == null) continue;
+      completedDays.add(YikeDateUtils.atStartOfDay(completedAt));
+    }
+
+    // 一次性拉取范围内“按计划日期落在某天”的任务，用于判断：
+    // - 某天是否“无任务”（允许跳过且不中断）
+    // - 某天是否“仅 skipped”（同样允许跳过）
+    // - 某天是否存在非 skipped 任务（若当天无完成则断签）
+    final scheduledRows =
         await (db.select(task).join([
                 innerJoin(item, item.id.equalsExp(task.learningItemId)),
               ])
               ..where(item.isDeleted.equals(false))
               ..where(task.scheduledDate.isBiggerOrEqualValue(earliestStart))
               ..where(task.scheduledDate.isSmallerThanValue(todayEnd))
-              ..where(task.status.isIn(const ['done', 'pending'])))
+              ..where(task.status.isIn(const ['done', 'pending', 'skipped'])))
             .get();
-    final tasks = joined.map((r) => r.readTable(task)).toList();
-
-    final dayMap = <DateTime, _DayStatsAccumulator>{};
-    for (final task in tasks) {
-      final day = YikeDateUtils.atStartOfDay(task.scheduledDate);
-      final stats = dayMap.putIfAbsent(day, _DayStatsAccumulator.new);
-      if (task.status == 'done') {
-        stats.done++;
-      } else {
-        stats.pending++;
+    final hasNonSkippedTaskByDay = <DateTime, bool>{};
+    for (final row in scheduledRows) {
+      final t = row.readTable(task);
+      final day = YikeDateUtils.atStartOfDay(t.scheduledDate);
+      final hasNonSkipped = hasNonSkippedTaskByDay[day] ?? false;
+      // 只要出现过一次非 skipped，就标记为“当天有需要完成的任务”。
+      if (!hasNonSkipped && t.status != 'skipped') {
+        hasNonSkippedTaskByDay[day] = true;
+        continue;
       }
+      // 若目前未记录该天，且当前为 skipped，则写入 false（用于区分“无任务”与“仅 skipped”）。
+      hasNonSkippedTaskByDay.putIfAbsent(day, () => false);
     }
 
+    // 链尾选择：
+    // - 今天已完成：从今天算
+    // - 今天未完成但昨天完成：从昨天算（避免今日 pending 导致直接归零）
+    // - 否则：未形成连续链
+    final yesterdayStart = todayStart.subtract(const Duration(days: 1));
+    var cursor =
+        completedDays.contains(todayStart) ? todayStart : yesterdayStart;
+    if (!completedDays.contains(cursor)) return 0;
+
     var streak = 0;
-    for (
-      var cursor = todayStart;
-      !cursor.isBefore(earliestStart);
-      cursor = cursor.subtract(const Duration(days: 1))
-    ) {
-      final stats = dayMap[cursor];
-      final pending = stats?.pending ?? 0;
-      final done = stats?.done ?? 0;
-
-      if (pending > 0 && done == 0) {
-        // 当天有待复习但没有完成，断签。
-        break;
-      }
-
-      if (done > 0) {
+    while (!cursor.isBefore(earliestStart)) {
+      if (completedDays.contains(cursor)) {
+        // 当天有完成：计入连续天数。
         streak++;
+        cursor = cursor.subtract(const Duration(days: 1));
+        continue;
       }
+
+      final hasNonSkipped = hasNonSkippedTaskByDay[cursor] ?? false;
+      if (!hasNonSkipped) {
+        // 无任务 / 仅 skipped：不中断连续链，但不计入天数。
+        cursor = cursor.subtract(const Duration(days: 1));
+        continue;
+      }
+
+      // 当天存在非 skipped 任务，但没有完成：断签。
+      break;
     }
 
     return streak;

@@ -138,7 +138,7 @@ class _GoalProgressCardState extends ConsumerState<GoalProgressCard> {
                         ),
                       ),
                       TextButton(
-                        onPressed: () => context.go('/calendar?openStats=1'),
+                        onPressed: () => context.go('/statistics'),
                         child: const Text('查看'),
                       ),
                     ],

@@ -86,8 +86,8 @@ class HomeBottomStatsBar extends ConsumerWidget {
                 onPressed: () {
                   // 触觉反馈：按钮点击轻反馈（桌面端会被工具类禁用）。
                   HapticUtils.lightImpact(context, enabledByUser: hapticEnabled);
-                  // 复用日历页统计入口：openStats=1 打开统计详情 Sheet。
-                  context.go('/calendar?openStats=1');
+                  // 统计页已作为独立 Tab 提供，直接跳转。
+                  context.go('/statistics');
                 },
                 child: const Text('查看'),
               ),

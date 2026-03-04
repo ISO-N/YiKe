@@ -15,6 +15,7 @@ import '../../presentation/pages/input/input_page.dart';
 import '../../presentation/pages/input/import_preview_page.dart';
 import '../../presentation/pages/input/templates_page.dart';
 import '../../presentation/pages/debug/mock_data_generator_page.dart';
+import '../../presentation/pages/statistics/statistics_page.dart';
 import '../../presentation/pages/learning_item/learning_item_detail_page.dart';
 import '../../presentation/pages/tasks/task_hub_page.dart';
 import '../../presentation/pages/tasks/task_detail_sheet.dart';
@@ -45,8 +46,21 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/calendar',
+            // 兼容旧深链：/calendar?openStats=1 过去用于打开统计 Sheet。
+            // 现在统计为独立 Tab，因此统一重定向到 /statistics。
+            redirect: (context, state) {
+              if (state.uri.queryParameters['openStats'] == '1') {
+                return '/statistics';
+              }
+              return null;
+            },
             pageBuilder: (context, state) =>
                 const NoTransitionPage(child: CalendarPage()),
+          ),
+          GoRoute(
+            path: '/statistics',
+            pageBuilder: (context, state) =>
+                const NoTransitionPage(child: StatisticsPage()),
           ),
           GoRoute(
             path: '/settings',
@@ -63,10 +77,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 
       // 旧路由兼容：通过 redirect 迁移到新的导航结构，避免深链/历史入口断裂。
       GoRoute(path: '/tasks', redirect: (context, state) => '/home?tab=all'),
-      GoRoute(
-        path: '/statistics',
-        redirect: (context, state) => '/calendar?openStats=1',
-      ),
       GoRoute(
         path: '/settings/help',
         redirect: (context, state) => '/help',

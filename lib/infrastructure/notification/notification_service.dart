@@ -31,7 +31,7 @@ class NotificationService {
 
   /// 通知点击路由流。
   ///
-  /// 说明：payload 约定为应用内路由（如 `/home`、`/calendar?openStats=1`）。
+  /// 说明：payload 约定为应用内路由（如 `/home`、`/statistics`）。
   Stream<String> get onTapRouteStream => _tapRouteController.stream;
 
   /// 初始化通知服务（请求权限、初始化通道等）。
