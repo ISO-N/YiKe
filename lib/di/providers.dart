@@ -70,7 +70,9 @@ import '../domain/usecases/update_subtask_usecase.dart';
 import '../domain/usecases/delete_subtask_usecase.dart';
 import '../domain/usecases/reorder_subtasks_usecase.dart';
 import '../domain/usecases/update_learning_item_description_usecase.dart';
+import '../domain/usecases/update_learning_item_meta_usecase.dart';
 import '../domain/usecases/update_learning_item_note_usecase.dart';
+import '../domain/usecases/set_learning_item_topics_usecase.dart';
 import '../domain/usecases/deactivate_learning_item_usecase.dart';
 import '../domain/usecases/get_review_plan_usecase.dart';
 import '../domain/usecases/adjust_review_date_usecase.dart';
@@ -349,6 +351,23 @@ final updateLearningItemNoteUseCaseProvider =
 final updateLearningItemDescriptionUseCaseProvider =
     Provider<UpdateLearningItemDescriptionUseCase>((ref) {
       return UpdateLearningItemDescriptionUseCase(
+        learningItemRepository: ref.read(learningItemRepositoryProvider),
+      );
+    });
+
+/// 更新学习内容基础字段（标题/标签）用例 Provider。
+final updateLearningItemMetaUseCaseProvider =
+    Provider<UpdateLearningItemMetaUseCase>((ref) {
+      return UpdateLearningItemMetaUseCase(
+        learningItemRepository: ref.read(learningItemRepositoryProvider),
+      );
+    });
+
+/// 设置学习内容关联主题（多对多）用例 Provider。
+final setLearningItemTopicsUseCaseProvider =
+    Provider<SetLearningItemTopicsUseCase>((ref) {
+      return SetLearningItemTopicsUseCase(
+        learningTopicRepository: ref.read(learningTopicRepositoryProvider),
         learningItemRepository: ref.read(learningItemRepositoryProvider),
       );
     });

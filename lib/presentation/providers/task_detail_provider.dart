@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../di/providers.dart';
 import '../../domain/entities/learning_item.dart';
 import '../../domain/entities/learning_subtask.dart';
+import '../../domain/entities/learning_topic.dart';
 import '../../domain/entities/review_task.dart';
 import 'calendar_provider.dart';
 import 'home_tasks_provider.dart';
@@ -21,6 +22,7 @@ class TaskDetailState {
     required this.item,
     required this.plan,
     required this.subtasks,
+    required this.topics,
     this.errorMessage,
   });
 
@@ -28,6 +30,9 @@ class TaskDetailState {
   final LearningItemEntity? item;
   final List<ReviewTaskViewEntity> plan;
   final List<LearningSubtaskEntity> subtasks;
+
+  /// 关联主题列表（可为空；支持多对多）。
+  final List<LearningTopicEntity> topics;
   final String? errorMessage;
 
   factory TaskDetailState.initial() =>
@@ -36,6 +41,7 @@ class TaskDetailState {
         item: null,
         plan: [],
         subtasks: [],
+        topics: [],
       );
 
   TaskDetailState copyWith({
@@ -43,6 +49,7 @@ class TaskDetailState {
     LearningItemEntity? item,
     List<ReviewTaskViewEntity>? plan,
     List<LearningSubtaskEntity>? subtasks,
+    List<LearningTopicEntity>? topics,
     String? errorMessage,
     bool clearError = false,
   }) {
@@ -51,6 +58,7 @@ class TaskDetailState {
       item: item ?? this.item,
       plan: plan ?? this.plan,
       subtasks: subtasks ?? this.subtasks,
+      topics: topics ?? this.topics,
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
     );
   }
@@ -82,11 +90,15 @@ class TaskDetailNotifier extends StateNotifier<TaskDetailState> {
       final plan = await planFuture;
       final subtasks = await subtasksFuture;
 
+      // 主题加载失败不应阻塞主流程（例如：主题表尚未初始化/迁移异常等）。
+      final topics = await _loadTopicsSafe(learningItemId);
+
       state = state.copyWith(
         isLoading: false,
         item: item,
         plan: plan,
         subtasks: subtasks,
+        topics: topics,
       );
     } catch (e) {
       state = state.copyWith(isLoading: false, errorMessage: e.toString());
@@ -94,6 +106,53 @@ class TaskDetailNotifier extends StateNotifier<TaskDetailState> {
   }
 
   bool get isReadOnly => (state.item?.isDeleted ?? false);
+
+  /// 更新学习内容基础信息（任务名/标签/主题）。
+  ///
+  /// 说明：
+  /// - “任务名/标签”属于 LearningItem 本身
+  /// - “主题”属于多对多关联（topic_item_relations）
+  /// - 为减少无意义同步日志，仅当确实发生变化时才写入
+  Future<void> updateBasicInfo({
+    required String title,
+    required List<String> tags,
+    required Set<int> topicIds,
+  }) async {
+    if (isReadOnly) {
+      throw StateError('学习内容已停用，无法编辑');
+    }
+
+    final item = state.item;
+    if (item == null) {
+      throw StateError('学习内容不存在或尚未加载');
+    }
+
+    final normalizedTitle = title.trim();
+    final currentTopicIds =
+        state.topics.map((e) => e.id).whereType<int>().toSet();
+
+    final shouldUpdateMeta =
+        normalizedTitle != item.title || !_sameStringList(tags, item.tags);
+    final shouldUpdateTopics = !_sameIntSet(topicIds, currentTopicIds);
+    if (!shouldUpdateMeta && !shouldUpdateTopics) return;
+
+    if (shouldUpdateMeta) {
+      await _ref.read(updateLearningItemMetaUseCaseProvider).execute(
+        learningItemId: learningItemId,
+        title: normalizedTitle,
+        tags: tags,
+      );
+    }
+    if (shouldUpdateTopics) {
+      await _ref.read(setLearningItemTopicsUseCaseProvider).execute(
+        learningItemId: learningItemId,
+        topicIds: topicIds,
+      );
+    }
+
+    _invalidateRelatedPages();
+    await load();
+  }
 
   Future<void> updateNote(String? note) async {
     await _ref
@@ -183,6 +242,40 @@ class TaskDetailNotifier extends StateNotifier<TaskDetailState> {
     _ref.invalidate(calendarProvider);
     _ref.invalidate(statisticsProvider);
     _ref.invalidate(taskHubProvider);
+  }
+
+  /// 安全加载某学习内容的关联主题列表（失败时返回空列表）。
+  Future<List<LearningTopicEntity>> _loadTopicsSafe(int learningItemId) async {
+    try {
+      final useCase = _ref.read(manageTopicUseCaseProvider);
+      final all = await useCase.getAll();
+      return all
+          .where((t) => t.id != null && t.itemIds.contains(learningItemId))
+          .toList()
+        ..sort((a, b) => a.name.compareTo(b.name));
+    } catch (_) {
+      return const <LearningTopicEntity>[];
+    }
+  }
+
+  /// 判断两个字符串列表是否完全一致（顺序敏感）。
+  bool _sameStringList(List<String> a, List<String> b) {
+    if (identical(a, b)) return true;
+    if (a.length != b.length) return false;
+    for (var i = 0; i < a.length; i++) {
+      if (a[i] != b[i]) return false;
+    }
+    return true;
+  }
+
+  /// 判断两个 int 集合是否相等。
+  bool _sameIntSet(Set<int> a, Set<int> b) {
+    if (identical(a, b)) return true;
+    if (a.length != b.length) return false;
+    for (final v in a) {
+      if (!b.contains(v)) return false;
+    }
+    return true;
   }
 }
 

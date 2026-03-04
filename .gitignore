@@ -33,6 +33,11 @@ migrate_working_dir/
 /build/
 /coverage/
 
+# Flutter 平台自动生成文件（每次 pub get 或构建时都会重新生成）
+**/generated_plugin_registrant.cc
+**/generated_plugins.cmake
+**/GeneratedPluginRegistrant.swift
+
 # Symbolication related
 app.*.symbols
 

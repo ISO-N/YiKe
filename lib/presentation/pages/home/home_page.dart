@@ -1943,6 +1943,10 @@ class _TaskCard extends StatelessWidget {
           await onComplete();
         case TaskContextMenuAction.skip:
           await onSkip();
+        case TaskContextMenuAction.editBasicInfo:
+          if (!context.mounted) return;
+          // 说明：复用任务详情页的“编辑基本信息”能力，通过 query 参数触发自动打开编辑 Sheet。
+          context.push('/tasks/detail/$learningItemId?edit=1');
         case TaskContextMenuAction.undo:
           final undo = onUndo;
           if (undo != null) {

@@ -15,6 +15,9 @@ enum TaskContextMenuAction {
   /// 跳过任务。
   skip,
 
+  /// 编辑任务基础信息（任务名/标签/主题）。
+  editBasicInfo,
+
   /// 撤销任务状态（done/skipped → pending）。
   undo,
 
@@ -57,6 +60,10 @@ Future<TaskContextMenuAction?> showTaskContextMenu({
         child: _MenuRow(icon: Icons.not_interested_outlined, text: '跳过'),
       ),
       const PopupMenuItem(
+        value: TaskContextMenuAction.editBasicInfo,
+        child: _MenuRow(icon: Icons.edit_outlined, text: '编辑'),
+      ),
+      const PopupMenuItem(
         value: TaskContextMenuAction.viewDetail,
         child: _MenuRow(icon: Icons.visibility_outlined, text: '查看详情'),
       ),
@@ -64,6 +71,10 @@ Future<TaskContextMenuAction?> showTaskContextMenu({
       const PopupMenuItem(
         value: TaskContextMenuAction.undo,
         child: _MenuRow(icon: Icons.undo, text: '撤销'),
+      ),
+      const PopupMenuItem(
+        value: TaskContextMenuAction.editBasicInfo,
+        child: _MenuRow(icon: Icons.edit_outlined, text: '编辑'),
       ),
       const PopupMenuItem(
         value: TaskContextMenuAction.viewDetail,

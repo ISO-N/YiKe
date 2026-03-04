@@ -88,10 +88,16 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           if (id == null) {
             return const MaterialPage(child: TaskHubPage());
           }
+          // 说明：允许从上下文菜单直接进入“编辑基本信息”。
+          // - edit=1：打开详情页后自动弹出编辑 Sheet
+          // - 默认不弹出（避免影响正常查看详情流程）
+          final openEdit = state.uri.queryParameters['edit'] == '1';
           return _bottomSheetPageIfDesktop(
             context,
-            TaskDetailSheet(learningItemId: id),
-            fallback: MaterialPage(child: TaskDetailSheet(learningItemId: id)),
+            TaskDetailSheet(learningItemId: id, openEditOnLoad: openEdit),
+            fallback: MaterialPage(
+              child: TaskDetailSheet(learningItemId: id, openEditOnLoad: openEdit),
+            ),
             dialogSize: const Size(760, 780),
             heightFactor: 0.88,
           );
