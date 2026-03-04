@@ -159,7 +159,7 @@ class _UxBootstrapState extends ConsumerState<UxBootstrap> {
           id: 22,
           title: '目标达成',
           body: '已达成：$summary。打开统计页查看进度详情。',
-          payloadRoute: '/calendar?openStats=1',
+          payloadRoute: '/statistics',
         );
         await dedup.setLastSent('goal', now);
       }
