@@ -733,7 +733,7 @@ void main() {
     expect(left.single.isMockData, false);
   });
 
-  test('getConsecutiveCompletedDays 按 completedAt 计算连续完成天数（缺口即断）', () async {
+  test('getConsecutiveCompletedDays 支持“无任务/仅 skipped 不间断”口径', () async {
     final itemId = await insertItem(tags: jsonEncode(['a']));
     final now = DateTime.now();
     final todayStart = DateTime(now.year, now.month, now.day);
@@ -802,8 +802,8 @@ void main() {
     );
 
     final streak = await dao.getConsecutiveCompletedDays(today: now);
-    // 两天前缺少完成记录（即使存在 skipped/pending），连续链在此断开：仅计今天 + 昨天。
-    expect(streak, 2);
+    // skipped 不计完成且不间断，因此可跨过“前天 skipped”继续累计到大前天 done。
+    expect(streak, 3);
   });
 
   test('getConsecutiveCompletedDays 今日未完成但昨日完成时，不应直接归零', () async {
@@ -849,6 +849,55 @@ void main() {
     );
 
     final streak = await dao.getConsecutiveCompletedDays(today: now);
+    expect(streak, 2);
+  });
+
+  test('getConsecutiveCompletedDays 无任务日期不应打断连续链', () async {
+    final itemId = await insertItem(tags: jsonEncode(['a']));
+    final now = DateTime.now();
+    final todayStart = DateTime(now.year, now.month, now.day);
+
+    // 今天 done（计 1 天）
+    await dao.insertReviewTask(
+      ReviewTasksCompanion.insert(
+        learningItemId: itemId,
+        reviewRound: 1,
+        scheduledDate: todayStart.add(const Duration(hours: 9)),
+        status: const drift.Value('done'),
+        completedAt: drift.Value(todayStart.add(const Duration(hours: 9))),
+        createdAt: drift.Value(todayStart),
+      ),
+    );
+
+    // 昨天“无任务”：不插入任何记录
+
+    // 前天 done（计 1 天）
+    final twoDaysAgo = todayStart.subtract(const Duration(days: 2));
+    await dao.insertReviewTask(
+      ReviewTasksCompanion.insert(
+        learningItemId: itemId,
+        reviewRound: 2,
+        scheduledDate: twoDaysAgo.add(const Duration(hours: 9)),
+        status: const drift.Value('done'),
+        completedAt: drift.Value(twoDaysAgo.add(const Duration(hours: 9))),
+        createdAt: drift.Value(twoDaysAgo),
+      ),
+    );
+
+    // 再往前一天 pending：存在非 skipped 任务但无完成，应断签（确保不会继续回溯计数）
+    final threeDaysAgo = todayStart.subtract(const Duration(days: 3));
+    await dao.insertReviewTask(
+      ReviewTasksCompanion.insert(
+        learningItemId: itemId,
+        reviewRound: 3,
+        scheduledDate: threeDaysAgo.add(const Duration(hours: 9)),
+        status: const drift.Value('pending'),
+        createdAt: drift.Value(threeDaysAgo),
+      ),
+    );
+
+    final streak = await dao.getConsecutiveCompletedDays(today: now);
+    // 昨天无任务不间断：连续链为 今天 + 前天 = 2 天。
     expect(streak, 2);
   });
 }
