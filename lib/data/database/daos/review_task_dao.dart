@@ -875,11 +875,12 @@ WHERE li.is_deleted = 0
 
   /// F7：获取连续打卡天数（从今天往前计算）。
   ///
-  /// 口径：
-  /// - 连续每天至少完成 1 条任务即算打卡成功（done>=1 记 1 天）
-  /// - 某天存在 pending 且 done=0 则断签
-  /// - skipped 不计入断签，也不计入完成
-  /// - 某天没有任务，不中断打卡链
+  /// 口径（按“实际完成日”统计）：
+  /// - 仅按 [completedAt]（实际完成时间）所在日期计入打卡，不再使用 scheduledDate（计划日期）
+  /// - 每天至少完成 1 条任务（done>=1）计 1 天
+  /// - pending / skipped 不计入完成，也不作为断签依据
+  /// - 若今天尚未完成（done=0），但昨天有完成，则连续天数以“昨天”为链尾继续累计
+  ///   （用于避免“今天还有 pending 未做完，连续直接变 0”的体验问题）
   Future<int> getConsecutiveCompletedDays({DateTime? today}) async {
     final now = today ?? DateTime.now();
     final todayStart = YikeDateUtils.atStartOfDay(now);
@@ -888,63 +889,56 @@ WHERE li.is_deleted = 0
     final task = db.reviewTasks;
     final item = db.learningItems;
 
-    // 找到最早的“done/pending”任务日期作为遍历下界，避免无穷回溯。
+    // 找到最早的“done 且 completedAt 有值”的记录作为遍历下界，避免无穷回溯。
     final earliestRow =
         await (db.select(task).join([
                 innerJoin(item, item.id.equalsExp(task.learningItemId)),
               ])
               ..where(item.isDeleted.equals(false))
-              ..where(task.scheduledDate.isSmallerThanValue(todayEnd))
-              ..where(task.status.isIn(const ['done', 'pending']))
-              ..orderBy([OrderingTerm.asc(task.scheduledDate)])
+              ..where(task.completedAt.isNotNull())
+              ..where(task.completedAt.isSmallerThanValue(todayEnd))
+              ..where(task.status.equals('done'))
+              ..orderBy([OrderingTerm.asc(task.completedAt)])
               ..limit(1))
             .getSingleOrNull();
 
-    final earliest = earliestRow?.readTable(task).scheduledDate;
+    final earliest = earliestRow?.readTable(task).completedAt;
     if (earliest == null) return 0;
     final earliestStart = YikeDateUtils.atStartOfDay(earliest);
 
-    // 一次性拉取范围内的 done/pending 任务，再在 Dart 侧按天聚合（排除已停用学习内容）。
+    // 一次性拉取范围内的 done 任务，再在 Dart 侧按天聚合（排除已停用学习内容）。
     final joined =
         await (db.select(task).join([
                 innerJoin(item, item.id.equalsExp(task.learningItemId)),
               ])
               ..where(item.isDeleted.equals(false))
-              ..where(task.scheduledDate.isBiggerOrEqualValue(earliestStart))
-              ..where(task.scheduledDate.isSmallerThanValue(todayEnd))
-              ..where(task.status.isIn(const ['done', 'pending'])))
+              ..where(task.completedAt.isNotNull())
+              ..where(task.completedAt.isBiggerOrEqualValue(earliestStart))
+              ..where(task.completedAt.isSmallerThanValue(todayEnd))
+              ..where(task.status.equals('done')))
             .get();
     final tasks = joined.map((r) => r.readTable(task)).toList();
 
-    final dayMap = <DateTime, _DayStatsAccumulator>{};
-    for (final task in tasks) {
-      final day = YikeDateUtils.atStartOfDay(task.scheduledDate);
-      final stats = dayMap.putIfAbsent(day, _DayStatsAccumulator.new);
-      if (task.status == 'done') {
-        stats.done++;
-      } else {
-        stats.pending++;
-      }
+    final completedDays = <DateTime>{};
+    for (final t in tasks) {
+      final completedAt = t.completedAt;
+      if (completedAt == null) continue;
+      completedDays.add(YikeDateUtils.atStartOfDay(completedAt));
     }
 
+    // 链尾选择：
+    // - 今天已完成：从今天算
+    // - 今天未完成但昨天完成：从昨天算（避免今日 pending 导致直接归零）
+    // - 否则：未形成连续链
+    final yesterdayStart = todayStart.subtract(const Duration(days: 1));
+    var cursor =
+        completedDays.contains(todayStart) ? todayStart : yesterdayStart;
+    if (!completedDays.contains(cursor)) return 0;
+
     var streak = 0;
-    for (
-      var cursor = todayStart;
-      !cursor.isBefore(earliestStart);
-      cursor = cursor.subtract(const Duration(days: 1))
-    ) {
-      final stats = dayMap[cursor];
-      final pending = stats?.pending ?? 0;
-      final done = stats?.done ?? 0;
-
-      if (pending > 0 && done == 0) {
-        // 当天有待复习但没有完成，断签。
-        break;
-      }
-
-      if (done > 0) {
-        streak++;
-      }
+    while (!cursor.isBefore(earliestStart) && completedDays.contains(cursor)) {
+      streak++;
+      cursor = cursor.subtract(const Duration(days: 1));
     }
 
     return streak;

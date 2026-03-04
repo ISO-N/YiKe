@@ -733,7 +733,7 @@ void main() {
     expect(left.single.isMockData, false);
   });
 
-  test('getConsecutiveCompletedDays 支持“无任务不间断、pending 断签”口径', () async {
+  test('getConsecutiveCompletedDays 按 completedAt 计算连续完成天数（缺口即断）', () async {
     final itemId = await insertItem(tags: jsonEncode(['a']));
     final now = DateTime.now();
     final todayStart = DateTime(now.year, now.month, now.day);
@@ -802,6 +802,53 @@ void main() {
     );
 
     final streak = await dao.getConsecutiveCompletedDays(today: now);
-    expect(streak, 3);
+    // 两天前缺少完成记录（即使存在 skipped/pending），连续链在此断开：仅计今天 + 昨天。
+    expect(streak, 2);
+  });
+
+  test('getConsecutiveCompletedDays 今日未完成但昨日完成时，不应直接归零', () async {
+    final itemId = await insertItem(tags: jsonEncode(['a']));
+    final now = DateTime.now();
+    final todayStart = DateTime(now.year, now.month, now.day);
+
+    // 前天 done
+    final twoDaysAgo = todayStart.subtract(const Duration(days: 2));
+    await dao.insertReviewTask(
+      ReviewTasksCompanion.insert(
+        learningItemId: itemId,
+        reviewRound: 1,
+        scheduledDate: twoDaysAgo.add(const Duration(hours: 9)),
+        status: const drift.Value('done'),
+        completedAt: drift.Value(twoDaysAgo.add(const Duration(hours: 9))),
+        createdAt: drift.Value(twoDaysAgo),
+      ),
+    );
+
+    // 昨天 done
+    final yesterday = todayStart.subtract(const Duration(days: 1));
+    await dao.insertReviewTask(
+      ReviewTasksCompanion.insert(
+        learningItemId: itemId,
+        reviewRound: 2,
+        scheduledDate: yesterday.add(const Duration(hours: 9)),
+        status: const drift.Value('done'),
+        completedAt: drift.Value(yesterday.add(const Duration(hours: 9))),
+        createdAt: drift.Value(yesterday),
+      ),
+    );
+
+    // 今天 pending（不应导致连续归零）
+    await dao.insertReviewTask(
+      ReviewTasksCompanion.insert(
+        learningItemId: itemId,
+        reviewRound: 3,
+        scheduledDate: todayStart.add(const Duration(hours: 9)),
+        status: const drift.Value('pending'),
+        createdAt: drift.Value(todayStart),
+      ),
+    );
+
+    final streak = await dao.getConsecutiveCompletedDays(today: now);
+    expect(streak, 2);
   });
 }

@@ -52,7 +52,7 @@ void main() {
     final itemId1 = await insertItem(tags: ['a', 'b']);
     final itemId2 = await insertItem(tags: ['b']);
 
-    // 连续打卡链：25 done、24 done、23 skipped（不中断）、22 done、21 pending（断签）
+    // 连续打卡链（按 completedAt）：25 done、24 done，23 无完成（skipped 不计完成）→ 连续到此中断
     await db
         .into(db.reviewTasks)
         .insert(
@@ -141,7 +141,7 @@ void main() {
 
     final result = await useCase.execute(today: today);
 
-    expect(result.consecutiveCompletedDays, 3);
+    expect(result.consecutiveCompletedDays, 2);
 
     // 本周范围：2026-02-23(周一) ~ 2026-03-02
     // done: 25、24 => 2
