@@ -12,6 +12,7 @@ import '../../providers/task_hub_provider.dart';
 import '../../providers/ui_preferences_provider.dart';
 import '../../widgets/gradient_background.dart';
 import '../../widgets/task_filter_bar.dart';
+import '../../widgets/yike_refresh_indicator.dart';
 import 'widgets/task_hub_timeline_list.dart';
 
 /// 任务中心页面。
@@ -54,15 +55,18 @@ class _TaskHubPageState extends ConsumerState<TaskHubPage> {
     final state = ref.watch(taskHubProvider);
     final notifier = ref.read(taskHubProvider.notifier);
     final blurEnabled = ref.watch(taskListBlurEnabledProvider);
+    final hapticEnabled = ref.watch(hapticFeedbackEnabledProvider);
 
     return Scaffold(
       appBar: AppBar(title: const Text(AppStrings.taskHubTitle)),
       body: GradientBackground(
         child: SafeArea(
-          child: RefreshIndicator(
+          child: YiKeRefreshIndicator(
+            hapticEnabledByUser: hapticEnabled,
             onRefresh: notifier.refresh,
             // 性能优化（Phase 1）：使用 CustomScrollView + SliverList 虚拟化时间线，避免一次性构建全部卡片。
             child: CustomScrollView(
+              key: const PageStorageKey('task_hub_scroll'),
               controller: _scrollController,
               slivers: [
                 SliverPadding(

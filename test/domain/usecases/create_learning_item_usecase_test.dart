@@ -130,6 +130,12 @@ class _FakeReviewTaskRepository implements ReviewTaskRepository {
   ) => throw UnimplementedError();
 
   @override
+  Future<Map<DateTime, TaskDayStats>> getTaskDayStatsInRange(
+    DateTime start,
+    DateTime end,
+  ) => throw UnimplementedError();
+
+  @override
   Future<List<ReviewTaskViewEntity>> getTasksInRange(
     DateTime start,
     DateTime end,

@@ -228,8 +228,8 @@ class TaskHubTimelineSliver extends StatelessWidget {
             final row = state.timelineRows[i];
             return switch (row) {
               TaskHubTimelineHeaderRow() =>
-                buildHeaderRow(row as TaskHubTimelineHeaderRow),
-              TaskHubTimelineTaskRow() => buildTaskRow(row as TaskHubTimelineTaskRow),
+                buildHeaderRow(row),
+              TaskHubTimelineTaskRow() => buildTaskRow(row),
             };
           }
 

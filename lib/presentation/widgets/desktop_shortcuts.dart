@@ -4,6 +4,7 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -13,6 +14,8 @@ import '../providers/home_tasks_provider.dart';
 import '../providers/settings_provider.dart';
 import '../providers/statistics_provider.dart';
 import '../providers/task_hub_provider.dart';
+import 'shortcut_actions_scope.dart';
+import 'shortcut_hint.dart';
 
 /// 桌面端快捷键包装器。
 ///
@@ -26,16 +29,28 @@ class DesktopShortcuts extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isMac = !kIsWeb && defaultTargetPlatform == TargetPlatform.macOS;
+    final primaryModifier =
+        isMac ? LogicalKeyboardKey.meta : LogicalKeyboardKey.control;
+
+    // 快捷键提示 UI（3.4.3）只在 Windows 桌面端展示。
+    final shouldShowHints =
+        !kIsWeb && defaultTargetPlatform == TargetPlatform.windows;
+
     return Shortcuts(
       shortcuts: <ShortcutActivator, Intent>{
-        LogicalKeySet(LogicalKeyboardKey.control, LogicalKeyboardKey.keyN):
+        LogicalKeySet(primaryModifier, LogicalKeyboardKey.keyN):
             const _NewItemIntent(),
-        LogicalKeySet(LogicalKeyboardKey.control, LogicalKeyboardKey.keyR):
+        LogicalKeySet(primaryModifier, LogicalKeyboardKey.keyR):
             const _RefreshIntent(),
-        LogicalKeySet(LogicalKeyboardKey.control, LogicalKeyboardKey.comma):
+        LogicalKeySet(primaryModifier, LogicalKeyboardKey.comma):
             const _OpenSettingsIntent(),
-        LogicalKeySet(LogicalKeyboardKey.control, LogicalKeyboardKey.keyH):
+        LogicalKeySet(primaryModifier, LogicalKeyboardKey.keyH):
             const _OpenHelpIntent(),
+        LogicalKeySet(primaryModifier, LogicalKeyboardKey.keyF):
+            const _FocusSearchIntent(),
+        LogicalKeySet(primaryModifier, LogicalKeyboardKey.keyS):
+            const _SaveIntent(),
         LogicalKeySet(LogicalKeyboardKey.escape): const _EscapeIntent(),
       },
       child: Actions(
@@ -64,6 +79,18 @@ class DesktopShortcuts extends StatelessWidget {
               return null;
             },
           ),
+          _FocusSearchIntent: CallbackAction<_FocusSearchIntent>(
+            onInvoke: (_) {
+              ShortcutActionsScope.maybeOf(context)?.onFocusSearch?.call();
+              return null;
+            },
+          ),
+          _SaveIntent: CallbackAction<_SaveIntent>(
+            onInvoke: (_) {
+              ShortcutActionsScope.maybeOf(context)?.onSave?.call();
+              return null;
+            },
+          ),
           _EscapeIntent: CallbackAction<_EscapeIntent>(
             onInvoke: (_) {
               Navigator.of(context).maybePop();
@@ -71,7 +98,10 @@ class DesktopShortcuts extends StatelessWidget {
             },
           ),
         },
-        child: Focus(autofocus: true, child: child),
+        child: ShortcutHintScope(
+          shouldShowHints: shouldShowHints,
+          child: Focus(autofocus: true, child: child),
+        ),
       ),
     );
   }
@@ -119,6 +149,14 @@ class _OpenSettingsIntent extends Intent {
 
 class _OpenHelpIntent extends Intent {
   const _OpenHelpIntent();
+}
+
+class _FocusSearchIntent extends Intent {
+  const _FocusSearchIntent();
+}
+
+class _SaveIntent extends Intent {
+  const _SaveIntent();
 }
 
 class _EscapeIntent extends Intent {

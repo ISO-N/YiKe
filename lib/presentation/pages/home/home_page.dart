@@ -4,7 +4,6 @@
 library;
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app_settings/app_settings.dart';
 import 'package:go_router/go_router.dart';
@@ -14,6 +13,7 @@ import '../../../core/constants/app_strings.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/utils/date_utils.dart';
+import '../../../core/utils/haptic_utils.dart';
 import '../../../core/utils/responsive_utils.dart';
 import '../../../di/providers.dart';
 import '../../../domain/entities/app_settings.dart';
@@ -23,6 +23,7 @@ import '../../widgets/glass_card.dart';
 import '../../widgets/error_card.dart';
 import '../../widgets/gradient_background.dart';
 import '../../widgets/completion_animation.dart';
+import '../../widgets/skeleton_loader.dart';
 import '../../providers/home_tasks_provider.dart';
 import '../../providers/home_task_filter_provider.dart';
 import '../../providers/home_task_tab_provider.dart';
@@ -35,8 +36,13 @@ import '../../providers/task_filter_provider.dart';
 import '../../providers/ui_preferences_provider.dart';
 import '../../widgets/review_progress.dart';
 import '../../widgets/search_bar.dart';
+import '../../widgets/shortcut_actions_scope.dart';
 import '../../widgets/task_filter_bar.dart';
 import '../../widgets/task_context_menu.dart';
+import '../../widgets/deferred_visibility_builder.dart';
+import '../../widgets/home_bottom_stats_bar.dart';
+import '../../widgets/shortcut_hint.dart';
+import '../../widgets/yike_refresh_indicator.dart';
 import '../tasks/widgets/task_hub_timeline_list.dart';
 import 'widgets/home_tab_switcher.dart';
 
@@ -58,6 +64,19 @@ class _HomePageState extends ConsumerState<HomePage> {
   // tab=all 使用独立滚动控制器，以支持“接近底部自动加载下一页”的游标分页。
   final ScrollController _allTasksScrollController = ScrollController();
 
+  // tab=today 使用独立滚动控制器，便于“通知深链聚焦逾期任务”等场景滚动定位。
+  final ScrollController _todayScrollController = ScrollController();
+
+  // 深链参数：focus=overdue 时，用于定位“逾期任务”分区。
+  final GlobalKey _overdueSectionKey = GlobalKey();
+  bool _didFocusOverdue = false;
+
+  // 深链参数：tab=all/today 同步到本地 Provider（homeTaskTabProvider）的去抖。
+  String? _lastTabQueryValue;
+
+  // 搜索框 FocusNode：用于桌面端 Ctrl/Cmd+F 快捷键聚焦。
+  final FocusNode _searchFocusNode = FocusNode();
+
   // v1.1.0：按钮/菜单触发完成后，为“缩放+淡出”移除动效保留的临时占位任务。
   //
   // 说明：
@@ -77,6 +96,8 @@ class _HomePageState extends ConsumerState<HomePage> {
   void dispose() {
     _allTasksScrollController.removeListener(_onAllTasksScroll);
     _allTasksScrollController.dispose();
+    _todayScrollController.dispose();
+    _searchFocusNode.dispose();
     super.dispose();
   }
 
@@ -94,18 +115,47 @@ class _HomePageState extends ConsumerState<HomePage> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final primary = isDark ? AppColors.primaryLight : AppColors.primary;
-    final disableAnimations = MediaQuery.of(context).disableAnimations;
+    final mq = MediaQuery.of(context);
+    final disableAnimations = mq.disableAnimations || mq.accessibleNavigation;
 
     final settingsState = ref.watch(settingsProvider);
     final permissionAsync = ref.watch(notificationPermissionProvider);
     final syncUiState = ref.watch(syncControllerProvider.select((s) => s.state));
     final tab = ref.watch(homeTaskTabProvider);
     final blurEnabled = ref.watch(taskListBlurEnabledProvider);
+    final undoSnackbarEnabled = ref.watch(undoSnackbarEnabledProvider);
+    final hapticEnabled = ref.watch(hapticFeedbackEnabledProvider);
+    final skeletonStrategy = ref.watch(skeletonStrategyProvider);
 
     // 首页默认展示“今日”任务；tab=all 时会额外复用 taskHubProvider 的逻辑展示全量任务。
     final state = ref.watch(homeTasksProvider);
     final notifier = ref.read(homeTasksProvider.notifier);
     final homeFilter = ref.watch(homeTaskFilterProvider);
+
+    // 关键逻辑：兼容通知深链/旧路由使用 query 参数控制 Tab（tab=all/today）与聚焦位置（focus=overdue）。
+    //
+    // 说明：
+    // - 首页自身的 Tab 已改为本地 Provider 状态（避免路由重建）
+    // - 但通知点击与旧路由 redirect 仍可能携带 query，因此在此做一次“从路由到 Provider”的单向同步
+    final uri = GoRouter.of(context).routeInformationProvider.value.uri;
+    final tabQuery = uri.queryParameters['tab'];
+    final focusQuery = uri.queryParameters['focus'];
+
+    if (tabQuery != null && tabQuery != _lastTabQueryValue) {
+      _lastTabQueryValue = tabQuery;
+      final desired = HomeTaskTabX.fromQuery(tabQuery);
+      if (desired != tab) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          ref.read(homeTaskTabProvider.notifier).state = desired;
+        });
+      }
+    }
+    if (focusQuery == 'overdue' && tab != HomeTaskTab.today) {
+      // focus=overdue 的语义要求展示“今日视角”的逾期任务，因此强制切到 today。
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ref.read(homeTaskTabProvider.notifier).state = HomeTaskTab.today;
+      });
+    }
 
     final TaskHubState? hubState = tab == HomeTaskTab.all
         ? ref.watch(taskHubProvider)
@@ -131,18 +181,81 @@ class _HomePageState extends ConsumerState<HomePage> {
         ? state.isSelectionMode
         : false;
 
+    // focus=overdue：在数据已加载且存在逾期任务时，滚动到“逾期任务”分区。
+    if (focusQuery == 'overdue' &&
+        !_didFocusOverdue &&
+        tab == HomeTaskTab.today &&
+        !state.isLoading &&
+        state.overduePending.isNotEmpty) {
+      _didFocusOverdue = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final targetContext = _overdueSectionKey.currentContext;
+        if (targetContext == null) return;
+        Scrollable.ensureVisible(
+          targetContext,
+          alignment: 0.06,
+          duration:
+              disableAnimations
+                  ? Duration.zero
+                  : const Duration(milliseconds: 280),
+          curve: Curves.easeOut,
+        );
+      });
+    }
+
     void showSnack(String text) {
       if (!context.mounted) return;
+      // 交互优化：新提示覆盖旧提示，避免连续操作时 Snackbar 堆叠。
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
+    }
+
+    void showUndoSnack({required String text, required int taskId}) {
+      if (!context.mounted) return;
+      final messenger = ScaffoldMessenger.of(context);
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(text),
+          duration: const Duration(seconds: 5),
+          action: SnackBarAction(
+            label: '撤销',
+            onPressed: () async {
+              try {
+                await notifier.undoTaskStatus(taskId);
+                showSnack('已撤销');
+              } catch (_) {
+                showSnack('撤销失败，请重试');
+              }
+            },
+          ),
+        ),
+      );
     }
 
     /// 统一任务操作执行器（v1.1.0：失败提示统一为“操作失败，请重试”）。
     ///
     /// 返回值：true=成功；false=失败（不抛出异常，便于 Dismissible 回滚）。
-    Future<bool> runAction(Future<void> Function() action, {String? ok}) async {
+    Future<bool> runAction(
+      Future<void> Function() action, {
+      String? ok,
+      int? undoTaskId,
+    }) async {
       try {
         await action();
-        if (ok != null) showSnack(ok);
+        if (ok != null) {
+          // ignore: use_build_context_synchronously 的正确处理：异步后先确认 context 仍然挂载。
+          if (!context.mounted) return true;
+
+          // 触觉反馈：关键交互点触发轻反馈（桌面端会被工具类禁用）。
+          HapticUtils.lightImpact(context, enabledByUser: hapticEnabled);
+
+          if (undoSnackbarEnabled && undoTaskId != null) {
+            showUndoSnack(text: ok, taskId: undoTaskId);
+          } else {
+            showSnack(ok);
+          }
+        }
         return true;
       } catch (_) {
         // 失败策略：不刷新列表，保持当前 UI 状态一致。
@@ -192,7 +305,8 @@ class _HomePageState extends ConsumerState<HomePage> {
 
       final ok = await runAction(
         () => notifier.completeTask(taskId),
-        ok: '已完成',
+        ok: '任务已完成',
+        undoTaskId: taskId,
       );
       if (!ok) return false;
 
@@ -211,16 +325,21 @@ class _HomePageState extends ConsumerState<HomePage> {
       // 左滑：保持原生滑出效果，不叠加缩放淡出动画。
       return runAction(
         () => notifier.completeTaskWithoutReload(taskId),
-        ok: '已完成',
+        ok: '任务已完成',
+        undoTaskId: taskId,
       );
     }
 
     Future<bool> skipTask(int taskId) {
-      return runAction(() => notifier.skipTask(taskId), ok: '已跳过');
+      return runAction(() => notifier.skipTask(taskId), ok: '任务已跳过', undoTaskId: taskId);
     }
 
     Future<bool> skipFromSwipe(int taskId) {
-      return runAction(() => notifier.skipTaskWithoutReload(taskId), ok: '已跳过');
+      return runAction(
+        () => notifier.skipTaskWithoutReload(taskId),
+        ok: '任务已跳过',
+        undoTaskId: taskId,
+      );
     }
 
     List<ReviewTaskViewEntity> withRemovingGhosts(
@@ -330,6 +449,14 @@ class _HomePageState extends ConsumerState<HomePage> {
       return notifier.load();
     }
 
+    Future<void> refreshFromButton() async {
+      // 触觉反馈（spec-user-experience-improvements.md 3.2.3）：
+      // - 按钮点击：lightImpact
+      // - 下拉刷新：mediumImpact（由 YiKeRefreshIndicator 统一处理）
+      await HapticUtils.lightImpact(context, enabledByUser: hapticEnabled);
+      await refresh();
+    }
+
     void changeTab(HomeTaskTab next) {
       // 使用本地状态管理 Tab，避免路由重建触发全量页面刷新。
       ref.read(homeTaskTabProvider.notifier).state = next;
@@ -360,7 +487,8 @@ class _HomePageState extends ConsumerState<HomePage> {
                     : Theme.of(context).colorScheme.primary,
               ),
             ),
-          IconButton(
+          ShortcutHintIconButton(
+            hint: 'Ctrl+R',
             tooltip: '刷新',
             onPressed:
                 (tab == HomeTaskTab.all
@@ -368,7 +496,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                         : state.isLoading) ==
                     true
                 ? null
-                : () => refresh(),
+                : () => refreshFromButton(),
             icon: const Icon(Icons.refresh),
           ),
           if (tab == HomeTaskTab.today)
@@ -383,11 +511,21 @@ class _HomePageState extends ConsumerState<HomePage> {
       ),
       body: GradientBackground(
         child: SafeArea(
-          child: RefreshIndicator(
-            onRefresh: refresh,
-            // 性能优化（Phase 1）：tab=all 使用 CustomScrollView + SliverList 虚拟化时间线，避免一次性构建全部卡片。
-            child: (tab == HomeTaskTab.all && hubState != null && hubNotifier != null)
-                ? CustomScrollView(
+          child: ShortcutActionsScope(
+            onFocusSearch: () {
+              // 桌面快捷键：Ctrl/Cmd+F 聚焦搜索框。
+              FocusScope.of(context).requestFocus(_searchFocusNode);
+            },
+            child: YiKeRefreshIndicator(
+              hapticEnabledByUser: hapticEnabled,
+              onRefresh: refresh,
+              // 性能优化（Phase 1）：tab=all 使用 CustomScrollView + SliverList 虚拟化时间线，避免一次性构建全部卡片。
+              child:
+                  (tab == HomeTaskTab.all &&
+                          hubState != null &&
+                          hubNotifier != null)
+                      ? CustomScrollView(
+                    key: const PageStorageKey('home_all_tasks_scroll'),
                     controller: _allTasksScrollController,
                     slivers: [
                       SliverPadding(
@@ -400,6 +538,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                         sliver: SliverToBoxAdapter(
                           child: LearningSearchBar(
                             query: searchQuery,
+                            focusNode: _searchFocusNode,
                             enabled: !(hubState.isLoading),
                             onChanged: (v) => searchQueryNotifier.state = v,
                             onClear: () => searchQueryNotifier.state = '',
@@ -473,10 +612,13 @@ class _HomePageState extends ConsumerState<HomePage> {
                     ],
                   )
                 : ListView(
+                    key: const PageStorageKey('home_today_scroll'),
+                    controller: _todayScrollController,
                     padding: const EdgeInsets.all(AppSpacing.lg),
                     children: [
                       LearningSearchBar(
                         query: searchQuery,
+                        focusNode: _searchFocusNode,
                         enabled: tab == HomeTaskTab.all
                             ? !(hubState?.isLoading ?? false)
                             : !state.isLoading,
@@ -532,11 +674,22 @@ class _HomePageState extends ConsumerState<HomePage> {
                     const SizedBox(height: AppSpacing.lg),
                   ],
                   if (state.isLoading) ...[
-                    const Center(
-                      child: Padding(
-                        padding: EdgeInsets.all(24),
-                        child: CircularProgressIndicator(),
+                    SkeletonLoader(
+                      isLoading: true,
+                      strategy: skeletonStrategy,
+                      skeleton: const SkeletonShimmer(
+                        child: _HomeLoadingSkeleton(),
                       ),
+                      // auto/on：<200ms 不显示任何加载态；off：保留传统进度指示器。
+                      child:
+                          skeletonStrategy == 'off'
+                              ? const Center(
+                                  child: Padding(
+                                    padding: EdgeInsets.all(24),
+                                    child: CircularProgressIndicator(),
+                                  ),
+                                )
+                              : const SizedBox.shrink(),
                     ),
                   ] else ...[
                     if ((homeFilter == ReviewTaskFilter.pending ||
@@ -566,12 +719,15 @@ class _HomePageState extends ConsumerState<HomePage> {
                       ),
                       const SizedBox(height: AppSpacing.lg),
                     ],
-                    if (homeFilter == ReviewTaskFilter.pending) ...[
+                      if (homeFilter == ReviewTaskFilter.pending) ...[
                       if (overduePendingUi.isNotEmpty) ...[
-                        _SectionHeader(
-                          title: '逾期任务',
-                          subtitle: '优先处理红色逾期任务，避免堆积',
-                          color: AppColors.warning,
+                        KeyedSubtree(
+                          key: _overdueSectionKey,
+                          child: const _SectionHeader(
+                            title: '逾期任务',
+                            subtitle: '优先处理红色逾期任务，避免堆积',
+                            color: AppColors.warning,
+                          ),
                         ),
                         const SizedBox(height: AppSpacing.sm),
                         _TaskGrid(
@@ -710,10 +866,13 @@ class _HomePageState extends ConsumerState<HomePage> {
                         _EmptyState(learningItemCount: state.learningItemCount),
                       ] else ...[
                         if (overduePendingUi.isNotEmpty) ...[
-                          _SectionHeader(
-                            title: '逾期任务',
-                            subtitle: '优先处理红色逾期任务，避免堆积',
-                            color: AppColors.warning,
+                          KeyedSubtree(
+                            key: _overdueSectionKey,
+                            child: const _SectionHeader(
+                              title: '逾期任务',
+                              subtitle: '优先处理红色逾期任务，避免堆积',
+                              color: AppColors.warning,
+                            ),
                           ),
                           const SizedBox(height: AppSpacing.sm),
                           _TaskGrid(
@@ -849,6 +1008,31 @@ class _HomePageState extends ConsumerState<HomePage> {
                           ),
                       ],
                     ],
+                    // 性能优化（spec-user-experience-improvements.md 3.3.4）：
+                    // 首页底部统计栏属于非首屏组件，延迟到“首帧后 300ms + 滚动可见”再渲染。
+                    const SizedBox(height: AppSpacing.lg),
+                    DeferredVisibilityBuilder(
+                      id: 'home_bottom_stats_bar',
+                      placeholder: SizedBox(
+                        height: 92,
+                        // 轻量占位：避免首屏构建额外 Provider 与图表组件。
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .surface
+                                .withValues(alpha: 0.06),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: Theme.of(context)
+                                  .dividerColor
+                                  .withValues(alpha: 0.30),
+                            ),
+                          ),
+                        ),
+                      ),
+                      builder: (_) => const HomeBottomStatsBar(),
+                    ),
                     const SizedBox(height: 96),
                   ],
                 ],
@@ -856,6 +1040,7 @@ class _HomePageState extends ConsumerState<HomePage> {
             ),
           ),
         ),
+      ),
       ),
       bottomNavigationBar: effectiveSelectionMode
           ? _BatchActionBar(
@@ -1463,11 +1648,11 @@ class _TaskCard extends StatelessWidget {
     final borderColor = status == ReviewTaskStatus.pending && isOverdue
         ? AppColors.warning
         : normalBorderColor;
-    final statusText = _subtitleText(context);
+    final subtitleStatusText = _subtitleText(context);
     final infoText = _infoText();
     final subtitleText = infoText == null
-        ? statusText
-        : '$statusText · $infoText';
+        ? subtitleStatusText
+        : '$subtitleStatusText · $infoText';
     final detailLabel = _expandedDetailLabel();
     final detailText = _expandedDetailText();
 
@@ -1701,25 +1886,35 @@ class _TaskCard extends StatelessWidget {
                       const SizedBox(width: AppSpacing.md),
                       Column(
                         children: [
-                          IconButton(
-                            tooltip: isOverdue ? '补做' : '完成',
-                            onPressed: isRemoving
-                                ? null
-                                : () async {
-                                    await onComplete();
-                                  },
-                            icon: const Icon(Icons.check_circle_outline),
-                            color: AppColors.success,
+                          Semantics(
+                            button: true,
+                            label: '标记为完成',
+                            child: IconButton(
+                              tooltip: isOverdue ? '补做' : '完成',
+                              onPressed: isRemoving
+                                  ? null
+                                  : () async {
+                                      await onComplete();
+                                    },
+                              icon: const Icon(Icons.check_circle_outline),
+                              color: AppColors.success,
+                            ),
                           ),
-                          IconButton(
-                            tooltip: '跳过',
-                            onPressed: isRemoving
-                                ? null
-                                : () async {
-                                    await onSkip();
-                                  },
-                            icon: const Icon(Icons.not_interested_outlined),
-                            color: secondaryText,
+                          Semantics(
+                            button: true,
+                            label: '跳过此次复习',
+                            child: IconButton(
+                              tooltip: '跳过',
+                              onPressed: isRemoving
+                                  ? null
+                                  : () async {
+                                      await onSkip();
+                                    },
+                              icon: const Icon(
+                                Icons.not_interested_outlined,
+                              ),
+                              color: secondaryText,
+                            ),
                           ),
                         ],
                       ),
@@ -1759,7 +1954,16 @@ class _TaskCard extends StatelessWidget {
       }
     }
 
-    Widget decoratedCard = card;
+    final statusText = switch (status) {
+      ReviewTaskStatus.pending => '待复习',
+      ReviewTaskStatus.done => '已完成',
+      ReviewTaskStatus.skipped => '已跳过',
+    };
+
+    Widget decoratedCard = Semantics(
+      label: '$title，状态：$statusText',
+      child: card,
+    );
     if (!selectionMode && !isRemoving) {
       decoratedCard = GestureDetector(
         behavior: HitTestBehavior.translucent,
@@ -1812,10 +2016,6 @@ class _TaskCard extends StatelessWidget {
         };
         if (!ok) return false;
 
-        // 触觉反馈：仅在“确认触发”时触发一次（松手确认时），减少干扰。
-        if (!disableAnimations) {
-          HapticFeedback.lightImpact();
-        }
         return true;
       },
       onDismissed: (_) => onSwipeDismissed(),
@@ -2032,7 +2232,7 @@ class _EmptyState extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final primary = isDark ? AppColors.primaryLight : AppColors.primary;
     final iconColor = isColdStart ? primary : AppColors.success;
-    final title = isColdStart ? '还没有任何学习内容' : '今日任务已完成！';
+    final title = isColdStart ? '还没有任何学习内容' : '太棒了！今日任务已完成';
 
     return GlassCard(
       child: Padding(
@@ -2053,15 +2253,92 @@ class _EmptyState extends StatelessWidget {
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: AppSpacing.lg),
-            FilledButton(
-              onPressed: () => context.push('/input'),
-              child: const Text('＋添加学习内容'),
+            if (isColdStart) ...[
+              FilledButton(
+                onPressed: () => context.push('/input'),
+                child: const Text('＋添加学习内容'),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              TextButton(
+                onPressed: () => context.push('/topics'),
+                child: const Text('或创建学习专题'),
+              ),
+            ] else ...[
+              FilledButton.icon(
+                onPressed: () => context.go('/calendar'),
+                icon: const Icon(Icons.calendar_month),
+                label: const Text('查看日历'),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              TextButton(
+                onPressed: () => context.push('/input'),
+                child: const Text('添加更多学习内容'),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// 首页骨架屏（用于任务列表加载中占位）。
+///
+/// 说明：
+/// - 仅用于 state.isLoading=true 时的视觉占位
+/// - 形状尽量贴近真实内容，但不追求像素级一致（避免过度耦合 UI）
+class _HomeLoadingSkeleton extends StatelessWidget {
+  const _HomeLoadingSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Column(
+        children: const [
+          GlassCard(
+            child: Padding(
+              padding: EdgeInsets.all(AppSpacing.lg),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SkeletonBox(width: 120, height: 18),
+                  SizedBox(height: AppSpacing.md),
+                  SkeletonBox(width: double.infinity, height: 12),
+                  SizedBox(height: 8),
+                  SkeletonBox(width: 220, height: 12),
+                ],
+              ),
             ),
-            const SizedBox(height: AppSpacing.sm),
-            TextButton(
-              onPressed: () => context.push('/topics'),
-              child: const Text('或创建学习专题'),
-            ),
+          ),
+          SizedBox(height: AppSpacing.lg),
+          _SkeletonTaskCard(),
+          SizedBox(height: AppSpacing.md),
+          _SkeletonTaskCard(),
+          SizedBox(height: AppSpacing.md),
+          _SkeletonTaskCard(),
+        ],
+      ),
+    );
+  }
+}
+
+class _SkeletonTaskCard extends StatelessWidget {
+  const _SkeletonTaskCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return const GlassCard(
+      child: Padding(
+        padding: EdgeInsets.all(AppSpacing.lg),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SkeletonBox(width: 180, height: 14),
+            SizedBox(height: 10),
+            SkeletonBox(width: double.infinity, height: 10),
+            SizedBox(height: 10),
+            SkeletonBox(width: 120, height: 10),
           ],
         ),
       ),

@@ -23,6 +23,7 @@ import '../../providers/review_intervals_provider.dart';
 import '../../providers/templates_provider.dart';
 import '../../widgets/glass_card.dart';
 import '../../widgets/review_preview_panel.dart';
+import '../../widgets/shortcut_actions_scope.dart';
 import '../../widgets/speech_input_field.dart';
 import 'draft_learning_item.dart';
 import 'import_preview_page.dart';
@@ -289,7 +290,14 @@ class _InputPageState extends ConsumerState<InputPage> {
     final secondaryText =
         Theme.of(context).textTheme.bodySmall?.color ?? AppColors.textSecondary;
 
-    return Scaffold(
+    return ShortcutActionsScope(
+      // 交互优化（spec-user-experience-improvements.md 3.4.4）：
+      // 输入页注册保存动作，使 Ctrl/Cmd+S 可触发保存。
+      onSave: () {
+        if (_saving) return;
+        _onSave();
+      },
+      child: Scaffold(
       appBar: AppBar(
         title: const Text('录入'),
         actions: [
@@ -539,6 +547,7 @@ class _InputPageState extends ConsumerState<InputPage> {
               ),
             ),
         ],
+      ),
       ),
     );
   }

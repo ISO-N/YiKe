@@ -239,7 +239,8 @@ LIMIT ?
       // 说明：这里不用 raw string，避免引号与反斜杠的转义陷阱。
       final cleaned = p.replaceAll(RegExp("[\"'`\\\\]"), '').trim();
       if (cleaned.isEmpty) continue;
-      tokens.add('${cleaned}*');
+      // 语法说明：FTS5 支持 `token*` 前缀匹配；此处无需额外插值括号。
+      tokens.add('$cleaned*');
     }
     if (tokens.isEmpty) return null;
     return tokens.join(' AND ');

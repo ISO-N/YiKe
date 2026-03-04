@@ -1109,7 +1109,7 @@ WHERE rt.is_mock_data = 0
     final themeRaw = settings['theme_mode'];
     if (themeRaw is String && themeRaw.trim().isNotEmpty) {
       await _themeSettingsRepository.saveThemeSettings(
-        ThemeSettingsEntity(mode: themeRaw.trim()),
+        ThemeSettingsEntity.defaults().copyWith(mode: themeRaw.trim()),
       );
     }
 

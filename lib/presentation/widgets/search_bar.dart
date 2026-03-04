@@ -23,6 +23,7 @@ class LearningSearchBar extends StatefulWidget {
     required this.query,
     required this.onChanged,
     required this.onClear,
+    this.focusNode,
     this.enabled = true,
     this.hintText = '搜索学习内容...',
   });
@@ -30,6 +31,7 @@ class LearningSearchBar extends StatefulWidget {
   final String query;
   final ValueChanged<String> onChanged;
   final VoidCallback onClear;
+  final FocusNode? focusNode;
   final bool enabled;
   final String hintText;
 
@@ -40,12 +42,20 @@ class LearningSearchBar extends StatefulWidget {
 class _LearningSearchBarState extends State<LearningSearchBar> {
   late final TextEditingController _controller;
   late final FocusNode _focusNode;
+  bool _ownsFocusNode = false;
 
   @override
   void initState() {
     super.initState();
     _controller = TextEditingController(text: widget.query);
-    _focusNode = FocusNode();
+    final provided = widget.focusNode;
+    if (provided != null) {
+      _focusNode = provided;
+      _ownsFocusNode = false;
+    } else {
+      _focusNode = FocusNode();
+      _ownsFocusNode = true;
+    }
   }
 
   @override
@@ -62,7 +72,9 @@ class _LearningSearchBarState extends State<LearningSearchBar> {
   @override
   void dispose() {
     _controller.dispose();
-    _focusNode.dispose();
+    if (_ownsFocusNode) {
+      _focusNode.dispose();
+    }
     super.dispose();
   }
 

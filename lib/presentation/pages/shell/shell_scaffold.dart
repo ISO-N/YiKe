@@ -9,7 +9,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_strings.dart';
 import 'shell_fab.dart';
 
-class ShellScaffold extends StatelessWidget {
+class ShellScaffold extends StatefulWidget {
   /// 底部导航壳层。
   ///
   /// 参数：
@@ -19,6 +19,17 @@ class ShellScaffold extends StatelessWidget {
   const ShellScaffold({super.key, required this.child});
 
   final Widget child;
+
+  @override
+  State<ShellScaffold> createState() => _ShellScaffoldState();
+}
+
+class _ShellScaffoldState extends State<ShellScaffold> {
+  // PageStorage：用于在“路由切换导致页面重建”时，尽量保留滚动位置等状态。
+  //
+  // 说明：当前使用的是 ShellRoute（非 StatefulShellRoute.indexedStack），因此页面会被替换重建。
+  // 这里通过 PageStorageBucket 做一个轻量级的状态保持，满足 spec-user-experience-improvements.md 的体验诉求。
+  final PageStorageBucket _bucket = PageStorageBucket();
 
   int _locationToIndex(String location) {
     if (location.startsWith('/settings')) return 2;
@@ -48,7 +59,7 @@ class ShellScaffold extends StatelessWidget {
     final currentIndex = _locationToIndex(location);
     final shouldShowFab = !location.startsWith('/settings');
     return Scaffold(
-      body: child,
+      body: PageStorage(bucket: _bucket, child: widget.child),
       // 交互规范：录入入口由 Shell 层统一提供；设置页不显示 FAB。
       floatingActionButton: shouldShowFab ? const ShellFAB() : null,
       bottomNavigationBar: NavigationBar(
