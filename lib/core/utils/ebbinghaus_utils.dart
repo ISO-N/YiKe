@@ -37,6 +37,16 @@ class EbbinghausUtils {
   /// 异常：
   /// - 当 [round] 不在 1..10 范围内时抛出 [RangeError]。
   static DateTime calculateReviewDate(DateTime learningDate, int round) {
+    // 关键逻辑：显式校验轮次范围，避免越界访问导致信息不明确的异常。
+    if (round < 1 || round > maxReviewRound) {
+      throw RangeError.range(
+        round,
+        1,
+        maxReviewRound,
+        'round',
+        '复习轮次必须在 1..$maxReviewRound 范围内',
+      );
+    }
     final interval = defaultIntervalsDays[round - 1];
     return learningDate.add(Duration(days: interval));
   }

@@ -260,8 +260,13 @@ class ReviewTaskRepositoryImpl implements ReviewTaskRepository {
     final last = tasks.last;
 
     final nextRound = maxRound + 1;
-    final interval = EbbinghausUtils.defaultIntervalsDays[nextRound - 1];
-    final nextDate = last.scheduledDate.add(Duration(days: interval));
+    // 关键逻辑：defaultIntervalsDays 表达的是“相对学习日的绝对间隔天数”，
+    // 因此在“增加轮次”时应按“相邻两轮的间隔差值”向后推进，避免把绝对间隔重复叠加。
+    final intervals = EbbinghausUtils.defaultIntervalsDays;
+    final currentInterval = intervals[maxRound - 1];
+    final nextInterval = intervals[nextRound - 1];
+    final deltaDays = nextInterval - currentInterval;
+    final nextDate = last.scheduledDate.add(Duration(days: deltaDays));
 
     final now = DateTime.now();
     await create(

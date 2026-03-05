@@ -11,6 +11,7 @@ import 'package:permission_handler/permission_handler.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_typography.dart';
+import '../../../core/utils/ebbinghaus_utils.dart';
 import '../../../core/utils/note_migration_parser.dart';
 import '../../../di/providers.dart';
 import '../../../domain/entities/learning_topic.dart';
@@ -203,7 +204,7 @@ class _InputPageState extends ConsumerState<InputPage> {
     final state = ref.read(reviewIntervalsProvider);
     if (state.configs.isNotEmpty) return state.configs;
     // 兜底：配置尚未加载时，使用默认间隔。
-    const defaults = [1, 2, 4, 7, 15];
+    final defaults = EbbinghausUtils.defaultIntervalsDays;
     return List<ReviewIntervalConfigEntity>.generate(
       defaults.length,
       (index) => ReviewIntervalConfigEntity(

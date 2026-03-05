@@ -1000,7 +1000,7 @@ test('增加轮次：扩展艾宾浩斯曲线到第6轮', () async {
       .getSingleOrNull();
   expect(task6, isNotNull);
   expect(task6!.status, ReviewTaskStatus.pending);
-  // 第6轮应为第5轮日期 + 30天
+  // 第6轮应为第5轮日期 + 15天（默认间隔从 15 → 30，增加差值 15 天）
   expect(task6.scheduledDate.day, now.day + 30);
 });
 ```

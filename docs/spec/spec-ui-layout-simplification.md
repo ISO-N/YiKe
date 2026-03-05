@@ -16,7 +16,7 @@
 
 | 范围 | 说明 |
 |------|------|
-| **底部导航** | 5 Tab → 3 Tab 重构 |
+| **底部导航** | 4 Tab → 3 Tab 重构（规划） |
 | **入口合并** | 首页+任务中心合并、日历+统计合并、设置聚合 |
 | **路由迁移** | 旧路由通过重定向兼容，新路由结构落地 |
 
@@ -42,7 +42,7 @@
 
 | 问题 | 现状代码位置 | 影响 |
 |------|--------------|------|
-| **底部Tab过多** | ShellScaffold destinations 为 5 项（`lib/presentation/pages/shell/shell_scaffold.dart:61`） | 用户选择困难，视觉疲劳 |
+| **底部Tab过多** | ShellScaffold destinations 为 4 项（`lib/presentation/pages/shell/shell_scaffold.dart`） | 用户选择困难，视觉疲劳 |
 | **功能入口分散** | 任务中心与首页功能重叠 | 用户需要在多页面切换 |
 | **设置独立路由页过多** | /settings/export、/settings/backup、/settings/sync、/settings/help、`/topics` 等独立路由 | 功能发现困难，导航效率低 |
 | **路由层级复杂** | 最深3级跳转（如 /settings/debug/mock-data） | 导航效率低 |
@@ -64,14 +64,14 @@
 - **交互形态以可用性优先**：Sheet/全屏二选一，不强制简化复杂流程
 - **路由兼容优先**：旧路由通过重定向兼容，避免直接删除导致断裂
 - **层级简化**：
-  - Shell内层级 ≤ 1（`/home`、`/calendar`、`/settings`）
+  - Shell 内层级 ≤ 1（现状：`/home`、`/calendar`、`/statistics`、`/settings`；目标：收敛为 3 Tab）
   - 工具/详情走独立路由（可多段，但不进入底部Tab结构）
 
 ### 2.2 量化目标
 
 | 指标 | 现状 | 目标 |
 |------|------|------|
-| Shell内Tab数 | 5 | **3** |
+| Shell内Tab数 | 4 | **3** |
 | 设置独立路由页 | 5+ | **1** (聚合入口页) |
 | 功能入口数 | 分散 | **集中** |
 

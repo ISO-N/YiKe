@@ -5,6 +5,7 @@ library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/utils/ebbinghaus_utils.dart';
 import '../../di/providers.dart';
 import '../../domain/entities/review_interval_config.dart';
 import '../../domain/repositories/settings_repository.dart';
@@ -95,7 +96,7 @@ class ReviewIntervalsNotifier extends StateNotifier<ReviewIntervalsState> {
 
   /// 恢复默认（艾宾浩斯）。
   Future<void> resetDefault() async {
-    const defaults = [1, 2, 4, 7, 15];
+    final defaults = EbbinghausUtils.defaultIntervalsDays;
     final next = List<ReviewIntervalConfigEntity>.generate(
       defaults.length,
       (index) => ReviewIntervalConfigEntity(

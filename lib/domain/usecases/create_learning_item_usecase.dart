@@ -37,7 +37,7 @@ class CreateLearningItemParams {
   /// 复习间隔配置（可选）。
   ///
   /// 说明：
-  /// - 若为空则使用默认艾宾浩斯间隔 [1,2,4,7,15]
+  /// - 若为空则使用默认艾宾浩斯间隔（最多 10 轮）
   /// - 仅影响本次创建（不回算历史）
   final List<ReviewIntervalConfigEntity>? reviewIntervals;
 }

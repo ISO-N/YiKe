@@ -18,7 +18,7 @@
 
 | 文档 | 路径 | 说明 |
 |------|------|------|
-| **忆刻学习指南** | `prd/忆刻学习指南.md` | 用户使用指南（单一事实源，内容同步至应用 assets） |
+| **忆刻学习指南** | `prd/忆刻学习指南.md` | 用户使用指南（单一事实源，通过脚本同步到应用 assets） |
 
 ### 归档说明
 
@@ -109,6 +109,6 @@
 - 想要了解使用方法 → `prd/忆刻学习指南.md`
 
 ### 内容同步规则
-- **学习指南**：以 `docs/prd/忆刻学习指南.md` 为唯一源，同步到 `assets/markdown/learning_guide.md`（需创建目录并配置 pubspec.yaml）
+- **学习指南**：以 `docs/prd/忆刻学习指南.md` 为唯一源，同步到 `assets/markdown/learning_guide.md`
 - **注意**：`assets/markdown/learning_guide.md` 为生成文件，不手工编辑，避免双向内容漂移
 - **同步脚本**：使用 `tool/sync_learning_guide.dart` 一键同步学习指南到 assets

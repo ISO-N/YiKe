@@ -247,8 +247,8 @@ class _RoundTile extends StatelessWidget {
               ),
               Slider(
                 min: 1,
-                max: 60,
-                divisions: 59,
+                max: 180,
+                divisions: 179,
                 value: config.intervalDays.toDouble(),
                 label: '${config.intervalDays}',
                 onChanged: config.enabled
