@@ -93,6 +93,7 @@ dependencies:
   timezone: ^0.9.4
   flutter_timezone: ^5.0.1
   local_notifier: ^0.1.6
+  shared_preferences: ^2.5.3
   # 性能优化（spec-user-experience-improvements.md 3.3.4）：用于“滚动到可见区域再渲染”。
   visibility_detector: ^0.4.0+2
 

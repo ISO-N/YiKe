@@ -2482,6 +2482,380 @@ class ReviewRecordsCompanion extends UpdateCompanion<ReviewRecord> {
   }
 }
 
+class $PomodoroRecordsTable extends PomodoroRecords
+    with TableInfo<$PomodoroRecordsTable, PomodoroRecord> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $PomodoroRecordsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _startTimeMeta = const VerificationMeta(
+    'startTime',
+  );
+  @override
+  late final GeneratedColumn<DateTime> startTime = GeneratedColumn<DateTime>(
+    'start_time',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _durationMinutesMeta = const VerificationMeta(
+    'durationMinutes',
+  );
+  @override
+  late final GeneratedColumn<int> durationMinutes = GeneratedColumn<int>(
+    'duration_minutes',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _phaseTypeMeta = const VerificationMeta(
+    'phaseType',
+  );
+  @override
+  late final GeneratedColumn<String> phaseType = GeneratedColumn<String>(
+    'phase_type',
+    aliasedName,
+    false,
+    additionalChecks: GeneratedColumn.checkTextLength(
+      minTextLength: 1,
+      maxTextLength: 20,
+    ),
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _completedMeta = const VerificationMeta(
+    'completed',
+  );
+  @override
+  late final GeneratedColumn<bool> completed = GeneratedColumn<bool>(
+    'completed',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("completed" IN (0, 1))',
+    ),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    startTime,
+    durationMinutes,
+    phaseType,
+    completed,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'pomodoro_records';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<PomodoroRecord> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('start_time')) {
+      context.handle(
+        _startTimeMeta,
+        startTime.isAcceptableOrUnknown(data['start_time']!, _startTimeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_startTimeMeta);
+    }
+    if (data.containsKey('duration_minutes')) {
+      context.handle(
+        _durationMinutesMeta,
+        durationMinutes.isAcceptableOrUnknown(
+          data['duration_minutes']!,
+          _durationMinutesMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_durationMinutesMeta);
+    }
+    if (data.containsKey('phase_type')) {
+      context.handle(
+        _phaseTypeMeta,
+        phaseType.isAcceptableOrUnknown(data['phase_type']!, _phaseTypeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_phaseTypeMeta);
+    }
+    if (data.containsKey('completed')) {
+      context.handle(
+        _completedMeta,
+        completed.isAcceptableOrUnknown(data['completed']!, _completedMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_completedMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  PomodoroRecord map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return PomodoroRecord(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      startTime: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}start_time'],
+      )!,
+      durationMinutes: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}duration_minutes'],
+      )!,
+      phaseType: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}phase_type'],
+      )!,
+      completed: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}completed'],
+      )!,
+    );
+  }
+
+  @override
+  $PomodoroRecordsTable createAlias(String alias) {
+    return $PomodoroRecordsTable(attachedDatabase, alias);
+  }
+}
+
+class PomodoroRecord extends DataClass implements Insertable<PomodoroRecord> {
+  /// 主键 ID。
+  final int id;
+
+  /// 阶段开始时间。
+  final DateTime startTime;
+
+  /// 阶段时长（分钟）。
+  final int durationMinutes;
+
+  /// 阶段类型：work / shortBreak / longBreak。
+  final String phaseType;
+
+  /// 是否完整完成该阶段。
+  final bool completed;
+  const PomodoroRecord({
+    required this.id,
+    required this.startTime,
+    required this.durationMinutes,
+    required this.phaseType,
+    required this.completed,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['start_time'] = Variable<DateTime>(startTime);
+    map['duration_minutes'] = Variable<int>(durationMinutes);
+    map['phase_type'] = Variable<String>(phaseType);
+    map['completed'] = Variable<bool>(completed);
+    return map;
+  }
+
+  PomodoroRecordsCompanion toCompanion(bool nullToAbsent) {
+    return PomodoroRecordsCompanion(
+      id: Value(id),
+      startTime: Value(startTime),
+      durationMinutes: Value(durationMinutes),
+      phaseType: Value(phaseType),
+      completed: Value(completed),
+    );
+  }
+
+  factory PomodoroRecord.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return PomodoroRecord(
+      id: serializer.fromJson<int>(json['id']),
+      startTime: serializer.fromJson<DateTime>(json['startTime']),
+      durationMinutes: serializer.fromJson<int>(json['durationMinutes']),
+      phaseType: serializer.fromJson<String>(json['phaseType']),
+      completed: serializer.fromJson<bool>(json['completed']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'startTime': serializer.toJson<DateTime>(startTime),
+      'durationMinutes': serializer.toJson<int>(durationMinutes),
+      'phaseType': serializer.toJson<String>(phaseType),
+      'completed': serializer.toJson<bool>(completed),
+    };
+  }
+
+  PomodoroRecord copyWith({
+    int? id,
+    DateTime? startTime,
+    int? durationMinutes,
+    String? phaseType,
+    bool? completed,
+  }) => PomodoroRecord(
+    id: id ?? this.id,
+    startTime: startTime ?? this.startTime,
+    durationMinutes: durationMinutes ?? this.durationMinutes,
+    phaseType: phaseType ?? this.phaseType,
+    completed: completed ?? this.completed,
+  );
+  PomodoroRecord copyWithCompanion(PomodoroRecordsCompanion data) {
+    return PomodoroRecord(
+      id: data.id.present ? data.id.value : this.id,
+      startTime: data.startTime.present ? data.startTime.value : this.startTime,
+      durationMinutes: data.durationMinutes.present
+          ? data.durationMinutes.value
+          : this.durationMinutes,
+      phaseType: data.phaseType.present ? data.phaseType.value : this.phaseType,
+      completed: data.completed.present ? data.completed.value : this.completed,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PomodoroRecord(')
+          ..write('id: $id, ')
+          ..write('startTime: $startTime, ')
+          ..write('durationMinutes: $durationMinutes, ')
+          ..write('phaseType: $phaseType, ')
+          ..write('completed: $completed')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(id, startTime, durationMinutes, phaseType, completed);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is PomodoroRecord &&
+          other.id == this.id &&
+          other.startTime == this.startTime &&
+          other.durationMinutes == this.durationMinutes &&
+          other.phaseType == this.phaseType &&
+          other.completed == this.completed);
+}
+
+class PomodoroRecordsCompanion extends UpdateCompanion<PomodoroRecord> {
+  final Value<int> id;
+  final Value<DateTime> startTime;
+  final Value<int> durationMinutes;
+  final Value<String> phaseType;
+  final Value<bool> completed;
+  const PomodoroRecordsCompanion({
+    this.id = const Value.absent(),
+    this.startTime = const Value.absent(),
+    this.durationMinutes = const Value.absent(),
+    this.phaseType = const Value.absent(),
+    this.completed = const Value.absent(),
+  });
+  PomodoroRecordsCompanion.insert({
+    this.id = const Value.absent(),
+    required DateTime startTime,
+    required int durationMinutes,
+    required String phaseType,
+    required bool completed,
+  }) : startTime = Value(startTime),
+       durationMinutes = Value(durationMinutes),
+       phaseType = Value(phaseType),
+       completed = Value(completed);
+  static Insertable<PomodoroRecord> custom({
+    Expression<int>? id,
+    Expression<DateTime>? startTime,
+    Expression<int>? durationMinutes,
+    Expression<String>? phaseType,
+    Expression<bool>? completed,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (startTime != null) 'start_time': startTime,
+      if (durationMinutes != null) 'duration_minutes': durationMinutes,
+      if (phaseType != null) 'phase_type': phaseType,
+      if (completed != null) 'completed': completed,
+    });
+  }
+
+  PomodoroRecordsCompanion copyWith({
+    Value<int>? id,
+    Value<DateTime>? startTime,
+    Value<int>? durationMinutes,
+    Value<String>? phaseType,
+    Value<bool>? completed,
+  }) {
+    return PomodoroRecordsCompanion(
+      id: id ?? this.id,
+      startTime: startTime ?? this.startTime,
+      durationMinutes: durationMinutes ?? this.durationMinutes,
+      phaseType: phaseType ?? this.phaseType,
+      completed: completed ?? this.completed,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (startTime.present) {
+      map['start_time'] = Variable<DateTime>(startTime.value);
+    }
+    if (durationMinutes.present) {
+      map['duration_minutes'] = Variable<int>(durationMinutes.value);
+    }
+    if (phaseType.present) {
+      map['phase_type'] = Variable<String>(phaseType.value);
+    }
+    if (completed.present) {
+      map['completed'] = Variable<bool>(completed.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PomodoroRecordsCompanion(')
+          ..write('id: $id, ')
+          ..write('startTime: $startTime, ')
+          ..write('durationMinutes: $durationMinutes, ')
+          ..write('phaseType: $phaseType, ')
+          ..write('completed: $completed')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $AppSettingsTableTable extends AppSettingsTable
     with TableInfo<$AppSettingsTableTable, AppSettingsTableData> {
   @override
@@ -5893,6 +6267,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   );
   late final $ReviewTasksTable reviewTasks = $ReviewTasksTable(this);
   late final $ReviewRecordsTable reviewRecords = $ReviewRecordsTable(this);
+  late final $PomodoroRecordsTable pomodoroRecords = $PomodoroRecordsTable(
+    this,
+  );
   late final $AppSettingsTableTable appSettingsTable = $AppSettingsTableTable(
     this,
   );
@@ -5950,6 +6327,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     learningSubtasks,
     reviewTasks,
     reviewRecords,
+    pomodoroRecords,
     appSettingsTable,
     learningTemplates,
     learningTopics,
@@ -7935,6 +8313,208 @@ typedef $$ReviewRecordsTableProcessedTableManager =
       (ReviewRecord, $$ReviewRecordsTableReferences),
       ReviewRecord,
       PrefetchHooks Function({bool reviewTaskId})
+    >;
+typedef $$PomodoroRecordsTableCreateCompanionBuilder =
+    PomodoroRecordsCompanion Function({
+      Value<int> id,
+      required DateTime startTime,
+      required int durationMinutes,
+      required String phaseType,
+      required bool completed,
+    });
+typedef $$PomodoroRecordsTableUpdateCompanionBuilder =
+    PomodoroRecordsCompanion Function({
+      Value<int> id,
+      Value<DateTime> startTime,
+      Value<int> durationMinutes,
+      Value<String> phaseType,
+      Value<bool> completed,
+    });
+
+class $$PomodoroRecordsTableFilterComposer
+    extends Composer<_$AppDatabase, $PomodoroRecordsTable> {
+  $$PomodoroRecordsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get startTime => $composableBuilder(
+    column: $table.startTime,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get durationMinutes => $composableBuilder(
+    column: $table.durationMinutes,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get phaseType => $composableBuilder(
+    column: $table.phaseType,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get completed => $composableBuilder(
+    column: $table.completed,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$PomodoroRecordsTableOrderingComposer
+    extends Composer<_$AppDatabase, $PomodoroRecordsTable> {
+  $$PomodoroRecordsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get startTime => $composableBuilder(
+    column: $table.startTime,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get durationMinutes => $composableBuilder(
+    column: $table.durationMinutes,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get phaseType => $composableBuilder(
+    column: $table.phaseType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get completed => $composableBuilder(
+    column: $table.completed,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$PomodoroRecordsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $PomodoroRecordsTable> {
+  $$PomodoroRecordsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get startTime =>
+      $composableBuilder(column: $table.startTime, builder: (column) => column);
+
+  GeneratedColumn<int> get durationMinutes => $composableBuilder(
+    column: $table.durationMinutes,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get phaseType =>
+      $composableBuilder(column: $table.phaseType, builder: (column) => column);
+
+  GeneratedColumn<bool> get completed =>
+      $composableBuilder(column: $table.completed, builder: (column) => column);
+}
+
+class $$PomodoroRecordsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $PomodoroRecordsTable,
+          PomodoroRecord,
+          $$PomodoroRecordsTableFilterComposer,
+          $$PomodoroRecordsTableOrderingComposer,
+          $$PomodoroRecordsTableAnnotationComposer,
+          $$PomodoroRecordsTableCreateCompanionBuilder,
+          $$PomodoroRecordsTableUpdateCompanionBuilder,
+          (
+            PomodoroRecord,
+            BaseReferences<
+              _$AppDatabase,
+              $PomodoroRecordsTable,
+              PomodoroRecord
+            >,
+          ),
+          PomodoroRecord,
+          PrefetchHooks Function()
+        > {
+  $$PomodoroRecordsTableTableManager(
+    _$AppDatabase db,
+    $PomodoroRecordsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$PomodoroRecordsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$PomodoroRecordsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$PomodoroRecordsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<DateTime> startTime = const Value.absent(),
+                Value<int> durationMinutes = const Value.absent(),
+                Value<String> phaseType = const Value.absent(),
+                Value<bool> completed = const Value.absent(),
+              }) => PomodoroRecordsCompanion(
+                id: id,
+                startTime: startTime,
+                durationMinutes: durationMinutes,
+                phaseType: phaseType,
+                completed: completed,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required DateTime startTime,
+                required int durationMinutes,
+                required String phaseType,
+                required bool completed,
+              }) => PomodoroRecordsCompanion.insert(
+                id: id,
+                startTime: startTime,
+                durationMinutes: durationMinutes,
+                phaseType: phaseType,
+                completed: completed,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$PomodoroRecordsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $PomodoroRecordsTable,
+      PomodoroRecord,
+      $$PomodoroRecordsTableFilterComposer,
+      $$PomodoroRecordsTableOrderingComposer,
+      $$PomodoroRecordsTableAnnotationComposer,
+      $$PomodoroRecordsTableCreateCompanionBuilder,
+      $$PomodoroRecordsTableUpdateCompanionBuilder,
+      (
+        PomodoroRecord,
+        BaseReferences<_$AppDatabase, $PomodoroRecordsTable, PomodoroRecord>,
+      ),
+      PomodoroRecord,
+      PrefetchHooks Function()
     >;
 typedef $$AppSettingsTableTableCreateCompanionBuilder =
     AppSettingsTableCompanion Function({
@@ -10000,6 +10580,8 @@ class $AppDatabaseManager {
       $$ReviewTasksTableTableManager(_db, _db.reviewTasks);
   $$ReviewRecordsTableTableManager get reviewRecords =>
       $$ReviewRecordsTableTableManager(_db, _db.reviewRecords);
+  $$PomodoroRecordsTableTableManager get pomodoroRecords =>
+      $$PomodoroRecordsTableTableManager(_db, _db.pomodoroRecords);
   $$AppSettingsTableTableTableManager get appSettingsTable =>
       $$AppSettingsTableTableTableManager(_db, _db.appSettingsTable);
   $$LearningTemplatesTableTableManager get learningTemplates =>

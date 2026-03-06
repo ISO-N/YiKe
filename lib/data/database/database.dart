@@ -15,6 +15,7 @@ import 'tables/learning_subtasks_table.dart';
 import 'tables/review_records_table.dart';
 import 'tables/learning_templates_table.dart';
 import 'tables/learning_topics_table.dart';
+import 'tables/pomodoro_records_table.dart';
 import 'tables/review_tasks_table.dart';
 import 'tables/settings_table.dart';
 import 'tables/sync_devices_table.dart';
@@ -37,6 +38,7 @@ part 'database.g.dart';
     LearningSubtasks,
     ReviewTasks,
     ReviewRecords,
+    PomodoroRecords,
     AppSettingsTable,
     LearningTemplates,
     LearningTopics,
@@ -71,7 +73,7 @@ class AppDatabase extends _$AppDatabase {
   }
 
   @override
-  int get schemaVersion => 11;
+  int get schemaVersion => 12;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -369,6 +371,11 @@ WHERE occurred_at IS NULL
       // v11：全文检索（FTS5）- 建表 + 触发器 + 回填。
       if (from < 11) {
         await _createOrRebuildLearningItemsFts();
+      }
+
+      // v12：新增番茄钟记录表。
+      if (from < 12) {
+        await migrator.createTable(pomodoroRecords);
       }
     },
     beforeOpen: (details) async {
