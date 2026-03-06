@@ -10,6 +10,7 @@ import '../data/database/daos/learning_subtask_dao.dart';
 import '../data/database/daos/learning_template_dao.dart';
 import '../data/database/daos/learning_topic_dao.dart';
 import '../data/database/daos/backup_dao.dart';
+import '../data/database/daos/pomodoro_record_dao.dart';
 import '../data/database/daos/review_task_dao.dart';
 import '../data/database/daos/settings_dao.dart';
 import '../data/database/daos/sync_device_dao.dart';
@@ -22,6 +23,8 @@ import '../data/repositories/learning_subtask_repository_impl.dart';
 import '../data/repositories/learning_template_repository_impl.dart';
 import '../data/repositories/learning_topic_repository_impl.dart';
 import '../data/repositories/goal_settings_repository_impl.dart';
+import '../data/repositories/pomodoro_repository_impl.dart';
+import '../data/repositories/pomodoro_settings_repository_impl.dart';
 import '../data/repositories/review_task_repository_impl.dart';
 import '../data/repositories/settings_repository_impl.dart';
 import '../data/repositories/task_structure_migration_repository_impl.dart';
@@ -34,6 +37,8 @@ import '../domain/repositories/learning_subtask_repository.dart';
 import '../domain/repositories/learning_template_repository.dart';
 import '../domain/repositories/learning_topic_repository.dart';
 import '../domain/repositories/goal_settings_repository.dart';
+import '../domain/repositories/pomodoro_repository.dart';
+import '../domain/repositories/pomodoro_settings_repository.dart';
 import '../domain/repositories/review_task_repository.dart';
 import '../domain/repositories/settings_repository.dart';
 import '../domain/repositories/task_structure_migration_repository.dart';
@@ -104,6 +109,10 @@ final learningSubtaskDaoProvider = Provider<LearningSubtaskDao>((ref) {
 
 final reviewTaskDaoProvider = Provider<ReviewTaskDao>((ref) {
   return ReviewTaskDao(ref.read(appDatabaseProvider));
+});
+
+final pomodoroRecordDaoProvider = Provider<PomodoroRecordDao>((ref) {
+  return PomodoroRecordDao(ref.read(appDatabaseProvider));
 });
 
 final settingsDaoProvider = Provider<SettingsDao>((ref) {
@@ -233,6 +242,21 @@ final goalSettingsRepositoryProvider = Provider<GoalSettingsRepository>((ref) {
     dao: ref.read(settingsDaoProvider),
     secureStorageService: ref.read(secureStorageServiceProvider),
     syncLogWriter: ref.read(syncLogWriterProvider),
+  );
+});
+
+/// 番茄钟记录仓储 Provider。
+final pomodoroRepositoryProvider = Provider<PomodoroRepository>((ref) {
+  return PomodoroRepositoryImpl(dao: ref.read(pomodoroRecordDaoProvider));
+});
+
+/// 番茄钟配置仓储 Provider。
+final pomodoroSettingsRepositoryProvider = Provider<PomodoroSettingsRepository>((
+  ref,
+) {
+  return PomodoroSettingsRepositoryImpl(
+    dao: ref.read(settingsDaoProvider),
+    secureStorageService: ref.read(secureStorageServiceProvider),
   );
 });
 
