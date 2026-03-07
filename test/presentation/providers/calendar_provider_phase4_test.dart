@@ -33,14 +33,10 @@ class _ControlledCalendarUseCase extends GetCalendarTasksUseCase {
   String _key(int year, int month) => '$year-$month';
 
   @override
-  Future<CalendarMonthResult> execute({
-    required int year,
-    required int month,
-  }) {
-    return _monthCompleters.putIfAbsent(
-      _key(year, month),
-      Completer<CalendarMonthResult>.new,
-    ).future;
+  Future<CalendarMonthResult> execute({required int year, required int month}) {
+    return _monthCompleters
+        .putIfAbsent(_key(year, month), Completer<CalendarMonthResult>.new)
+        .future;
   }
 
   @override
@@ -53,10 +49,9 @@ class _ControlledCalendarUseCase extends GetCalendarTasksUseCase {
     int month, {
     required Map<DateTime, TaskDayStats> stats,
   }) {
-    _monthCompleters.putIfAbsent(
-      _key(year, month),
-      Completer<CalendarMonthResult>.new,
-    ).complete(CalendarMonthResult(dayStats: stats));
+    _monthCompleters
+        .putIfAbsent(_key(year, month), Completer<CalendarMonthResult>.new)
+        .complete(CalendarMonthResult(dayStats: stats));
   }
 }
 
@@ -88,7 +83,11 @@ void main() {
 
     final notifier = container.read(calendarProvider.notifier);
     final now = DateTime.now();
-    useCase.completeMonth(now.year, now.month, stats: const <DateTime, TaskDayStats>{});
+    useCase.completeMonth(
+      now.year,
+      now.month,
+      stats: const <DateTime, TaskDayStats>{},
+    );
     await settle();
 
     final aprilFuture = notifier.loadMonth(2026, 4);

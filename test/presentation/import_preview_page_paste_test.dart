@@ -16,9 +16,7 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
     await tester.pumpWidget(
       const ProviderScope(
-        child: MaterialApp(
-          home: ImportPreviewPage(autoPickFileOnOpen: false),
-        ),
+        child: MaterialApp(home: ImportPreviewPage(autoPickFileOnOpen: false)),
       ),
     );
     await tester.pumpAndSettle();
@@ -41,11 +39,12 @@ void main() {
                 body: Center(
                   child: TextButton(
                     onPressed: () async {
-                      imported = await Navigator.of(context).push<List<DraftLearningItem>>(
-                        MaterialPageRoute<List<DraftLearningItem>>(
-                          builder: (_) => const ImportPreviewPage(),
-                        ),
-                      );
+                      imported = await Navigator.of(context)
+                          .push<List<DraftLearningItem>>(
+                            MaterialPageRoute<List<DraftLearningItem>>(
+                              builder: (_) => const ImportPreviewPage(),
+                            ),
+                          );
                     },
                     child: const Text('打开导入页'),
                   ),

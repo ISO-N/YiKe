@@ -172,24 +172,28 @@ void main() {
         throwsA(isA<ExportException>()),
       );
 
-      final itemId = await db.into(db.learningItems).insert(
-        LearningItemsCompanion.insert(
-          title: 'T,1',
-          description: const drift.Value('含有"引号"'),
-          note: const drift.Value('原始备注'),
-          tags: drift.Value(jsonEncode(<String>['a,b', 'c'])),
-          learningDate: DateTime(2026, 2, 25),
-          createdAt: drift.Value(DateTime(2026, 2, 25, 9)),
-        ),
-      );
-      await db.into(db.learningSubtasks).insert(
-        LearningSubtasksCompanion.insert(
-          learningItemId: itemId,
-          content: '第一行\n第二行',
-          sortOrder: const drift.Value(0),
-          createdAt: DateTime(2026, 2, 25, 10),
-        ),
-      );
+      final itemId = await db
+          .into(db.learningItems)
+          .insert(
+            LearningItemsCompanion.insert(
+              title: 'T,1',
+              description: const drift.Value('含有"引号"'),
+              note: const drift.Value('原始备注'),
+              tags: drift.Value(jsonEncode(<String>['a,b', 'c'])),
+              learningDate: DateTime(2026, 2, 25),
+              createdAt: drift.Value(DateTime(2026, 2, 25, 9)),
+            ),
+          );
+      await db
+          .into(db.learningSubtasks)
+          .insert(
+            LearningSubtasksCompanion.insert(
+              learningItemId: itemId,
+              content: '第一行\n第二行',
+              sortOrder: const drift.Value(0),
+              createdAt: DateTime(2026, 2, 25, 10),
+            ),
+          );
 
       final preview = await useCase.preview(
         const ExportParams(

@@ -49,9 +49,9 @@ class GoalSettingsEntity {
     return GoalSettingsEntity(
       dailyTarget: clearDaily ? null : (dailyTarget ?? this.dailyTarget),
       streakTarget: clearStreak ? null : (streakTarget ?? this.streakTarget),
-      weeklyRateTarget:
-          clearWeeklyRate ? null : (weeklyRateTarget ?? this.weeklyRateTarget),
+      weeklyRateTarget: clearWeeklyRate
+          ? null
+          : (weeklyRateTarget ?? this.weeklyRateTarget),
     );
   }
 }
-

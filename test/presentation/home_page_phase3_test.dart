@@ -39,16 +39,18 @@ void main() {
     List<String> tags = const <String>[],
     required DateTime learningDate,
   }) {
-    return db.into(db.learningItems).insert(
-      LearningItemsCompanion.insert(
-        title: title,
-        description: drift.Value(description),
-        tags: drift.Value(jsonEncode(tags)),
-        learningDate: learningDate,
-        createdAt: drift.Value(learningDate),
-        updatedAt: drift.Value(learningDate),
-      ),
-    );
+    return db
+        .into(db.learningItems)
+        .insert(
+          LearningItemsCompanion.insert(
+            title: title,
+            description: drift.Value(description),
+            tags: drift.Value(jsonEncode(tags)),
+            learningDate: learningDate,
+            createdAt: drift.Value(learningDate),
+            updatedAt: drift.Value(learningDate),
+          ),
+        );
   }
 
   /// 插入复习任务，并显式维护 occurredAt，贴近生产口径。
@@ -66,19 +68,21 @@ void main() {
       ReviewTaskStatus.done => completedAt ?? scheduledDate,
       ReviewTaskStatus.skipped => skippedAt ?? scheduledDate,
     };
-    return db.into(db.reviewTasks).insert(
-      ReviewTasksCompanion.insert(
-        learningItemId: learningItemId,
-        reviewRound: reviewRound,
-        scheduledDate: scheduledDate,
-        occurredAt: drift.Value(occurredAt),
-        status: drift.Value(status.toDbValue()),
-        completedAt: drift.Value(completedAt),
-        skippedAt: drift.Value(skippedAt),
-        createdAt: drift.Value(scheduledDate),
-        updatedAt: drift.Value(occurredAt),
-      ),
-    );
+    return db
+        .into(db.reviewTasks)
+        .insert(
+          ReviewTasksCompanion.insert(
+            learningItemId: learningItemId,
+            reviewRound: reviewRound,
+            scheduledDate: scheduledDate,
+            occurredAt: drift.Value(occurredAt),
+            status: drift.Value(status.toDbValue()),
+            completedAt: drift.Value(completedAt),
+            skippedAt: drift.Value(skippedAt),
+            createdAt: drift.Value(scheduledDate),
+            updatedAt: drift.Value(occurredAt),
+          ),
+        );
   }
 
   group('HomePage Phase3', () {
@@ -176,145 +180,142 @@ void main() {
       expect(find.text('开启通知，确保及时复习'), findsNothing);
     });
 
-    testWidgets(
-      '首页支持展示逾期/已完成/已跳过分区，并可从状态标签撤销任务',
-      (tester) async {
-        final today = startOfDay(DateTime.now());
-        final yesterday = today.subtract(const Duration(days: 1));
+    testWidgets('首页支持展示逾期/已完成/已跳过分区，并可从状态标签撤销任务', (tester) async {
+      final today = startOfDay(DateTime.now());
+      final yesterday = today.subtract(const Duration(days: 1));
 
-        late final int doneTaskId;
-        late final int skippedTaskId;
+      late final int doneTaskId;
+      late final int skippedTaskId;
 
-        final harness = await pumpYiKeApp(
-          tester,
-          // 说明：显式带上 tab/focus 参数，覆盖深链解析逻辑。
-          initialLocation: '/home?tab=today&focus=overdue',
-          size: const Size(390, 960),
-          seed: (container) async {
-            final db = container.read(appDatabaseProvider);
+      final harness = await pumpYiKeApp(
+        tester,
+        // 说明：显式带上 tab/focus 参数，覆盖深链解析逻辑。
+        initialLocation: '/home?tab=today&focus=overdue',
+        size: const Size(390, 960),
+        seed: (container) async {
+          final db = container.read(appDatabaseProvider);
 
-            final overdueItemId = await insertLearningItem(
-              db,
-              title: '逾期待复习',
-              description: '逾期任务描述',
-              tags: const <String>['逾期'],
-              learningDate: yesterday,
-            );
-            await insertReviewTask(
-              db,
-              learningItemId: overdueItemId,
-              reviewRound: 1,
-              scheduledDate: yesterday,
-              status: ReviewTaskStatus.pending,
-            );
+          final overdueItemId = await insertLearningItem(
+            db,
+            title: '逾期待复习',
+            description: '逾期任务描述',
+            tags: const <String>['逾期'],
+            learningDate: yesterday,
+          );
+          await insertReviewTask(
+            db,
+            learningItemId: overdueItemId,
+            reviewRound: 1,
+            scheduledDate: yesterday,
+            status: ReviewTaskStatus.pending,
+          );
 
-            final todayItemId = await insertLearningItem(
-              db,
-              title: '今日待复习',
-              description: '今日任务描述',
-              tags: const <String>['今日'],
-              learningDate: today,
-            );
-            await insertReviewTask(
-              db,
-              learningItemId: todayItemId,
-              reviewRound: 2,
-              scheduledDate: today,
-              status: ReviewTaskStatus.pending,
-            );
+          final todayItemId = await insertLearningItem(
+            db,
+            title: '今日待复习',
+            description: '今日任务描述',
+            tags: const <String>['今日'],
+            learningDate: today,
+          );
+          await insertReviewTask(
+            db,
+            learningItemId: todayItemId,
+            reviewRound: 2,
+            scheduledDate: today,
+            status: ReviewTaskStatus.pending,
+          );
 
-            final doneItemId = await insertLearningItem(
-              db,
-              title: '今日已完成',
-              tags: const <String>['完成'],
-              learningDate: today,
-            );
-            doneTaskId = await insertReviewTask(
-              db,
-              learningItemId: doneItemId,
-              reviewRound: 1,
-              scheduledDate: today,
-              status: ReviewTaskStatus.done,
-              completedAt: today.add(const Duration(hours: 8)),
-            );
+          final doneItemId = await insertLearningItem(
+            db,
+            title: '今日已完成',
+            tags: const <String>['完成'],
+            learningDate: today,
+          );
+          doneTaskId = await insertReviewTask(
+            db,
+            learningItemId: doneItemId,
+            reviewRound: 1,
+            scheduledDate: today,
+            status: ReviewTaskStatus.done,
+            completedAt: today.add(const Duration(hours: 8)),
+          );
 
-            final skippedItemId = await insertLearningItem(
-              db,
-              title: '今日已跳过',
-              tags: const <String>['跳过'],
-              learningDate: today,
-            );
-            skippedTaskId = await insertReviewTask(
-              db,
-              learningItemId: skippedItemId,
-              reviewRound: 1,
-              scheduledDate: today,
-              status: ReviewTaskStatus.skipped,
-              skippedAt: today.add(const Duration(hours: 9)),
-            );
-          },
-        );
+          final skippedItemId = await insertLearningItem(
+            db,
+            title: '今日已跳过',
+            tags: const <String>['跳过'],
+            learningDate: today,
+          );
+          skippedTaskId = await insertReviewTask(
+            db,
+            learningItemId: skippedItemId,
+            reviewRound: 1,
+            scheduledDate: today,
+            status: ReviewTaskStatus.skipped,
+            skippedAt: today.add(const Duration(hours: 9)),
+          );
+        },
+      );
 
-        await harness.container.read(homeTasksProvider.notifier).load();
-        await tester.pumpAndSettle();
+      await harness.container.read(homeTasksProvider.notifier).load();
+      await tester.pumpAndSettle();
 
-        expect(find.text('逾期任务'), findsOneWidget);
-        expect(find.text('今日待复习'), findsOneWidget);
+      expect(find.text('逾期任务'), findsOneWidget);
+      expect(find.text('今日待复习'), findsOneWidget);
 
-        // 说明：首页默认筛选为“待复习”，因此要先切换到 done/skipped 才会渲染对应卡片。
-        expect(find.text('已完成 1'), findsOneWidget);
-        expect(find.text('已跳过 1'), findsOneWidget);
+      // 说明：首页默认筛选为“待复习”，因此要先切换到 done/skipped 才会渲染对应卡片。
+      expect(find.text('已完成 1'), findsOneWidget);
+      expect(find.text('已跳过 1'), findsOneWidget);
 
-        await tester.tap(find.text('已完成 1'));
-        await tester.pumpAndSettle();
-        expect(find.textContaining('今日已完成（第1次）'), findsOneWidget);
+      await tester.tap(find.text('已完成 1'));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('今日已完成（第1次）'), findsOneWidget);
 
-        // 点击“已完成”状态标签触发撤销弹窗（覆盖“点击状态标签撤销”的交互）。
-        final doneCard = find.ancestor(
-          of: find.textContaining('今日已完成（第1次）'),
-          matching: find.byType(InkWell),
-        );
-        await tester.tap(
-          find.descendant(of: doneCard.first, matching: find.text('已完成')),
-        );
-        await tester.pumpAndSettle();
-        expect(find.text('撤销任务状态？'), findsOneWidget);
-        await tester.tap(find.text('确认撤销'));
-        await tester.pumpAndSettle();
-        expect(find.text('已撤销'), findsOneWidget);
+      // 点击“已完成”状态标签触发撤销弹窗（覆盖“点击状态标签撤销”的交互）。
+      final doneCard = find.ancestor(
+        of: find.textContaining('今日已完成（第1次）'),
+        matching: find.byType(InkWell),
+      );
+      await tester.tap(
+        find.descendant(of: doneCard.first, matching: find.text('已完成')),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('撤销任务状态？'), findsOneWidget);
+      await tester.tap(find.text('确认撤销'));
+      await tester.pumpAndSettle();
+      expect(find.text('已撤销'), findsOneWidget);
 
-        // 额外验证：撤销后 Provider 状态会反映为 pending。
-        final doneAfterUndo = harness.container
-            .read(homeTasksProvider)
-            .todayPending
-            .any((task) => task.taskId == doneTaskId);
-        expect(doneAfterUndo, isTrue);
+      // 额外验证：撤销后 Provider 状态会反映为 pending。
+      final doneAfterUndo = harness.container
+          .read(homeTasksProvider)
+          .todayPending
+          .any((task) => task.taskId == doneTaskId);
+      expect(doneAfterUndo, isTrue);
 
-        // 点击“已跳过”状态标签触发撤销。
-        await tester.ensureVisible(find.text('已跳过 1'));
-        await tester.tap(find.text('已跳过 1'));
-        await tester.pumpAndSettle();
-        expect(find.textContaining('今日已跳过（第1次）'), findsOneWidget);
+      // 点击“已跳过”状态标签触发撤销。
+      await tester.ensureVisible(find.text('已跳过 1'));
+      await tester.tap(find.text('已跳过 1'));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('今日已跳过（第1次）'), findsOneWidget);
 
-        final skippedCard = find.ancestor(
-          of: find.textContaining('今日已跳过（第1次）'),
-          matching: find.byType(InkWell),
-        );
-        await tester.tap(
-          find.descendant(of: skippedCard.first, matching: find.text('已跳过')),
-        );
-        await tester.pumpAndSettle();
-        expect(find.text('撤销任务状态？'), findsOneWidget);
-        await tester.tap(find.text('确认撤销'));
-        await tester.pumpAndSettle();
+      final skippedCard = find.ancestor(
+        of: find.textContaining('今日已跳过（第1次）'),
+        matching: find.byType(InkWell),
+      );
+      await tester.tap(
+        find.descendant(of: skippedCard.first, matching: find.text('已跳过')),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('撤销任务状态？'), findsOneWidget);
+      await tester.tap(find.text('确认撤销'));
+      await tester.pumpAndSettle();
 
-        final skippedAfterUndo = harness.container
-            .read(homeTasksProvider)
-            .todayPending
-            .any((task) => task.taskId == skippedTaskId);
-        expect(skippedAfterUndo, isTrue);
-      },
-    );
+      final skippedAfterUndo = harness.container
+          .read(homeTasksProvider)
+          .todayPending
+          .any((task) => task.taskId == skippedTaskId);
+      expect(skippedAfterUndo, isTrue);
+    });
 
     testWidgets(
       '长按任务卡片可打开上下文菜单并进入编辑详情路由',

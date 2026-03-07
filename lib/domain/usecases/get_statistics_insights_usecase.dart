@@ -126,10 +126,8 @@ class GetStatisticsInsightsUseCase {
     for (var month = 1; month <= 12; month++) {
       final start = DateTime(year, month, 1);
       final end = DateTime(year, month + 1, 1);
-      final (completed, total) = await _reviewTaskRepository.getTaskStatsInRange(
-        start,
-        end,
-      );
+      final (completed, total) = await _reviewTaskRepository
+          .getTaskStatsInRange(start, end);
       points.add(
         StatisticsTrendPointEntity(
           date: start,

@@ -14,9 +14,7 @@ void main() {
     });
 
     test('列表文本会提取为子任务', () {
-      final result = NoteMigrationParser.parse(
-        '- 第一条\n2. 第二条\n③ 第三条\n• 第四条',
-      );
+      final result = NoteMigrationParser.parse('- 第一条\n2. 第二条\n③ 第三条\n• 第四条');
       expect(result.description, isNull);
       expect(result.subtasks, <String>['第一条', '第二条', '第三条', '第四条']);
     });
@@ -28,9 +26,7 @@ void main() {
     });
 
     test('多行且无列表时第一段为描述，其余为子任务', () {
-      final result = NoteMigrationParser.parse(
-        '第一段说明\n第二行补充\n\n子任务一\n子任务二',
-      );
+      final result = NoteMigrationParser.parse('第一段说明\n第二行补充\n\n子任务一\n子任务二');
       expect(result.description, '第一段说明\n第二行补充');
       expect(result.subtasks, <String>['子任务一', '子任务二']);
     });

@@ -194,13 +194,14 @@ final learningItemRepositoryProvider = Provider<LearningItemRepository>((ref) {
   );
 });
 
-final learningSubtaskRepositoryProvider =
-    Provider<LearningSubtaskRepository>((ref) {
-      return LearningSubtaskRepositoryImpl(
-        dao: ref.read(learningSubtaskDaoProvider),
-        syncLogWriter: ref.read(syncLogWriterProvider),
-      );
-    });
+final learningSubtaskRepositoryProvider = Provider<LearningSubtaskRepository>((
+  ref,
+) {
+  return LearningSubtaskRepositoryImpl(
+    dao: ref.read(learningSubtaskDaoProvider),
+    syncLogWriter: ref.read(syncLogWriterProvider),
+  );
+});
 
 final learningTemplateRepositoryProvider = Provider<LearningTemplateRepository>(
   (ref) {
@@ -251,14 +252,14 @@ final pomodoroRepositoryProvider = Provider<PomodoroRepository>((ref) {
 });
 
 /// 番茄钟配置仓储 Provider。
-final pomodoroSettingsRepositoryProvider = Provider<PomodoroSettingsRepository>((
-  ref,
-) {
-  return PomodoroSettingsRepositoryImpl(
-    dao: ref.read(settingsDaoProvider),
-    secureStorageService: ref.read(secureStorageServiceProvider),
-  );
-});
+final pomodoroSettingsRepositoryProvider = Provider<PomodoroSettingsRepository>(
+  (ref) {
+    return PomodoroSettingsRepositoryImpl(
+      dao: ref.read(settingsDaoProvider),
+      secureStorageService: ref.read(secureStorageServiceProvider),
+    );
+  },
+);
 
 /// 主题设置仓储 Provider。
 ///
@@ -423,12 +424,13 @@ final addReviewRoundUseCaseProvider = Provider<AddReviewRoundUseCase>((ref) {
   );
 });
 
-final removeReviewRoundUseCaseProvider =
-    Provider<RemoveReviewRoundUseCase>((ref) {
-      return RemoveReviewRoundUseCase(
-        reviewTaskRepository: ref.read(reviewTaskRepositoryProvider),
-      );
-    });
+final removeReviewRoundUseCaseProvider = Provider<RemoveReviewRoundUseCase>((
+  ref,
+) {
+  return RemoveReviewRoundUseCase(
+    reviewTaskRepository: ref.read(reviewTaskRepositoryProvider),
+  );
+});
 
 final migrateNoteToSubtasksUseCaseProvider =
     Provider<MigrateNoteToSubtasksUseCase>((ref) {
@@ -516,12 +518,13 @@ final exportDataUseCaseProvider = Provider<ExportDataUseCase>((ref) {
 });
 
 /// v1.4.0：统计数据导出（按天聚合 CSV）UseCase Provider。
-final exportStatisticsCsvUseCaseProvider =
-    Provider<ExportStatisticsCsvUseCase>((ref) {
-      return ExportStatisticsCsvUseCase(
-        reviewTaskRepository: ref.read(reviewTaskRepositoryProvider),
-      );
-    });
+final exportStatisticsCsvUseCaseProvider = Provider<ExportStatisticsCsvUseCase>(
+  (ref) {
+    return ExportStatisticsCsvUseCase(
+      reviewTaskRepository: ref.read(reviewTaskRepositoryProvider),
+    );
+  },
+);
 
 /// v1.5：备份与恢复 UseCase Providers
 final exportBackupUseCaseProvider = Provider<ExportBackupUseCase>((ref) {

@@ -24,9 +24,16 @@ void main() {
   /// 等待主题、复习配置与番茄钟配置全部加载完成。
   Future<void> waitUntilLoaded(ProviderContainer container) async {
     for (var attempt = 0; attempt < 80; attempt++) {
-      final intervalsLoaded = !container.read(reviewIntervalsProvider).isLoading;
-      final pomodoroLoaded = !container.read(pomodoroSettingsProvider).isLoading;
-      final themeLoaded = container.read(themeSettingsProvider).seedColorHex.isNotEmpty;
+      final intervalsLoaded = !container
+          .read(reviewIntervalsProvider)
+          .isLoading;
+      final pomodoroLoaded = !container
+          .read(pomodoroSettingsProvider)
+          .isLoading;
+      final themeLoaded = container
+          .read(themeSettingsProvider)
+          .seedColorHex
+          .isNotEmpty;
       if (intervalsLoaded && pomodoroLoaded && themeLoaded) {
         return;
       }
@@ -56,35 +63,38 @@ void main() {
 
     await waitUntilLoaded(container);
 
-    await container.read(themeSettingsProvider.notifier).save(
-      container.read(themeSettingsProvider).copyWith(
-        seedColorHex: '#4CAF50',
-        amoled: true,
-      ),
-    );
-    await container.read(reviewIntervalsProvider.notifier).save(
-      <ReviewIntervalConfigEntity>[
-        ReviewIntervalConfigEntity(round: 1, intervalDays: 1, enabled: true),
-        ReviewIntervalConfigEntity(round: 2, intervalDays: 3, enabled: true),
-        ReviewIntervalConfigEntity(round: 3, intervalDays: 6, enabled: true),
-        ReviewIntervalConfigEntity(round: 4, intervalDays: 10, enabled: true),
-        ReviewIntervalConfigEntity(round: 5, intervalDays: 16, enabled: true),
-        ReviewIntervalConfigEntity(round: 6, intervalDays: 24, enabled: true),
-        ReviewIntervalConfigEntity(round: 7, intervalDays: 36, enabled: true),
-        ReviewIntervalConfigEntity(round: 8, intervalDays: 54, enabled: true),
-        ReviewIntervalConfigEntity(round: 9, intervalDays: 90, enabled: true),
-      ],
-    );
-    await container.read(pomodoroSettingsProvider.notifier).save(
-      const PomodoroSettingsEntity(
-        workMinutes: 45,
-        shortBreakMinutes: 8,
-        longBreakMinutes: 20,
-        longBreakInterval: 3,
-        autoStartBreak: false,
-        autoStartWork: true,
-      ),
-    );
+    await container
+        .read(themeSettingsProvider.notifier)
+        .save(
+          container
+              .read(themeSettingsProvider)
+              .copyWith(seedColorHex: '#4CAF50', amoled: true),
+        );
+    await container
+        .read(reviewIntervalsProvider.notifier)
+        .save(<ReviewIntervalConfigEntity>[
+          ReviewIntervalConfigEntity(round: 1, intervalDays: 1, enabled: true),
+          ReviewIntervalConfigEntity(round: 2, intervalDays: 3, enabled: true),
+          ReviewIntervalConfigEntity(round: 3, intervalDays: 6, enabled: true),
+          ReviewIntervalConfigEntity(round: 4, intervalDays: 10, enabled: true),
+          ReviewIntervalConfigEntity(round: 5, intervalDays: 16, enabled: true),
+          ReviewIntervalConfigEntity(round: 6, intervalDays: 24, enabled: true),
+          ReviewIntervalConfigEntity(round: 7, intervalDays: 36, enabled: true),
+          ReviewIntervalConfigEntity(round: 8, intervalDays: 54, enabled: true),
+          ReviewIntervalConfigEntity(round: 9, intervalDays: 90, enabled: true),
+        ]);
+    await container
+        .read(pomodoroSettingsProvider.notifier)
+        .save(
+          const PomodoroSettingsEntity(
+            workMinutes: 45,
+            shortBreakMinutes: 8,
+            longBreakMinutes: 20,
+            longBreakInterval: 3,
+            autoStartBreak: false,
+            autoStartWork: true,
+          ),
+        );
 
     container.dispose();
     await db.close();

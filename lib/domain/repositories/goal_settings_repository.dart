@@ -17,4 +17,3 @@ abstract class GoalSettingsRepository {
   /// 保存学习目标设置（整体覆盖）。
   Future<void> saveGoalSettings(GoalSettingsEntity settings);
 }
-

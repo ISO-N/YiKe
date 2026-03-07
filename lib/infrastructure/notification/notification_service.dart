@@ -127,7 +127,8 @@ class NotificationService {
   /// - Android 12+ 的“精确闹钟”权限可能导致 exact 调度失败或不触发
   /// - 为避免“用户已开启通知但完全收不到”的问题，优先尝试 exact，失败则降级为 inexact
   Future<AndroidScheduleMode> _resolveAndroidScheduleMode() async {
-    if (kIsWeb || !Platform.isAndroid) return AndroidScheduleMode.exactAllowWhileIdle;
+    if (kIsWeb || !Platform.isAndroid)
+      return AndroidScheduleMode.exactAllowWhileIdle;
     final android = _plugin
         .resolvePlatformSpecificImplementation<
           AndroidFlutterLocalNotificationsPlugin
@@ -242,12 +243,16 @@ class NotificationService {
     if (android != null) return android;
 
     final ios = await _plugin
-        .resolvePlatformSpecificImplementation<IOSFlutterLocalNotificationsPlugin>()
+        .resolvePlatformSpecificImplementation<
+          IOSFlutterLocalNotificationsPlugin
+        >()
         ?.requestPermissions(alert: true, badge: true, sound: true);
     if (ios != null) return ios;
 
     return _plugin
-        .resolvePlatformSpecificImplementation<MacOSFlutterLocalNotificationsPlugin>()
+        .resolvePlatformSpecificImplementation<
+          MacOSFlutterLocalNotificationsPlugin
+        >()
         ?.requestPermissions(alert: true, badge: true, sound: true);
   }
 
@@ -270,11 +275,7 @@ class NotificationService {
       try {
         await _ensureWindowsNotifierSetup();
         await localNotifier.notify(
-          LocalNotification(
-            identifier: 'review_$id',
-            title: title,
-            body: body,
-          ),
+          LocalNotification(identifier: 'review_$id', title: title, body: body),
         );
       } catch (e, st) {
         // 说明：Windows 通知失败时不应中断主流程（例如后台任务、设置保存）。

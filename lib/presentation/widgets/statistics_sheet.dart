@@ -46,10 +46,7 @@ class StatisticsSheet extends ConsumerWidget {
                   const Icon(Icons.bar_chart),
                   const SizedBox(width: AppSpacing.sm),
                   Expanded(
-                    child: Text(
-                      '统计详情',
-                      style: AppTypography.h2(context),
-                    ),
+                    child: Text('统计详情', style: AppTypography.h2(context)),
                   ),
                   IconButton(
                     tooltip: '刷新',
@@ -73,4 +70,3 @@ class StatisticsSheet extends ConsumerWidget {
     );
   }
 }
-

@@ -31,7 +31,10 @@ class _FakeGetCalendarTasksUseCase extends GetCalendarTasksUseCase {
     : super(reviewTaskRepository: _DummyReviewTaskRepository());
 
   @override
-  Future<CalendarMonthResult> execute({required int year, required int month}) async {
+  Future<CalendarMonthResult> execute({
+    required int year,
+    required int month,
+  }) async {
     return const CalendarMonthResult(dayStats: <DateTime, TaskDayStats>{});
   }
 
@@ -114,12 +117,18 @@ void main() {
     final container = ProviderContainer(
       overrides: <Override>[
         appDatabaseProvider.overrideWithValue(db),
-        getCalendarTasksUseCaseProvider.overrideWithValue(_FakeGetCalendarTasksUseCase()),
+        getCalendarTasksUseCaseProvider.overrideWithValue(
+          _FakeGetCalendarTasksUseCase(),
+        ),
         completeReviewTaskUseCaseProvider.overrideWithValue(
           _NoopCompleteReviewTaskUseCase(),
         ),
-        skipReviewTaskUseCaseProvider.overrideWithValue(_NoopSkipReviewTaskUseCase()),
-        undoTaskStatusUseCaseProvider.overrideWithValue(_NoopUndoTaskStatusUseCase()),
+        skipReviewTaskUseCaseProvider.overrideWithValue(
+          _NoopSkipReviewTaskUseCase(),
+        ),
+        undoTaskStatusUseCaseProvider.overrideWithValue(
+          _NoopUndoTaskStatusUseCase(),
+        ),
       ],
     );
     addTearDown(container.dispose);
@@ -128,9 +137,7 @@ void main() {
       UncontrolledProviderScope(
         container: container,
         child: MaterialApp(
-          home: Scaffold(
-            body: DayTaskListContent(selectedDay: selectedDay),
-          ),
+          home: Scaffold(body: DayTaskListContent(selectedDay: selectedDay)),
         ),
       ),
     );
@@ -144,12 +151,13 @@ void main() {
       final selectedDay = DateTime(2026, 3, 7);
       final container = await pumpContent(tester, selectedDay: selectedDay);
 
-      container.read(calendarProvider.notifier).state = CalendarState.initial().copyWith(
-        selectedDay: selectedDay,
-        isLoadingTasks: true,
-        isLoadingMonth: false,
-        errorMessage: null,
-      );
+      container.read(calendarProvider.notifier).state = CalendarState.initial()
+          .copyWith(
+            selectedDay: selectedDay,
+            isLoadingTasks: true,
+            isLoadingMonth: false,
+            errorMessage: null,
+          );
       await tester.pump();
 
       expect(find.byType(CircularProgressIndicator), findsWidgets);
@@ -159,12 +167,13 @@ void main() {
       final selectedDay = DateTime(2026, 3, 7);
       final container = await pumpContent(tester, selectedDay: selectedDay);
 
-      container.read(calendarProvider.notifier).state = CalendarState.initial().copyWith(
-        selectedDay: selectedDay,
-        isLoadingTasks: false,
-        isLoadingMonth: false,
-        errorMessage: '加载失败：主题不存在',
-      );
+      container.read(calendarProvider.notifier).state = CalendarState.initial()
+          .copyWith(
+            selectedDay: selectedDay,
+            isLoadingTasks: false,
+            isLoadingMonth: false,
+            errorMessage: '加载失败：主题不存在',
+          );
       await tester.pumpAndSettle();
 
       expect(find.textContaining('加载失败'), findsOneWidget);
@@ -174,12 +183,13 @@ void main() {
       final selectedDay = DateTime(2026, 3, 7);
       final container = await pumpContent(tester, selectedDay: selectedDay);
 
-      container.read(calendarProvider.notifier).state = CalendarState.initial().copyWith(
-        selectedDay: selectedDay,
-        isLoadingTasks: false,
-        isLoadingMonth: false,
-        selectedDayTasks: const <ReviewTaskViewEntity>[],
-      );
+      container.read(calendarProvider.notifier).state = CalendarState.initial()
+          .copyWith(
+            selectedDay: selectedDay,
+            isLoadingTasks: false,
+            isLoadingMonth: false,
+            selectedDayTasks: const <ReviewTaskViewEntity>[],
+          );
       await tester.pumpAndSettle();
       expect(find.text('当天暂无复习任务'), findsOneWidget);
 
@@ -195,7 +205,8 @@ void main() {
           .read(calendarProvider.notifier)
           .state
           .copyWith(selectedDayTasks: tasks);
-      container.read(reviewTaskFilterProvider.notifier).state = ReviewTaskFilter.done;
+      container.read(reviewTaskFilterProvider.notifier).state =
+          ReviewTaskFilter.done;
       await tester.pumpAndSettle();
       expect(find.text('当前筛选下暂无任务'), findsOneWidget);
     });
@@ -204,20 +215,22 @@ void main() {
       final selectedDay = DateTime(2026, 3, 7);
       final container = await pumpContent(tester, selectedDay: selectedDay);
 
-      container.read(calendarProvider.notifier).state = CalendarState.initial().copyWith(
-        selectedDay: selectedDay,
-        isLoadingTasks: false,
-        isLoadingMonth: false,
-        selectedDayTasks: <ReviewTaskViewEntity>[
-          task(
-            id: 1,
-            title: '可完成任务',
-            status: ReviewTaskStatus.pending,
-            scheduledDate: selectedDay,
-          ),
-        ],
-      );
-      container.read(reviewTaskFilterProvider.notifier).state = ReviewTaskFilter.all;
+      container.read(calendarProvider.notifier).state = CalendarState.initial()
+          .copyWith(
+            selectedDay: selectedDay,
+            isLoadingTasks: false,
+            isLoadingMonth: false,
+            selectedDayTasks: <ReviewTaskViewEntity>[
+              task(
+                id: 1,
+                title: '可完成任务',
+                status: ReviewTaskStatus.pending,
+                scheduledDate: selectedDay,
+              ),
+            ],
+          );
+      container.read(reviewTaskFilterProvider.notifier).state =
+          ReviewTaskFilter.all;
       await tester.pumpAndSettle();
 
       await tester.tap(find.text('完成'));

@@ -57,7 +57,8 @@ class _ThemeSettingsPageState extends ConsumerState<ThemeSettingsPage> {
 
   @override
   Widget build(BuildContext context) {
-    final previewSeed = ColorUtils.tryParseHex(_seedHex) ?? const Color(0xFF2196F3);
+    final previewSeed =
+        ColorUtils.tryParseHex(_seedHex) ?? const Color(0xFF2196F3);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final previewTheme = isDark
         ? AppTheme.dark(seedColor: previewSeed, amoled: _amoled)
@@ -66,16 +67,19 @@ class _ThemeSettingsPageState extends ConsumerState<ThemeSettingsPage> {
     Future<void> save() async {
       setState(() => _saving = true);
       try {
-        final next = _original.copyWith(seedColorHex: _seedHex, amoled: _amoled);
+        final next = _original.copyWith(
+          seedColorHex: _seedHex,
+          amoled: _amoled,
+        );
         await ref.read(themeSettingsProvider.notifier).save(next);
         // ignore: use_build_context_synchronously 的正确写法：用 context.mounted 守卫。
         if (!context.mounted) return;
         Navigator.of(context).pop();
       } catch (e) {
         if (!context.mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('保存失败：$e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('保存失败：$e')));
       } finally {
         if (mounted) setState(() => _saving = false);
       }
@@ -127,7 +131,8 @@ class _ThemeSettingsPageState extends ConsumerState<ThemeSettingsPage> {
                           _ColorChip(
                             name: item.name,
                             hex: item.hex,
-                            selected: item.hex.toUpperCase() ==
+                            selected:
+                                item.hex.toUpperCase() ==
                                 _seedHex.toUpperCase(),
                             onTap: () => setState(() => _seedHex = item.hex),
                           ),
@@ -194,7 +199,8 @@ class _ColorChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = ColorUtils.tryParseHex(hex) ?? Theme.of(context).colorScheme.primary;
+    final color =
+        ColorUtils.tryParseHex(hex) ?? Theme.of(context).colorScheme.primary;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(999),
@@ -213,10 +219,7 @@ class _ColorChip extends StatelessWidget {
             Container(
               width: 14,
               height: 14,
-              decoration: BoxDecoration(
-                color: color,
-                shape: BoxShape.circle,
-              ),
+              decoration: BoxDecoration(color: color, shape: BoxShape.circle),
             ),
             const SizedBox(width: 8),
             Text(name),
@@ -285,10 +288,7 @@ class _ThemePreview extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 12),
-            Text(
-              '65%',
-              style: AppTypography.bodySecondary(context),
-            ),
+            Text('65%', style: AppTypography.bodySecondary(context)),
           ],
         ),
         const SizedBox(height: 12),

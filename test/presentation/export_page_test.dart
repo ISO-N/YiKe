@@ -142,7 +142,9 @@ void main() {
       ProviderScope(
         overrides: <Override>[
           exportDataUseCaseProvider.overrideWithValue(exportUseCase),
-          exportStatisticsCsvUseCaseProvider.overrideWithValue(statisticsUseCase),
+          exportStatisticsCsvUseCaseProvider.overrideWithValue(
+            statisticsUseCase,
+          ),
         ],
         child: const MaterialApp(home: ExportPage()),
       ),

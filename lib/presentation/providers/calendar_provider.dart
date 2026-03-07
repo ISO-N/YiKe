@@ -103,16 +103,10 @@ class CalendarNotifier extends StateNotifier<CalendarState> {
   /// 加载月份数据（用于日历圆点标记）。
   ///
   /// 异常：异常会捕获并写入 [CalendarState.errorMessage]。
-  Future<void> loadMonth(
-    int year,
-    int month,
-  ) async {
+  Future<void> loadMonth(int year, int month) async {
     final targetMonth = DateTime(year, month, 1);
     final requestToken = ++_monthLoadToken;
-    state = state.copyWith(
-      isLoadingMonth: true,
-      errorMessage: null,
-    );
+    state = state.copyWith(isLoadingMonth: true, errorMessage: null);
     try {
       final useCase = _ref.read(getCalendarTasksUseCaseProvider);
       final result = await useCase.execute(year: year, month: month);

@@ -301,7 +301,6 @@ void main() {
       expect(records, hasLength(1));
       expect(records.single.id, 21);
       expect(records[0].payloadRoute, '/home?tab=today&focus=overdue');
-
     });
 
     testWidgets('启动后会发送目标达成提醒', (tester) async {
@@ -383,7 +382,6 @@ void main() {
       expect(records.single.body, contains('每日完成'));
       expect(records.single.body, contains('连续打卡'));
       expect(records.single.body, contains('本周完成率'));
-
     });
 
     testWidgets('启动后会发送连续打卡里程碑提醒', (tester) async {
@@ -449,7 +447,6 @@ void main() {
       expect(records.single.id, 23);
       expect(records.single.payloadRoute, '/home');
       expect(records.single.body, contains('连续打卡 30 天'));
-
     });
 
     testWidgets('免打扰时段内会跳过启动通知', (tester) async {

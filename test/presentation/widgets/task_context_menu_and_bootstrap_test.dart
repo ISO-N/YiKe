@@ -28,7 +28,9 @@ void main() {
 
     testWidgets('showTaskContextMenu 会按任务状态生成不同菜单项', (tester) async {
       await tester.pumpWidget(
-        const MaterialApp(home: Scaffold(body: SizedBox(width: 400, height: 300))),
+        const MaterialApp(
+          home: Scaffold(body: SizedBox(width: 400, height: 300)),
+        ),
       );
       await tester.pumpAndSettle();
 
@@ -67,4 +69,3 @@ void main() {
     });
   });
 }
-

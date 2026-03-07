@@ -6,7 +6,10 @@ library;
 /// 备注迁移解析结果。
 class NoteMigrationResult {
   /// 构造函数。
-  const NoteMigrationResult({required this.description, required this.subtasks});
+  const NoteMigrationResult({
+    required this.description,
+    required this.subtasks,
+  });
 
   /// 描述（可空）。
   final String? description;
@@ -53,8 +56,10 @@ class NoteMigrationParser {
     }
 
     // 单行：统一迁移到 description（短文本优先满足 spec，长文本也更符合“描述”的语义）。
-    final nonEmptyLines =
-        lines.map((e) => e.trimRight()).where((e) => e.trim().isNotEmpty).toList();
+    final nonEmptyLines = lines
+        .map((e) => e.trimRight())
+        .where((e) => e.trim().isNotEmpty)
+        .toList();
     if (nonEmptyLines.length <= 1) {
       return NoteMigrationResult(description: trimmedAll, subtasks: const []);
     }
@@ -67,8 +72,9 @@ class NoteMigrationParser {
       if (line.trim().isEmpty) break;
       paragraphLines.add(line.trimRight());
     }
-    final description =
-        paragraphLines.join('\n').trim().isEmpty ? null : paragraphLines.join('\n').trim();
+    final description = paragraphLines.join('\n').trim().isEmpty
+        ? null
+        : paragraphLines.join('\n').trim();
 
     // 剩余部分：按行拆为 subtasks（跳过空行）。
     final subtasks = <String>[];
@@ -81,7 +87,11 @@ class NoteMigrationParser {
     // 保护：若第一段为空（例如开头就是空行），则将首个非空行作为 description。
     if (description == null) {
       final first = nonEmptyLines.first.trim();
-      final rest = nonEmptyLines.skip(1).map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
+      final rest = nonEmptyLines
+          .skip(1)
+          .map((e) => e.trim())
+          .where((e) => e.isNotEmpty)
+          .toList();
       return NoteMigrationResult(description: first, subtasks: rest);
     }
 
@@ -92,7 +102,8 @@ class NoteMigrationParser {
   static bool _looksLikeListLine(String line) {
     final t = line.trimLeft();
     if (t.isEmpty) return false;
-    if (t.startsWith('-') || t.startsWith('*') || t.startsWith('•')) return true;
+    if (t.startsWith('-') || t.startsWith('*') || t.startsWith('•'))
+      return true;
     if (RegExp(r'^\d+[.)]\s+').hasMatch(t)) return true;
     if (RegExp(r'^[①②③④⑤⑥⑦⑧⑨⑩]\s*').hasMatch(t)) return true;
     return false;
@@ -115,4 +126,3 @@ class NoteMigrationParser {
     return t;
   }
 }
-

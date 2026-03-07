@@ -32,8 +32,9 @@ class LearningTemplateRepositoryImpl implements LearningTemplateRepository {
   @override
   Future<LearningTemplateEntity> create(LearningTemplateEntity template) async {
     final now = DateTime.now();
-    final ensuredUuid =
-        template.uuid.trim().isEmpty ? _uuid.v4() : template.uuid.trim();
+    final ensuredUuid = template.uuid.trim().isEmpty
+        ? _uuid.v4()
+        : template.uuid.trim();
     final id = await dao.insertTemplate(
       LearningTemplatesCompanion.insert(
         uuid: Value(ensuredUuid),

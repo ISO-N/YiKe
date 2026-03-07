@@ -50,4 +50,3 @@ abstract class UiPreferencesRepository {
   /// 保存“骨架屏策略”。
   Future<void> setSkeletonStrategy(String strategy);
 }
-

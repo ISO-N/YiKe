@@ -19,12 +19,10 @@ class LearningItems extends Table {
   /// 说明：
   /// - 用于备份/恢复的“合并去重”与外键修复（uuid → id 映射）
   /// - 迁移时会通过 SQL 为历史库补齐该列并回填为真实 UUID，再建立唯一索引
-  TextColumn get uuid =>
-      text()
-          .withLength(min: 1, max: 36)
-          // 关键逻辑：即使调用方未显式传入 uuid，Drift 也会在插入时自动生成，避免默认空字符串触发唯一索引冲突。
-          .clientDefault(() => const Uuid().v4())
-          ();
+  TextColumn get uuid => text()
+      .withLength(min: 1, max: 36)
+      // 关键逻辑：即使调用方未显式传入 uuid，Drift 也会在插入时自动生成，避免默认空字符串触发唯一索引冲突。
+      .clientDefault(() => const Uuid().v4())();
 
   /// 学习内容标题（必填，≤50字）。
   TextColumn get title => text().withLength(min: 1, max: 50)();

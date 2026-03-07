@@ -125,9 +125,7 @@ void main() {
     testWidgets('会构建 ShaderMask 并保持 child', (tester) async {
       await tester.pumpWidget(
         const MaterialApp(
-          home: Scaffold(
-            body: SkeletonShimmer(child: Text('shimmer-child')),
-          ),
+          home: Scaffold(body: SkeletonShimmer(child: Text('shimmer-child'))),
         ),
       );
 

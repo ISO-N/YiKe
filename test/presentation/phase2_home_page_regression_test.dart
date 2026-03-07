@@ -213,5 +213,4 @@ void main() {
     expect(find.textContaining('搜索结果（最多 50 条）'), findsOneWidget);
     expect(harness.container.read(learningSearchQueryProvider), '未来');
   });
-
 }

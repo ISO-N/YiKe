@@ -11,8 +11,9 @@ import 'package:yike/infrastructure/notification/notification_service.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  const localNotificationsChannel =
-      MethodChannel('dexterous.com/flutter/local_notifications');
+  const localNotificationsChannel = MethodChannel(
+    'dexterous.com/flutter/local_notifications',
+  );
 
   setUp(() {
     // 说明：NotificationService.cancelAll 会调用 flutter_local_notifications 的 MethodChannel。
@@ -87,4 +88,3 @@ void main() {
     });
   });
 }
-

@@ -131,7 +131,9 @@ class PomodoroSettingsPage extends ConsumerWidget {
                   padding: const EdgeInsets.all(AppSpacing.lg),
                   child: Text(
                     '加载失败：${state.errorMessage}',
-                    style: TextStyle(color: Theme.of(context).colorScheme.error),
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
+                    ),
                   ),
                 ),
               ),

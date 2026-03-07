@@ -56,7 +56,10 @@ void main() {
       expect(saved.streakTarget, 14);
       expect(saved.weeklyRateTarget, isNull);
 
-      await settingsDao.upsertValue(GoalSettingsRepositoryImpl.keyGoalDaily, '坏数据');
+      await settingsDao.upsertValue(
+        GoalSettingsRepositoryImpl.keyGoalDaily,
+        '坏数据',
+      );
       final degraded = await repository.getGoalSettings();
       expect(degraded.dailyTarget, 10);
       expect(degraded.streakTarget, 14);

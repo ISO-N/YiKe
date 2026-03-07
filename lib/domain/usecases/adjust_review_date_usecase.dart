@@ -55,14 +55,15 @@ class AdjustReviewDateUseCase {
     }
 
     final normalized = DateTime(newDate.year, newDate.month, newDate.day);
-    final tomorrow = YikeDateUtils
-        .atStartOfDay(DateTime.now())
-        .add(const Duration(days: 1));
+    final tomorrow = YikeDateUtils.atStartOfDay(
+      DateTime.now(),
+    ).add(const Duration(days: 1));
     if (normalized.isBefore(tomorrow)) {
       throw StateError('新日期不能早于明天');
     }
 
-    final sorted = [...plan]..sort((a, b) => a.reviewRound.compareTo(b.reviewRound));
+    final sorted = [...plan]
+      ..sort((a, b) => a.reviewRound.compareTo(b.reviewRound));
     ReviewTaskViewEntity? prev;
     ReviewTaskViewEntity? next;
     for (final t in sorted) {
@@ -108,7 +109,8 @@ class AdjustReviewDateUseCase {
     );
   }
 
-  String _fmt(DateTime d) => '${d.year.toString().padLeft(4, '0')}-'
+  String _fmt(DateTime d) =>
+      '${d.year.toString().padLeft(4, '0')}-'
       '${d.month.toString().padLeft(2, '0')}-'
       '${d.day.toString().padLeft(2, '0')}';
 }

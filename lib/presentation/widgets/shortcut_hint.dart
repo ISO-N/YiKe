@@ -40,10 +40,7 @@ class ShortcutHintScope extends InheritedWidget {
 /// 快捷键提示胶囊（小标签）。
 class ShortcutHintPill extends StatelessWidget {
   /// 构造函数。
-  const ShortcutHintPill({
-    super.key,
-    required this.hint,
-  });
+  const ShortcutHintPill({super.key, required this.hint});
 
   final String hint;
 
@@ -99,12 +96,15 @@ class _ShortcutHintIconButtonState extends State<ShortcutHintIconButton> {
     final showHints = scope?.shouldShowHints ?? false;
 
     // 触屏设备不展示 hover UI；同时遵循“仅 Windows 桌面端显示”的规格。
-    final canHover = !kIsWeb &&
+    final canHover =
+        !kIsWeb &&
         (defaultTargetPlatform == TargetPlatform.windows ||
             defaultTargetPlatform == TargetPlatform.macOS ||
             defaultTargetPlatform == TargetPlatform.linux);
 
-    final tooltip = showHints ? '${widget.tooltip}（${widget.hint}）' : widget.tooltip;
+    final tooltip = showHints
+        ? '${widget.tooltip}（${widget.hint}）'
+        : widget.tooltip;
     final showPill = showHints && canHover && _hovered;
 
     return MouseRegion(
@@ -135,4 +135,3 @@ class _ShortcutHintIconButtonState extends State<ShortcutHintIconButton> {
     );
   }
 }
-

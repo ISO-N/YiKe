@@ -26,21 +26,23 @@ void main() {
     bool isMockData = false,
   }) {
     final now = DateTime(2026, 3, 7, 10);
-    return db.into(db.learningItems).insert(
-      LearningItemsCompanion.insert(
-        uuid: drift.Value(uuid),
-        title: title,
-        description: description == null
-            ? const drift.Value.absent()
-            : drift.Value(description),
-        note: note == null ? const drift.Value.absent() : drift.Value(note),
-        tags: const drift.Value('["迁移"]'),
-        learningDate: now,
-        createdAt: drift.Value(now),
-        updatedAt: drift.Value(now),
-        isMockData: drift.Value(isMockData),
-      ),
-    );
+    return db
+        .into(db.learningItems)
+        .insert(
+          LearningItemsCompanion.insert(
+            uuid: drift.Value(uuid),
+            title: title,
+            description: description == null
+                ? const drift.Value.absent()
+                : drift.Value(description),
+            note: note == null ? const drift.Value.absent() : drift.Value(note),
+            tags: const drift.Value('["迁移"]'),
+            learningDate: now,
+            createdAt: drift.Value(now),
+            updatedAt: drift.Value(now),
+            isMockData: drift.Value(isMockData),
+          ),
+        );
   }
 
   setUp(() {
@@ -98,13 +100,16 @@ void main() {
         migratedSubtasks: const <String>['子任务一', '子任务二'],
       );
 
-      final item = await (db.select(db.learningItems)
-            ..where((t) => t.id.equals(itemId)))
-          .getSingle();
+      final item = await (db.select(
+        db.learningItems,
+      )..where((t) => t.id.equals(itemId))).getSingle();
       final subtasks = await (db.select(
         db.learningSubtasks,
       )..where((t) => t.learningItemId.equals(itemId))).get();
-      final logs = await syncLogDao.getLogsFromDeviceSince('migration-device', 0);
+      final logs = await syncLogDao.getLogsFromDeviceSince(
+        'migration-device',
+        0,
+      );
 
       expect(item.description, '迁移后的描述');
       expect(item.note, isNull);
@@ -114,7 +119,10 @@ void main() {
       ]);
       expect(logs, hasLength(3));
       expect(logs.first.entityType, 'learning_item');
-      expect(jsonDecode(logs.first.data), containsPair('description', '迁移后的描述'));
+      expect(
+        jsonDecode(logs.first.data),
+        containsPair('description', '迁移后的描述'),
+      );
       expect(
         logs.where((row) => row.entityType == 'learning_subtask'),
         hasLength(2),
@@ -128,14 +136,16 @@ void main() {
         description: '已有描述',
         note: '旧备注',
       );
-      await db.into(db.learningSubtasks).insert(
-        LearningSubtasksCompanion.insert(
-          learningItemId: itemId,
-          content: '已有子任务',
-          sortOrder: const drift.Value(0),
-          createdAt: DateTime(2026, 3, 7, 10),
-        ),
-      );
+      await db
+          .into(db.learningSubtasks)
+          .insert(
+            LearningSubtasksCompanion.insert(
+              learningItemId: itemId,
+              content: '已有子任务',
+              sortOrder: const drift.Value(0),
+              createdAt: DateTime(2026, 3, 7, 10),
+            ),
+          );
 
       final repository = TaskStructureMigrationRepositoryImpl(
         db: db,
@@ -148,9 +158,9 @@ void main() {
         migratedSubtasks: const <String>['新子任务'],
       );
 
-      final item = await (db.select(db.learningItems)
-            ..where((t) => t.id.equals(itemId)))
-          .getSingle();
+      final item = await (db.select(
+        db.learningItems,
+      )..where((t) => t.id.equals(itemId))).getSingle();
       final subtasks = await (db.select(
         db.learningSubtasks,
       )..where((t) => t.learningItemId.equals(itemId))).get();

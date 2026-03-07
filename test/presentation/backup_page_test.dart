@@ -407,7 +407,10 @@ void main() {
       await tester.pump(const Duration(milliseconds: 300));
 
       expect(sharePlatform.shareCalls, hasLength(1));
-      expect(sharePlatform.shareCalls.single.single.path, contains('backup-1.json'));
+      expect(
+        sharePlatform.shareCalls.single.single.path,
+        contains('backup-1.json'),
+      );
     });
 
     testWidgets('备份历史可进入导入预览并按覆盖策略导入', (tester) async {
@@ -438,6 +441,5 @@ void main() {
       expect(fakeRepository.lastCreateSnapshotBeforeOverwrite, isTrue);
       expect(find.text('导入成功'), findsOneWidget);
     });
-
   });
 }

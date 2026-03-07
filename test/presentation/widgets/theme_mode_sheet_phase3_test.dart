@@ -114,7 +114,9 @@ void main() {
         repository: repository,
       );
 
-      await tester.tap(find.widgetWithText(RadioListTile<AppThemeMode>, '跟随系统'));
+      await tester.tap(
+        find.widgetWithText(RadioListTile<AppThemeMode>, '跟随系统'),
+      );
       await tester.pumpAndSettle();
 
       expect(repository.saved, isNotEmpty);
@@ -123,4 +125,3 @@ void main() {
     });
   });
 }
-

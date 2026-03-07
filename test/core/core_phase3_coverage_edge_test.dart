@@ -54,42 +54,45 @@ void main() {
       expect(next.tags, ['标签1']);
     });
 
-    test('FileParser.parseFile: CSV 无表头时仍可按旧格式解析（desc/subtasks 索引为 -1）', () async {
-      final dir = await Directory.systemTemp.createTemp('yike_csv_no_header');
-      addTearDown(() async => dir.delete(recursive: true));
+    test(
+      'FileParser.parseFile: CSV 无表头时仍可按旧格式解析（desc/subtasks 索引为 -1）',
+      () async {
+        final dir = await Directory.systemTemp.createTemp('yike_csv_no_header');
+        addTearDown(() async => dir.delete(recursive: true));
 
-      final file = File('${dir.path}${Platform.pathSeparator}items.csv');
-      // 说明：首行首列不为“标题/title”，因此不会被识别为表头。
-      // 该路径会走 headers == null 的分支，从而覆盖 descIndex/subtasksIndex 的 -1 赋值逻辑。
-      await file.writeAsString('内容1,旧备注,标签1 标签2\\n');
+        final file = File('${dir.path}${Platform.pathSeparator}items.csv');
+        // 说明：首行首列不为“标题/title”，因此不会被识别为表头。
+        // 该路径会走 headers == null 的分支，从而覆盖 descIndex/subtasksIndex 的 -1 赋值逻辑。
+        await file.writeAsString('内容1,旧备注,标签1 标签2\\n');
 
-      final parsed = await FileParser.parseFile(file.path);
-      expect(parsed, hasLength(1));
-      expect(parsed.single.title, '内容1');
-      expect(parsed.single.isValid, isTrue);
-    });
+        final parsed = await FileParser.parseFile(file.path);
+        expect(parsed, hasLength(1));
+        expect(parsed.single.title, '内容1');
+        expect(parsed.single.isValid, isTrue);
+      },
+    );
 
-    test('FileParser.parseFile: 非法 UTF-8 且非法 GBK 时回退 allowMalformed 解码', () async {
-      final dir = await Directory.systemTemp.createTemp('yike_csv_malformed');
-      addTearDown(() async => dir.delete(recursive: true));
+    test(
+      'FileParser.parseFile: 非法 UTF-8 且非法 GBK 时回退 allowMalformed 解码',
+      () async {
+        final dir = await Directory.systemTemp.createTemp('yike_csv_malformed');
+        addTearDown(() async => dir.delete(recursive: true));
 
-      final file = File('${dir.path}${Platform.pathSeparator}items.csv');
-      // 说明：
-      // - 0x80 对于 UTF-8（allowMalformed=false）会触发解码异常
-      // - 同时在 GBK 中也属于非法单字节
-      // - 最终应回退到 allowMalformed=true 的 UTF-8 解码路径
-      // 该用例主要用于覆盖 FileParser._decodeUtf8OrGbk 的兜底分支。
-      final bytes = Uint8List.fromList(<int>[
-        0x80,
-        ...'A,B\n'.codeUnits,
-      ]);
-      await file.writeAsBytes(bytes);
+        final file = File('${dir.path}${Platform.pathSeparator}items.csv');
+        // 说明：
+        // - 0x80 对于 UTF-8（allowMalformed=false）会触发解码异常
+        // - 同时在 GBK 中也属于非法单字节
+        // - 最终应回退到 allowMalformed=true 的 UTF-8 解码路径
+        // 该用例主要用于覆盖 FileParser._decodeUtf8OrGbk 的兜底分支。
+        final bytes = Uint8List.fromList(<int>[0x80, ...'A,B\n'.codeUnits]);
+        await file.writeAsBytes(bytes);
 
-      final parsed = await FileParser.parseFile(file.path);
-      expect(parsed, hasLength(1));
-      expect(parsed.single.title, contains('A'));
-      expect(parsed.single.isValid, isTrue);
-    });
+        final parsed = await FileParser.parseFile(file.path);
+        expect(parsed, hasLength(1));
+        expect(parsed.single.title, contains('A'));
+        expect(parsed.single.isValid, isTrue);
+      },
+    );
 
     test('TimeUtils.parseHHmm 在越界值时抛 FormatException', () {
       expect(
@@ -141,17 +144,16 @@ void main() {
         debugDefaultTargetPlatformOverride = TargetPlatform.android;
 
         await tester.pumpWidget(
-          const MaterialApp(home: Scaffold(body: SizedBox(key: Key('root')))),
+          const MaterialApp(
+            home: Scaffold(body: SizedBox(key: Key('root'))),
+          ),
         );
 
         final context = tester.element(find.byKey(const Key('root')));
         await HapticUtils.mediumImpact(context, enabledByUser: true);
 
         expect(calls, isNotEmpty);
-        expect(
-          calls.any((c) => c.method.contains('HapticFeedback')),
-          isTrue,
-        );
+        expect(calls.any((c) => c.method.contains('HapticFeedback')), isTrue);
 
         // 保护：必须在测试结束前恢复，否则会触发 Flutter invariants。
       } finally {

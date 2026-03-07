@@ -52,7 +52,8 @@ class ThemeSettingsRepositoryImpl implements ThemeSettingsRepository {
         ? defaults.mode
         : await _readModeWithCompat(storedMode);
 
-    final seedColorHex = await _getString(_keySeedColor) ?? defaults.seedColorHex;
+    final seedColorHex =
+        await _getString(_keySeedColor) ?? defaults.seedColorHex;
     final amoled = await _getBool(_keyAmoled) ?? defaults.amoled;
 
     return ThemeSettingsEntity(

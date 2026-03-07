@@ -126,7 +126,8 @@ Future<void> _checkAndSendDailyReviewNotification() async {
     await NotificationService.instance.initialize();
 
     // 若已存在精准定时的计划通知，则后台检查不再重复发送（避免双重提醒）。
-    final hasScheduled = await NotificationService.instance.hasPendingNotification(1);
+    final hasScheduled = await NotificationService.instance
+        .hasPendingNotification(1);
     if (hasScheduled) return;
 
     final topTitles = pending.take(3).map((e) => e.item.title).toList();

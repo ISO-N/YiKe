@@ -107,16 +107,19 @@ void main() {
         includeTasks: true,
       ),
     );
-    final exportJson = jsonDecode(
-      await exportResult.file.readAsString(),
-    ) as Map<String, dynamic>;
+    final exportJson =
+        jsonDecode(await exportResult.file.readAsString())
+            as Map<String, dynamic>;
     expect(
       (exportJson['items'] as List<dynamic>).cast<Map<String, dynamic>>().any(
         (item) => item['title'] == '备份链路内容',
       ),
       isTrue,
     );
-    expect((exportJson['tasks'] as List<dynamic>).length, greaterThanOrEqualTo(1));
+    expect(
+      (exportJson['tasks'] as List<dynamic>).length,
+      greaterThanOrEqualTo(1),
+    );
 
     final backupSummary = await exportBackupUseCase.execute(
       cancelToken: BackupCancelToken(),
@@ -144,8 +147,12 @@ void main() {
       cancelToken: BackupCancelToken(),
     );
 
-    final restoredItems = await container.read(learningItemRepositoryProvider).getAll();
-    final restoredTasks = await container.read(reviewTaskRepositoryProvider).getAllTasks();
+    final restoredItems = await container
+        .read(learningItemRepositoryProvider)
+        .getAll();
+    final restoredTasks = await container
+        .read(reviewTaskRepositoryProvider)
+        .getAllTasks();
     expect(restoredItems.map((item) => item.title), <String>['备份链路内容']);
     expect(restoredTasks.length, 10);
 
@@ -162,8 +169,12 @@ void main() {
       cancelToken: BackupCancelToken(),
     );
 
-    final dedupedItems = await container.read(learningItemRepositoryProvider).getAll();
-    final dedupedTasks = await container.read(reviewTaskRepositoryProvider).getAllTasks();
+    final dedupedItems = await container
+        .read(learningItemRepositoryProvider)
+        .getAll();
+    final dedupedTasks = await container
+        .read(reviewTaskRepositoryProvider)
+        .getAllTasks();
     expect(dedupedItems.length, 1);
     expect(dedupedTasks.length, 10);
   });

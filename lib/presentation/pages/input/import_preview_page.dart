@@ -25,10 +25,7 @@ class ImportPreviewPage extends ConsumerStatefulWidget {
   ///
   /// 返回值：页面 Widget。
   /// 异常：无。
-  const ImportPreviewPage({
-    super.key,
-    this.autoPickFileOnOpen = false,
-  });
+  const ImportPreviewPage({super.key, this.autoPickFileOnOpen = false});
 
   /// 是否在页面打开后立即弹出文件选择器。
   ///
@@ -198,9 +195,7 @@ class _ImportPreviewPageState extends ConsumerState<ImportPreviewPage>
                   controller: subtasksController,
                   minLines: 3,
                   maxLines: 8,
-                  decoration: const InputDecoration(
-                    labelText: '子任务（选填，每行一条）',
-                  ),
+                  decoration: const InputDecoration(labelText: '子任务（选填，每行一条）'),
                 ),
                 const SizedBox(height: AppSpacing.md),
                 TextField(
@@ -400,16 +395,17 @@ class _ImportPreviewPageState extends ConsumerState<ImportPreviewPage>
     try {
       final content = await rootBundle.loadString(assetPath);
       final dir = await getTemporaryDirectory();
-      final file =
-          File('${dir.path}${Platform.pathSeparator}yike_import_template.$ext');
+      final file = File(
+        '${dir.path}${Platform.pathSeparator}yike_import_template.$ext',
+      );
       await file.writeAsString(content, flush: true);
 
       await Share.shareXFiles([XFile(file.path)], text: '忆刻批量导入模板（$ext）');
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('下载模板失败：$e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('下载模板失败：$e')));
     }
   }
 

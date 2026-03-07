@@ -221,9 +221,9 @@ class PomodoroNotifier extends StateNotifier<PomodoroState> {
   /// 初始化 Provider：加载设置并尝试恢复持久化状态。
   Future<void> _initialize() async {
     try {
-      final settings = await _ref.read(
-        pomodoroSettingsRepositoryProvider,
-      ).getSettings();
+      final settings = await _ref
+          .read(pomodoroSettingsRepositoryProvider)
+          .getSettings();
       state = state.copyWith(
         isReady: true,
         settings: settings,
@@ -386,10 +386,10 @@ class PomodoroNotifier extends StateNotifier<PomodoroState> {
       return;
     }
 
-    final boundedRemaining = (restored.currentPhaseTotalSeconds -
-            restored.elapsedSecondsBeforeRun)
-        .clamp(0, restored.currentPhaseTotalSeconds)
-        .toInt();
+    final boundedRemaining =
+        (restored.currentPhaseTotalSeconds - restored.elapsedSecondsBeforeRun)
+            .clamp(0, restored.currentPhaseTotalSeconds)
+            .toInt();
     state = restored.copyWith(
       remainingSeconds: boundedRemaining,
       errorMessage: null,
@@ -403,11 +403,13 @@ class PomodoroNotifier extends StateNotifier<PomodoroState> {
   /// - 进行中的阶段不改时长，只影响后续阶段
   /// - 若当前阶段尚未开始，则同步刷新当前默认时长
   Future<void> refreshSettings() async {
-    final settings = await _ref.read(
-      pomodoroSettingsRepositoryProvider,
-    ).getSettings();
+    final settings = await _ref
+        .read(pomodoroSettingsRepositoryProvider)
+        .getSettings();
 
-    if (state.isIdle && state.phaseStartedAt == null && state.elapsedSecondsBeforeRun == 0) {
+    if (state.isIdle &&
+        state.phaseStartedAt == null &&
+        state.elapsedSecondsBeforeRun == 0) {
       final totalSeconds = _phaseDurationSeconds(
         phase: state.phase,
         settings: settings,
@@ -482,10 +484,9 @@ class PomodoroNotifier extends StateNotifier<PomodoroState> {
       elapsed -= current.currentPhaseTotalSeconds;
       lastFinishedPhase = current.phase;
 
-      final finishedAt =
-          (current.phaseStartedAt ?? now).add(
-            Duration(seconds: current.currentPhaseTotalSeconds),
-          );
+      final finishedAt = (current.phaseStartedAt ?? now).add(
+        Duration(seconds: current.currentPhaseTotalSeconds),
+      );
       current = await _handleNaturalPhaseCompletion(
         current,
         finishedAt: finishedAt,
@@ -540,14 +541,16 @@ class PomodoroNotifier extends StateNotifier<PomodoroState> {
     if (current.phase == PomodoroPhase.work) {
       completedRounds += 1;
       // 关键逻辑：仅完整结束的工作阶段会记入统计，手动跳过不会写入记录。
-      await _ref.read(pomodoroRepositoryProvider).createRecord(
-        PomodoroRecordEntity(
-          startTime: current.phaseStartedAt ?? finishedAt,
-          durationMinutes: current.currentPhaseTotalSeconds ~/ 60,
-          phaseType: 'work',
-          completed: true,
-        ),
-      );
+      await _ref
+          .read(pomodoroRepositoryProvider)
+          .createRecord(
+            PomodoroRecordEntity(
+              startTime: current.phaseStartedAt ?? finishedAt,
+              durationMinutes: current.currentPhaseTotalSeconds ~/ 60,
+              phaseType: 'work',
+              completed: true,
+            ),
+          );
       await _ref.read(pomodoroStatsProvider.notifier).load();
     } else if (current.phase == PomodoroPhase.longBreak) {
       // 规格要求：长休息结束后轮次归零，进入下一轮工作周期。
@@ -606,8 +609,8 @@ class PomodoroNotifier extends StateNotifier<PomodoroState> {
   }) {
     return switch (nextPhase) {
       PomodoroPhase.work => settings.autoStartWork,
-      PomodoroPhase.shortBreak || PomodoroPhase.longBreak =>
-        settings.autoStartBreak,
+      PomodoroPhase.shortBreak ||
+      PomodoroPhase.longBreak => settings.autoStartBreak,
     };
   }
 
@@ -731,7 +734,8 @@ class PomodoroNotifier extends StateNotifier<PomodoroState> {
 }
 
 /// 番茄钟状态 Provider。
-final pomodoroProvider =
-    StateNotifierProvider<PomodoroNotifier, PomodoroState>((ref) {
-      return PomodoroNotifier(ref);
-    });
+final pomodoroProvider = StateNotifierProvider<PomodoroNotifier, PomodoroState>(
+  (ref) {
+    return PomodoroNotifier(ref);
+  },
+);

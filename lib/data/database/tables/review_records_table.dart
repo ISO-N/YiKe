@@ -21,8 +21,9 @@ class ReviewRecords extends Table {
   /// 业务唯一标识（UUID v4）。
   ///
   /// 说明：用于备份/恢复合并去重（records 以 uuid 作为不可变事件标识）。
-  TextColumn get uuid =>
-      text().withLength(min: 1, max: 36).clientDefault(() => const Uuid().v4())();
+  TextColumn get uuid => text()
+      .withLength(min: 1, max: 36)
+      .clientDefault(() => const Uuid().v4())();
 
   /// 外键：关联复习任务 ID（删除任务时级联删除记录）。
   IntColumn get reviewTaskId =>

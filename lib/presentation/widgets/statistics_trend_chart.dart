@@ -72,7 +72,9 @@ class _StatisticsTrendChartState extends State<StatisticsTrendChart> {
                   style: ButtonStyle(
                     visualDensity: VisualDensity.compact,
                     textStyle: WidgetStateProperty.all(
-                      AppTypography.bodySecondary(context).copyWith(fontSize: 12),
+                      AppTypography.bodySecondary(
+                        context,
+                      ).copyWith(fontSize: 12),
                     ),
                   ),
                 ),
@@ -102,9 +104,9 @@ class _Line extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final primary = Theme.of(context).colorScheme.primary;
-    final gridColor = Theme.of(context).dividerColor.withValues(
-      alpha: isDark ? 0.18 : 0.12,
-    );
+    final gridColor = Theme.of(
+      context,
+    ).dividerColor.withValues(alpha: isDark ? 0.18 : 0.12);
 
     final spots = <FlSpot>[];
     for (var i = 0; i < points.length; i++) {
@@ -126,11 +128,13 @@ class _Line extends StatelessWidget {
           // 关键逻辑：让 X 轴在数据点较多时可横向滚动，避免标签挤压。
           // 经验值：日维度（最多 31）每点约 24px；月维度（12）每点更宽以容纳“X月”。
           final pointSpacing = mode == _TrendMode.month ? 56.0 : 24.0;
-          final suggestedWidth = (points.isEmpty ? 1 : points.length) * pointSpacing;
+          final suggestedWidth =
+              (points.isEmpty ? 1 : points.length) * pointSpacing;
           final viewportWidth = (constraints.maxWidth - yAxisWidth - yAxisGap)
               .clamp(0.0, double.infinity);
-          final chartWidth =
-              suggestedWidth < viewportWidth ? viewportWidth : suggestedWidth;
+          final chartWidth = suggestedWidth < viewportWidth
+              ? viewportWidth
+              : suggestedWidth;
 
           return Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -157,8 +161,9 @@ class _Line extends StatelessWidget {
                           handleBuiltInTouches: true,
                           touchTooltipData: LineTouchTooltipData(
                             tooltipRoundedRadius: 10,
-                            tooltipBgColor:
-                                isDark ? const Color(0xFF0B1220) : Colors.white,
+                            tooltipBgColor: isDark
+                                ? const Color(0xFF0B1220)
+                                : Colors.white,
                             getTooltipItems: (touchedSpots) {
                               return touchedSpots.map((s) {
                                 final index = s.x.toInt();
@@ -184,10 +189,8 @@ class _Line extends StatelessWidget {
                           show: true,
                           drawVerticalLine: false,
                           horizontalInterval: 25,
-                          getDrawingHorizontalLine: (_) => FlLine(
-                            color: gridColor,
-                            strokeWidth: 1,
-                          ),
+                          getDrawingHorizontalLine: (_) =>
+                              FlLine(color: gridColor, strokeWidth: 1),
                         ),
                         titlesData: FlTitlesData(
                           topTitles: const AxisTitles(
@@ -204,8 +207,9 @@ class _Line extends StatelessWidget {
                             sideTitles: SideTitles(
                               showTitles: true,
                               reservedSize: 22,
-                              interval:
-                                  mode == _TrendMode.month ? 1 : _bottomInterval(points),
+                              interval: mode == _TrendMode.month
+                                  ? 1
+                                  : _bottomInterval(points),
                               getTitlesWidget: (value, meta) {
                                 // 只在整数位置显示标签，避免重复
                                 if (value != value.roundToDouble()) {
@@ -219,8 +223,9 @@ class _Line extends StatelessWidget {
                                   padding: const EdgeInsets.only(top: 6),
                                   child: Text(
                                     _xLabel(points[index].date, mode: mode),
-                                    style: AppTypography.bodySecondary(context)
-                                        .copyWith(fontSize: 11),
+                                    style: AppTypography.bodySecondary(
+                                      context,
+                                    ).copyWith(fontSize: 11),
                                   ),
                                 );
                               },
@@ -280,7 +285,10 @@ class _Line extends StatelessWidget {
     }
   }
 
-  String _tooltipText(StatisticsTrendPointEntity p, {required _TrendMode mode}) {
+  String _tooltipText(
+    StatisticsTrendPointEntity p, {
+    required _TrendMode mode,
+  }) {
     final total = p.total;
     if (total <= 0) {
       final label = mode == _TrendMode.month
@@ -338,7 +346,10 @@ class _YAxisLabels extends StatelessWidget {
       child: LayoutBuilder(
         builder: (context, constraints) {
           final totalHeight = constraints.maxHeight;
-          final chartHeight = (totalHeight - bottomReserved).clamp(0.0, double.infinity);
+          final chartHeight = (totalHeight - bottomReserved).clamp(
+            0.0,
+            double.infinity,
+          );
           // 网格线实际占据的高度（去除 topPadding）
           final gridHeight = chartHeight - topPadding;
 
@@ -365,11 +376,14 @@ class _YAxisLabels extends StatelessWidget {
                   Positioned(
                     left: 0,
                     right: 0,
-                    top: positionForTick(t).clamp(
-                      0.0,
-                      chartHeight - textPainter.height,
+                    top: positionForTick(
+                      t,
+                    ).clamp(0.0, chartHeight - textPainter.height),
+                    child: Text(
+                      '$t%',
+                      style: style,
+                      textAlign: TextAlign.right,
                     ),
-                    child: Text('$t%', style: style, textAlign: TextAlign.right),
                   ),
               ],
             ),

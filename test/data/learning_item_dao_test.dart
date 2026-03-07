@@ -256,7 +256,11 @@ void main() {
     );
 
     final ranked = await dao.getTagUsageRanking(recentSince: recentSince);
-    expect(ranked.map((entry) => entry.tag).toList(), <String>['数学', '英语', '物理']);
+    expect(ranked.map((entry) => entry.tag).toList(), <String>[
+      '数学',
+      '英语',
+      '物理',
+    ]);
     expect(ranked.first.recentUseCount, 2);
     expect(ranked.first.totalUseCount, 2);
     expect(ranked[1].recentUseCount, 1);

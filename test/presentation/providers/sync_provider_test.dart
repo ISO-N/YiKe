@@ -135,19 +135,21 @@ void main() {
 
     test('disconnectDevice 会删除已配对设备记录', () async {
       final notifier = container.read(syncControllerProvider.notifier);
-      await container.read(syncDeviceDaoProvider).upsert(
-        SyncDevicesCompanion.insert(
-          deviceId: 'device-1',
-          deviceName: '测试设备',
-          deviceType: 'windows',
-          ipAddress: const drift.Value('127.0.0.1'),
-          authToken: const drift.Value('token-1'),
-          isMaster: const drift.Value(true),
-          lastSyncMs: const drift.Value.absent(),
-          lastOutgoingMs: const drift.Value.absent(),
-          lastIncomingMs: const drift.Value.absent(),
-        ),
-      );
+      await container
+          .read(syncDeviceDaoProvider)
+          .upsert(
+            SyncDevicesCompanion.insert(
+              deviceId: 'device-1',
+              deviceName: '测试设备',
+              deviceType: 'windows',
+              ipAddress: const drift.Value('127.0.0.1'),
+              authToken: const drift.Value('token-1'),
+              isMaster: const drift.Value(true),
+              lastSyncMs: const drift.Value.absent(),
+              lastOutgoingMs: const drift.Value.absent(),
+              lastIncomingMs: const drift.Value.absent(),
+            ),
+          );
 
       expect(
         await container.read(syncDeviceDaoProvider).getByDeviceId('device-1'),
@@ -210,9 +212,9 @@ void main() {
         anyOf(SyncState.connected, SyncState.synced, SyncState.error),
       );
 
-      final pairedDevice = await container.read(syncDeviceDaoProvider).getByDeviceId(
-            'self-master',
-          );
+      final pairedDevice = await container
+          .read(syncDeviceDaoProvider)
+          .getByDeviceId('self-master');
       expect(pairedDevice, isNotNull);
       expect(pairedDevice?.authToken, isNotNull);
 
@@ -244,35 +246,39 @@ void main() {
 
     test('syncNow 在主机信息不完整时会给出明确错误', () async {
       final notifier = container.read(syncControllerProvider.notifier);
-      await container.read(syncDeviceDaoProvider).upsert(
-        SyncDevicesCompanion.insert(
-          deviceId: 'master-1',
-          deviceName: '主机',
-          deviceType: 'windows',
-          ipAddress: const drift.Value.absent(),
-          authToken: const drift.Value.absent(),
-          isMaster: const drift.Value(true),
-          lastSyncMs: const drift.Value.absent(),
-          lastOutgoingMs: const drift.Value.absent(),
-          lastIncomingMs: const drift.Value.absent(),
-        ),
-      );
+      await container
+          .read(syncDeviceDaoProvider)
+          .upsert(
+            SyncDevicesCompanion.insert(
+              deviceId: 'master-1',
+              deviceName: '主机',
+              deviceType: 'windows',
+              ipAddress: const drift.Value.absent(),
+              authToken: const drift.Value.absent(),
+              isMaster: const drift.Value(true),
+              lastSyncMs: const drift.Value.absent(),
+              lastOutgoingMs: const drift.Value.absent(),
+              lastIncomingMs: const drift.Value.absent(),
+            ),
+          );
 
-      notifier.state = container.read(syncControllerProvider).copyWith(
-        state: SyncState.connected,
-        connectedDevices: <ConnectedDevice>[
-          ConnectedDevice(
-            deviceId: 'master-1',
-            deviceName: '主机',
-            deviceType: 'windows',
-            ipAddress: null,
-            isMaster: true,
-            lastSyncMs: null,
-            isOnline: true,
-            lastSeenAtMs: DateTime.now().millisecondsSinceEpoch,
-          ),
-        ],
-      );
+      notifier.state = container
+          .read(syncControllerProvider)
+          .copyWith(
+            state: SyncState.connected,
+            connectedDevices: <ConnectedDevice>[
+              ConnectedDevice(
+                deviceId: 'master-1',
+                deviceName: '主机',
+                deviceType: 'windows',
+                ipAddress: null,
+                isMaster: true,
+                lastSyncMs: null,
+                isOnline: true,
+                lastSeenAtMs: DateTime.now().millisecondsSinceEpoch,
+              ),
+            ],
+          );
 
       await notifier.syncNow();
 
@@ -283,36 +289,40 @@ void main() {
 
     test('主机模式遇到缺少 IP 或令牌的客户端时会跳过并保持成功', () async {
       final notifier = container.read(syncControllerProvider.notifier);
-      await container.read(syncDeviceDaoProvider).upsert(
-        SyncDevicesCompanion.insert(
-          deviceId: 'client-1',
-          deviceName: '客户端',
-          deviceType: 'android',
-          ipAddress: const drift.Value.absent(),
-          authToken: const drift.Value.absent(),
-          isMaster: const drift.Value(false),
-          lastSyncMs: const drift.Value.absent(),
-          lastOutgoingMs: const drift.Value.absent(),
-          lastIncomingMs: const drift.Value.absent(),
-        ),
-      );
+      await container
+          .read(syncDeviceDaoProvider)
+          .upsert(
+            SyncDevicesCompanion.insert(
+              deviceId: 'client-1',
+              deviceName: '客户端',
+              deviceType: 'android',
+              ipAddress: const drift.Value.absent(),
+              authToken: const drift.Value.absent(),
+              isMaster: const drift.Value(false),
+              lastSyncMs: const drift.Value.absent(),
+              lastOutgoingMs: const drift.Value.absent(),
+              lastIncomingMs: const drift.Value.absent(),
+            ),
+          );
 
-      notifier.state = container.read(syncControllerProvider).copyWith(
-        isMaster: true,
-        state: SyncState.connected,
-        connectedDevices: <ConnectedDevice>[
-          ConnectedDevice(
-            deviceId: 'client-1',
-            deviceName: '客户端',
-            deviceType: 'android',
-            ipAddress: null,
-            isMaster: false,
-            lastSyncMs: null,
-            isOnline: true,
-            lastSeenAtMs: DateTime.now().millisecondsSinceEpoch,
-          ),
-        ],
-      );
+      notifier.state = container
+          .read(syncControllerProvider)
+          .copyWith(
+            isMaster: true,
+            state: SyncState.connected,
+            connectedDevices: <ConnectedDevice>[
+              ConnectedDevice(
+                deviceId: 'client-1',
+                deviceName: '客户端',
+                deviceType: 'android',
+                ipAddress: null,
+                isMaster: false,
+                lastSyncMs: null,
+                isOnline: true,
+                lastSeenAtMs: DateTime.now().millisecondsSinceEpoch,
+              ),
+            ],
+          );
 
       await notifier.syncNow();
 

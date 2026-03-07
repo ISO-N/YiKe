@@ -50,4 +50,3 @@ class YiKeRefreshIndicator extends StatelessWidget {
     );
   }
 }
-

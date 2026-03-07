@@ -78,9 +78,7 @@ class ReviewIntervalsNotifier extends StateNotifier<ReviewIntervalsState> {
       if (!c.enabled) continue;
       final prev = prevEnabled;
       if (prev != null && c.intervalDays <= prev.intervalDays) {
-        throw ArgumentError(
-          '第${c.round}轮复习需晚于第${prev.round}轮（间隔天数需递增）',
-        );
+        throw ArgumentError('第${c.round}轮复习需晚于第${prev.round}轮（间隔天数需递增）');
       }
       prevEnabled = c;
     }
@@ -102,11 +100,7 @@ class ReviewIntervalsNotifier extends StateNotifier<ReviewIntervalsState> {
     final next = [...configs]..sort((a, b) => a.round.compareTo(b.round));
     _validateConfigs(next);
 
-    state = state.copyWith(
-      isLoading: true,
-      errorMessage: null,
-      configs: next,
-    );
+    state = state.copyWith(isLoading: true, errorMessage: null, configs: next);
     try {
       await _repository.saveReviewIntervalConfigs(next);
       state = state.copyWith(isLoading: false, configs: next);

@@ -48,4 +48,3 @@ class StatisticsPage extends ConsumerWidget {
     );
   }
 }
-

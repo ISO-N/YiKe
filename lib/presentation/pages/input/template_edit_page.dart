@@ -42,7 +42,9 @@ class _TemplateEditPageState extends ConsumerState<TemplateEditPage> {
     _nameController = TextEditingController(text: t?.name ?? '');
     _titleController = TextEditingController(text: t?.titlePattern ?? '');
     final parsed = NoteMigrationParser.parse(t?.notePattern ?? '');
-    _descriptionController = TextEditingController(text: parsed.description ?? '');
+    _descriptionController = TextEditingController(
+      text: parsed.description ?? '',
+    );
     for (final s in parsed.subtasks) {
       _subtasks.add(
         _SubtaskController(
@@ -122,7 +124,10 @@ class _TemplateEditPageState extends ConsumerState<TemplateEditPage> {
     required List<String> subtasks,
   }) {
     final desc = description.trim();
-    final list = subtasks.map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
+    final list = subtasks
+        .map((e) => e.trim())
+        .where((e) => e.isNotEmpty)
+        .toList();
     final buffer = StringBuffer();
     if (desc.isNotEmpty) {
       buffer.writeln(desc);
@@ -323,7 +328,10 @@ class _TemplateEditPageState extends ConsumerState<TemplateEditPage> {
               Row(
                 children: [
                   Expanded(
-                    child: Text('子任务模板', style: AppTypography.bodySecondary(context)),
+                    child: Text(
+                      '子任务模板',
+                      style: AppTypography.bodySecondary(context),
+                    ),
                   ),
                   OutlinedButton.icon(
                     onPressed: _addSubtask,

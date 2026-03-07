@@ -17,7 +17,8 @@ class _FakeSettingsRepository implements SettingsRepository {
 
   List<ReviewIntervalConfigEntity> _configs;
   bool shouldFailOnSave = false;
-  final List<List<ReviewIntervalConfigEntity>> saved = <List<ReviewIntervalConfigEntity>>[];
+  final List<List<ReviewIntervalConfigEntity>> saved =
+      <List<ReviewIntervalConfigEntity>>[];
 
   @override
   Future<AppSettingsEntity> getSettings() async => AppSettingsEntity.defaults;

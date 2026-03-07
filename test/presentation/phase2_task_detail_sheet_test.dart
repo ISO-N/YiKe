@@ -262,10 +262,7 @@ void main() {
     await reviewRepo.completeTask(initialPlan.first.taskId);
     await reviewRepo.completeTask(initialPlan.last.taskId);
 
-    await pumpDetailSheet(
-      tester,
-      TaskDetailSheet(learningItemId: itemId),
-    );
+    await pumpDetailSheet(tester, TaskDetailSheet(learningItemId: itemId));
 
     await tester.tap(find.widgetWithText(OutlinedButton, '撤销').first);
     await tester.pumpAndSettle();
@@ -273,11 +270,12 @@ void main() {
     await tester.tap(find.text('确认撤销'));
     await tester.pumpAndSettle();
     await waitUntil(
-      () => container
-          .read(taskDetailProvider(itemId))
-          .plan
-          .where((task) => task.status == ReviewTaskStatus.done)
-          .length ==
+      () =>
+          container
+              .read(taskDetailProvider(itemId))
+              .plan
+              .where((task) => task.status == ReviewTaskStatus.done)
+              .length ==
           1,
     );
 
@@ -337,15 +335,10 @@ void main() {
   });
 
   testWidgets('任务详情在停用后进入只读展示并显示空标签信息', (tester) async {
-    final itemId = await createLearningItemWithPlan(
-      title: '只读详情',
-    );
+    final itemId = await createLearningItemWithPlan(title: '只读详情');
     await container.read(learningItemRepositoryProvider).deactivate(itemId);
 
-    await pumpDetailSheet(
-      tester,
-      TaskDetailSheet(learningItemId: itemId),
-    );
+    await pumpDetailSheet(tester, TaskDetailSheet(learningItemId: itemId));
 
     expect(find.textContaining('已停用'), findsOneWidget);
     expect(find.text('未关联'), findsOneWidget);
@@ -377,10 +370,7 @@ void main() {
       tags: const <String>['旧标签'],
     );
 
-    await pumpDetailSheet(
-      tester,
-      TaskDetailSheet(learningItemId: itemId),
-    );
+    await pumpDetailSheet(tester, TaskDetailSheet(learningItemId: itemId));
 
     await tester.tap(find.widgetWithText(OutlinedButton, '编辑').first);
     await tester.pumpAndSettle();
@@ -400,10 +390,7 @@ void main() {
 
     await tester.tap(find.widgetWithText(OutlinedButton, '新建主题'));
     await tester.pumpAndSettle();
-    await tester.enterText(
-      find.widgetWithText(TextField, '主题名称（必填）'),
-      '新增主题',
-    );
+    await tester.enterText(find.widgetWithText(TextField, '主题名称（必填）'), '新增主题');
     await tester.enterText(
       find.widgetWithText(TextField, '主题描述（选填）'),
       '详情页新建的主题',
@@ -424,22 +411,14 @@ void main() {
 
   testWidgets('任务详情编辑基本信息时会校验空标题', (tester) async {
     keepDetailDependenciesAlive();
-    final itemId = await createLearningItemWithPlan(
-      title: '标题校验测试',
-    );
+    final itemId = await createLearningItemWithPlan(title: '标题校验测试');
 
-    await pumpDetailSheet(
-      tester,
-      TaskDetailSheet(learningItemId: itemId),
-    );
+    await pumpDetailSheet(tester, TaskDetailSheet(learningItemId: itemId));
 
     await tester.tap(find.widgetWithText(OutlinedButton, '编辑').first);
     await tester.pumpAndSettle();
 
-    await tester.enterText(
-      find.widgetWithText(TextField, '任务名（必填）'),
-      '',
-    );
+    await tester.enterText(find.widgetWithText(TextField, '任务名（必填）'), '');
     await tester.tap(find.widgetWithText(FilledButton, '保存'));
     await tester.pumpAndSettle();
     expect(find.text('请输入任务名'), findsOneWidget);

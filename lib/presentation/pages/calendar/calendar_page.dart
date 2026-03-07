@@ -58,10 +58,9 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
     setState(() {
       _visibleMonth = DateTime(targetMonth.year, targetMonth.month, 1);
     });
-    ref.read(calendarProvider.notifier).loadMonth(
-      _visibleMonth.year,
-      _visibleMonth.month,
-    );
+    ref
+        .read(calendarProvider.notifier)
+        .loadMonth(_visibleMonth.year, _visibleMonth.month);
   }
 
   Future<void> _openDayTaskListSheet(DateTime day) async {

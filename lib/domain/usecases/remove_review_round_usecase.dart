@@ -28,8 +28,9 @@ class RemoveReviewRoundUseCase {
       throw StateError('学习内容已停用，无法减少轮次');
     }
 
-    final maxRound =
-        plan.map((e) => e.reviewRound).fold<int>(0, (a, b) => a > b ? a : b);
+    final maxRound = plan
+        .map((e) => e.reviewRound)
+        .fold<int>(0, (a, b) => a > b ? a : b);
     if (maxRound <= 1) {
       throw StateError('已达到最小轮次（1）');
     }
@@ -37,4 +38,3 @@ class RemoveReviewRoundUseCase {
     await _reviewTaskRepository.removeLatestReviewRound(learningItemId);
   }
 }
-

@@ -47,17 +47,19 @@ void main() {
     required DateTime learningDate,
     List<String> tags = const <String>[],
   }) {
-    return db.into(db.learningItems).insert(
-      LearningItemsCompanion.insert(
-        title: title,
-        note: const drift.Value.absent(),
-        description: const drift.Value.absent(),
-        tags: drift.Value(jsonEncode(tags)),
-        learningDate: learningDate,
-        createdAt: drift.Value(learningDate),
-        updatedAt: drift.Value(learningDate),
-      ),
-    );
+    return db
+        .into(db.learningItems)
+        .insert(
+          LearningItemsCompanion.insert(
+            title: title,
+            note: const drift.Value.absent(),
+            description: const drift.Value.absent(),
+            tags: drift.Value(jsonEncode(tags)),
+            learningDate: learningDate,
+            createdAt: drift.Value(learningDate),
+            updatedAt: drift.Value(learningDate),
+          ),
+        );
   }
 
   /// 插入一条复习任务，并显式维护 occurredAt，贴近生产库写入口径。
@@ -74,19 +76,21 @@ void main() {
       ReviewTaskStatus.done => completedAt ?? scheduledDate,
       ReviewTaskStatus.skipped => skippedAt ?? scheduledDate,
     };
-    return db.into(db.reviewTasks).insert(
-      ReviewTasksCompanion.insert(
-        learningItemId: learningItemId,
-        reviewRound: reviewRound,
-        scheduledDate: scheduledDate,
-        occurredAt: drift.Value(occurredAt),
-        status: drift.Value(status.toDbValue()),
-        completedAt: drift.Value(completedAt),
-        skippedAt: drift.Value(skippedAt),
-        createdAt: drift.Value(scheduledDate),
-        updatedAt: drift.Value(occurredAt),
-      ),
-    );
+    return db
+        .into(db.reviewTasks)
+        .insert(
+          ReviewTasksCompanion.insert(
+            learningItemId: learningItemId,
+            reviewRound: reviewRound,
+            scheduledDate: scheduledDate,
+            occurredAt: drift.Value(occurredAt),
+            status: drift.Value(status.toDbValue()),
+            completedAt: drift.Value(completedAt),
+            skippedAt: drift.Value(skippedAt),
+            createdAt: drift.Value(scheduledDate),
+            updatedAt: drift.Value(occurredAt),
+          ),
+        );
   }
 
   /// 插入主题及其关联，用于验证首页主题筛选会重新计算展示列表。
@@ -95,21 +99,25 @@ void main() {
     required int learningItemId,
     required DateTime createdAt,
   }) async {
-    final topicId = await db.into(db.learningTopics).insert(
-      LearningTopicsCompanion.insert(
-        name: name,
-        description: const drift.Value.absent(),
-        createdAt: drift.Value(createdAt),
-        updatedAt: drift.Value(createdAt),
-      ),
-    );
-    await db.into(db.topicItemRelations).insert(
-      TopicItemRelationsCompanion.insert(
-        topicId: topicId,
-        learningItemId: learningItemId,
-        createdAt: drift.Value(createdAt),
-      ),
-    );
+    final topicId = await db
+        .into(db.learningTopics)
+        .insert(
+          LearningTopicsCompanion.insert(
+            name: name,
+            description: const drift.Value.absent(),
+            createdAt: drift.Value(createdAt),
+            updatedAt: drift.Value(createdAt),
+          ),
+        );
+    await db
+        .into(db.topicItemRelations)
+        .insert(
+          TopicItemRelationsCompanion.insert(
+            topicId: topicId,
+            learningItemId: learningItemId,
+            createdAt: drift.Value(createdAt),
+          ),
+        );
     return topicId;
   }
 
@@ -128,7 +136,10 @@ void main() {
   group('CalendarProvider', () {
     test('选中日期并完成任务后，会同步刷新当日列表与月份统计', () async {
       final today = startOfDay(DateTime.now());
-      final itemId = await insertLearningItem(title: '日历任务', learningDate: today);
+      final itemId = await insertLearningItem(
+        title: '日历任务',
+        learningDate: today,
+      );
       final taskId = await insertReviewTask(
         learningItemId: itemId,
         reviewRound: 1,
@@ -149,7 +160,10 @@ void main() {
       final selectedState = container.read(calendarProvider);
       expect(selectedState.selectedDay, today);
       expect(selectedState.selectedDayTasks.single.taskId, taskId);
-      expect(selectedState.selectedDayTasks.single.status, ReviewTaskStatus.pending);
+      expect(
+        selectedState.selectedDayTasks.single.status,
+        ReviewTaskStatus.pending,
+      );
 
       await notifier.completeTask(taskId);
       await waitFor(() => !container.read(calendarProvider).isLoadingTasks);
@@ -168,7 +182,10 @@ void main() {
       final undoneState = container.read(calendarProvider);
       expect(undoneState.monthStats[today]?.pendingCount, 1);
       expect(undoneState.monthStats[today]?.doneCount, 0);
-      expect(undoneState.selectedDayTasks.single.status, ReviewTaskStatus.pending);
+      expect(
+        undoneState.selectedDayTasks.single.status,
+        ReviewTaskStatus.pending,
+      );
     });
   });
 
@@ -237,7 +254,9 @@ void main() {
 
       notifier.toggleSelectionMode();
       notifier.toggleSelected(topicTaskId);
-      expect(container.read(homeTasksProvider).selectedTaskIds, <int>{topicTaskId});
+      expect(container.read(homeTasksProvider).selectedTaskIds, <int>{
+        topicTaskId,
+      });
 
       await notifier.completeSelected();
       await waitFor(() => !container.read(homeTasksProvider).isLoading);
@@ -248,7 +267,10 @@ void main() {
       expect(completedState.isSelectionMode, false);
       expect(completedState.selectedTaskIds, isEmpty);
       expect(completedState.todayPending, isEmpty);
-      expect(completedState.todayCompleted.map((task) => task.taskId), contains(topicTaskId));
+      expect(
+        completedState.todayCompleted.map((task) => task.taskId),
+        contains(topicTaskId),
+      );
       expect(completedState.completedCount, 1);
       expect(completedState.totalCount, 1);
     });
@@ -340,7 +362,10 @@ void main() {
       final initialTaskRows = initialState.timelineRows
           .whereType<TaskHubTimelineTaskRow>()
           .toList();
-      expect(initialState.timelineRows.whereType<TaskHubTimelineHeaderRow>().length, 3);
+      expect(
+        initialState.timelineRows.whereType<TaskHubTimelineHeaderRow>().length,
+        3,
+      );
       expect(initialTaskRows.where((row) => row.isLastInGroup).length, 3);
 
       await notifier.setFilter(ReviewTaskFilter.pending);
@@ -350,7 +375,9 @@ void main() {
       expect(pendingState.filter, ReviewTaskFilter.pending);
       expect(pendingState.items.length, 2);
       expect(
-        pendingState.items.every((item) => item.task.status == ReviewTaskStatus.pending),
+        pendingState.items.every(
+          (item) => item.task.status == ReviewTaskStatus.pending,
+        ),
         isTrue,
       );
 
@@ -361,7 +388,10 @@ void main() {
       final futureOnlyState = container.read(taskHubProvider);
       expect(futureOnlyState.timeFilter, HomeTimeFilter.afterToday);
       expect(futureOnlyState.items.length, 1);
-      expect(futureOnlyState.items.single.task.learningItemId, futurePendingItemId);
+      expect(
+        futureOnlyState.items.single.task.learningItemId,
+        futurePendingItemId,
+      );
 
       await notifier.setTimeFilter(HomeTimeFilter.all);
       await notifier.skipTask(pendingTaskId);
@@ -374,7 +404,10 @@ void main() {
       expect(skippedState.counts.pending, 1);
       expect(skippedState.counts.skipped, 2);
       expect(
-        skippedState.items.firstWhere((item) => item.task.taskId == pendingTaskId).task.status,
+        skippedState.items
+            .firstWhere((item) => item.task.taskId == pendingTaskId)
+            .task
+            .status,
         ReviewTaskStatus.skipped,
       );
     });
@@ -421,7 +454,10 @@ void main() {
       await waitFor(() => !container.read(taskHubProvider).isLoadingMore);
 
       final finalState = container.read(taskHubProvider);
-      expect(finalState.items.map((item) => item.task.taskId).toSet().length, 25);
+      expect(
+        finalState.items.map((item) => item.task.taskId).toSet().length,
+        25,
+      );
       expect(finalState.nextCursor, isNull);
     });
   });

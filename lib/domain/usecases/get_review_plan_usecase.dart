@@ -25,4 +25,3 @@ class GetReviewPlanUseCase {
     return _reviewTaskRepository.getReviewPlan(learningItemId);
   }
 }
-

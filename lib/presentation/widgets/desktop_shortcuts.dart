@@ -30,8 +30,9 @@ class DesktopShortcuts extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isMac = !kIsWeb && defaultTargetPlatform == TargetPlatform.macOS;
-    final primaryModifier =
-        isMac ? LogicalKeyboardKey.meta : LogicalKeyboardKey.control;
+    final primaryModifier = isMac
+        ? LogicalKeyboardKey.meta
+        : LogicalKeyboardKey.control;
 
     // 快捷键提示 UI（3.4.3）只在 Windows 桌面端展示。
     final shouldShowHints =

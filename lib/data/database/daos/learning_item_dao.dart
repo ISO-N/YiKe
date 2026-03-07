@@ -347,23 +347,23 @@ LIMIT ?
       }
     }
 
-    final ranked = totalCounts.keys.map((tag) {
-      return TagUsageStatEntity(
-        tag: tag,
-        recentUseCount: recentCounts[tag] ?? 0,
-        totalUseCount: totalCounts[tag] ?? 0,
-        lastUsedAt: lastUsedMap[tag] ?? recentSince,
-      );
-    }).toList()
-      ..sort((left, right) {
-        final recent = right.recentUseCount.compareTo(left.recentUseCount);
-        if (recent != 0) return recent;
-        final total = right.totalUseCount.compareTo(left.totalUseCount);
-        if (total != 0) return total;
-        final lastUsed = right.lastUsedAt.compareTo(left.lastUsedAt);
-        if (lastUsed != 0) return lastUsed;
-        return left.tag.compareTo(right.tag);
-      });
+    final ranked =
+        totalCounts.keys.map((tag) {
+          return TagUsageStatEntity(
+            tag: tag,
+            recentUseCount: recentCounts[tag] ?? 0,
+            totalUseCount: totalCounts[tag] ?? 0,
+            lastUsedAt: lastUsedMap[tag] ?? recentSince,
+          );
+        }).toList()..sort((left, right) {
+          final recent = right.recentUseCount.compareTo(left.recentUseCount);
+          if (recent != 0) return recent;
+          final total = right.totalUseCount.compareTo(left.totalUseCount);
+          if (total != 0) return total;
+          final lastUsed = right.lastUsedAt.compareTo(left.lastUsedAt);
+          if (lastUsed != 0) return lastUsed;
+          return left.tag.compareTo(right.tag);
+        });
 
     if (limit == null) return ranked;
     final safeLimit = limit.clamp(0, ranked.length).toInt();

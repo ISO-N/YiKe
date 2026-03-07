@@ -28,7 +28,8 @@ class StatisticsTrendPointEntity {
   final int total;
 
   /// 完成率百分比（0~100）。
-  double get completionRatePercent => total <= 0 ? 0 : (completed / total) * 100;
+  double get completionRatePercent =>
+      total <= 0 ? 0 : (completed / total) * 100;
 }
 
 /// 本周与上周对比分析结果。

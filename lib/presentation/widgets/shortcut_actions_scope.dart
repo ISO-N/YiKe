@@ -32,7 +32,7 @@ class ShortcutActionsScope extends InheritedWidget {
 
   @override
   bool updateShouldNotify(covariant ShortcutActionsScope oldWidget) {
-    return oldWidget.onFocusSearch != onFocusSearch || oldWidget.onSave != onSave;
+    return oldWidget.onFocusSearch != onFocusSearch ||
+        oldWidget.onSave != onSave;
   }
 }
-

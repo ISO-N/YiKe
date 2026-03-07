@@ -264,17 +264,18 @@ void main() {
       cancelToken: token,
     );
 
-    final item = await (db.select(db.learningItems)
-          ..where((t) => t.uuid.equals('item-legacy')))
-        .getSingle();
+    final item = await (db.select(
+      db.learningItems,
+    )..where((t) => t.uuid.equals('item-legacy'))).getSingle();
     // 断言：旧 note 已清空（幂等锚点），description 为空（列表型 note 不迁移到描述）。
     expect(item.note == null || item.note!.isEmpty, isTrue);
     expect(item.description == null || item.description!.isEmpty, isTrue);
 
-    final subtasks = await (db.select(db.learningSubtasks)
-          ..where((t) => t.learningItemId.equals(item.id))
-          ..orderBy([(t) => OrderingTerm.asc(t.sortOrder)]))
-        .get();
+    final subtasks =
+        await (db.select(db.learningSubtasks)
+              ..where((t) => t.learningItemId.equals(item.id))
+              ..orderBy([(t) => OrderingTerm.asc(t.sortOrder)]))
+            .get();
     expect(subtasks.map((e) => e.content).toList(), ['子任务A', '子任务B']);
     expect(subtasks.map((e) => e.sortOrder).toList(), [0, 1]);
   });

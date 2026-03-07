@@ -310,7 +310,9 @@ void main() {
 
       state = container.read(backupProvider);
       expect(state.message, '已删除');
-      expect(state.backups.map((item) => item.fileName), <String>['backup-1.json']);
+      expect(state.backups.map((item) => item.fileName), <String>[
+        'backup-1.json',
+      ]);
     });
 
     test('预览导入与成功导入会清理进度并刷新联动 Provider', () async {

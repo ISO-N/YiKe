@@ -69,10 +69,7 @@ class HomeTabSwitcher extends StatelessWidget {
             value: HomeTaskTab.today,
             label: Text('今日'),
           ),
-          ButtonSegment<HomeTaskTab>(
-            value: HomeTaskTab.all,
-            label: Text('全部'),
-          ),
+          ButtonSegment<HomeTaskTab>(value: HomeTaskTab.all, label: Text('全部')),
         ],
         selected: {tab},
         onSelectionChanged: (selection) {
@@ -84,4 +81,3 @@ class HomeTabSwitcher extends StatelessWidget {
     );
   }
 }
-

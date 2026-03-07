@@ -22,4 +22,3 @@ class ReorderSubtasksUseCase {
     return _learningSubtaskRepository.reorder(learningItemId, subtaskIds);
   }
 }
-

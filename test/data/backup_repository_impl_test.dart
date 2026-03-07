@@ -87,56 +87,64 @@ void main() {
     required bool isMockData,
   }) async {
     final createdAt = DateTime(2026, 3, 7, 9, 30);
-    final itemId = await db.into(db.learningItems).insert(
-      LearningItemsCompanion.insert(
-        uuid: drift.Value('item-$suffix'),
-        title: '原始内容-$suffix',
-        description: drift.Value('原始描述-$suffix'),
-        note: drift.Value('原始备注-$suffix'),
-        tags: drift.Value(jsonEncode(<String>['历史', suffix])),
-        learningDate: createdAt,
-        createdAt: drift.Value(createdAt),
-        updatedAt: drift.Value(createdAt),
-        isMockData: drift.Value(isMockData),
-      ),
-    );
+    final itemId = await db
+        .into(db.learningItems)
+        .insert(
+          LearningItemsCompanion.insert(
+            uuid: drift.Value('item-$suffix'),
+            title: '原始内容-$suffix',
+            description: drift.Value('原始描述-$suffix'),
+            note: drift.Value('原始备注-$suffix'),
+            tags: drift.Value(jsonEncode(<String>['历史', suffix])),
+            learningDate: createdAt,
+            createdAt: drift.Value(createdAt),
+            updatedAt: drift.Value(createdAt),
+            isMockData: drift.Value(isMockData),
+          ),
+        );
 
-    await db.into(db.learningSubtasks).insert(
-      LearningSubtasksCompanion.insert(
-        uuid: drift.Value('subtask-$suffix'),
-        learningItemId: itemId,
-        content: '原始子任务-$suffix',
-        sortOrder: const drift.Value(0),
-        createdAt: createdAt,
-        updatedAt: drift.Value(createdAt),
-        isMockData: drift.Value(isMockData),
-      ),
-    );
+    await db
+        .into(db.learningSubtasks)
+        .insert(
+          LearningSubtasksCompanion.insert(
+            uuid: drift.Value('subtask-$suffix'),
+            learningItemId: itemId,
+            content: '原始子任务-$suffix',
+            sortOrder: const drift.Value(0),
+            createdAt: createdAt,
+            updatedAt: drift.Value(createdAt),
+            isMockData: drift.Value(isMockData),
+          ),
+        );
 
-    final taskId = await db.into(db.reviewTasks).insert(
-      ReviewTasksCompanion.insert(
-        uuid: drift.Value('task-$suffix'),
-        learningItemId: itemId,
-        reviewRound: 1,
-        scheduledDate: createdAt.add(const Duration(days: 1)),
-        occurredAt: drift.Value(createdAt.add(const Duration(days: 1))),
-        status: const drift.Value('done'),
-        completedAt: drift.Value(createdAt.add(const Duration(days: 1))),
-        createdAt: drift.Value(createdAt),
-        updatedAt: drift.Value(createdAt),
-        isMockData: drift.Value(isMockData),
-      ),
-    );
+    final taskId = await db
+        .into(db.reviewTasks)
+        .insert(
+          ReviewTasksCompanion.insert(
+            uuid: drift.Value('task-$suffix'),
+            learningItemId: itemId,
+            reviewRound: 1,
+            scheduledDate: createdAt.add(const Duration(days: 1)),
+            occurredAt: drift.Value(createdAt.add(const Duration(days: 1))),
+            status: const drift.Value('done'),
+            completedAt: drift.Value(createdAt.add(const Duration(days: 1))),
+            createdAt: drift.Value(createdAt),
+            updatedAt: drift.Value(createdAt),
+            isMockData: drift.Value(isMockData),
+          ),
+        );
 
-    await db.into(db.reviewRecords).insert(
-      ReviewRecordsCompanion.insert(
-        uuid: drift.Value('record-$suffix'),
-        reviewTaskId: taskId,
-        action: 'done',
-        occurredAt: createdAt.add(const Duration(days: 1)),
-        createdAt: drift.Value(createdAt.add(const Duration(days: 1))),
-      ),
-    );
+    await db
+        .into(db.reviewRecords)
+        .insert(
+          ReviewRecordsCompanion.insert(
+            uuid: drift.Value('record-$suffix'),
+            reviewTaskId: taskId,
+            action: 'done',
+            occurredAt: createdAt.add(const Duration(days: 1)),
+            createdAt: drift.Value(createdAt.add(const Duration(days: 1))),
+          ),
+        );
 
     return (itemId: itemId, taskId: taskId);
   }
@@ -290,7 +298,9 @@ void main() {
     });
 
     test('readBackupFile 会规范化旧备份缺失的顶层字段', () async {
-      final file = File('${tempDir.path}${Platform.pathSeparator}legacy.yikebackup');
+      final file = File(
+        '${tempDir.path}${Platform.pathSeparator}legacy.yikebackup',
+      );
       await file.writeAsString(
         jsonEncode(<String, dynamic>{
           'schemaVersion': ' ',
@@ -342,7 +352,9 @@ void main() {
 
       final snapshot = await repository.getLatestSnapshot();
       final items = await db.select(db.learningItems).get();
-      final importedItem = items.singleWhere((item) => item.uuid == 'import-item');
+      final importedItem = items.singleWhere(
+        (item) => item.uuid == 'import-item',
+      );
       final subtasks = await (db.select(
         db.learningSubtasks,
       )..where((t) => t.learningItemId.equals(importedItem.id))).get();

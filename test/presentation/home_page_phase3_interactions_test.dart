@@ -241,7 +241,9 @@ void main() {
           notificationPermissionProvider.overrideWith(
             (ref) async => NotificationPermissionState.disabled,
           ),
-          homeTaskFilterProvider.overrideWith((ref) => ReviewTaskFilter.pending),
+          homeTaskFilterProvider.overrideWith(
+            (ref) => ReviewTaskFilter.pending,
+          ),
           homeTasksProvider.overrideWith((ref) {
             notifier = _TestHomeTasksNotifier(
               ref,
@@ -353,7 +355,9 @@ void main() {
           notificationPermissionProvider.overrideWith(
             (ref) async => NotificationPermissionState.unknown,
           ),
-          homeTaskFilterProvider.overrideWith((ref) => ReviewTaskFilter.pending),
+          homeTaskFilterProvider.overrideWith(
+            (ref) => ReviewTaskFilter.pending,
+          ),
           homeTasksProvider.overrideWith((ref) {
             notifier = _TestHomeTasksNotifier(
               ref,
@@ -415,10 +419,7 @@ void main() {
       final timelineRows = <TaskHubTimelineRow>[
         TaskHubTimelineHeaderRow(day: DateTime(2026, 3, 7)),
         ...tasks.map(
-          (e) => TaskHubTimelineTaskRow.fromEntity(
-            e,
-            isLastInGroup: false,
-          ),
+          (e) => TaskHubTimelineTaskRow.fromEntity(e, isLastInGroup: false),
         ),
       ];
 

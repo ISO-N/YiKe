@@ -93,26 +93,14 @@ void main() {
       expect(find.text('请输入模板名称'), findsOneWidget);
       expect(find.text('请输入标题模板'), findsOneWidget);
 
-      await tester.enterText(
-        find.byType(TextFormField).at(0),
-        '模板A',
-      );
-      await tester.enterText(
-        find.byType(TextFormField).at(1),
-        '标题 {date}',
-      );
-      await tester.enterText(
-        find.byType(TextFormField).at(3),
-        '英语, 单词',
-      );
+      await tester.enterText(find.byType(TextFormField).at(0), '模板A');
+      await tester.enterText(find.byType(TextFormField).at(1), '标题 {date}');
+      await tester.enterText(find.byType(TextFormField).at(3), '英语, 单词');
 
       // 新增一个子任务并删除。
       await tester.tap(find.widgetWithText(OutlinedButton, '新增'));
       await tester.pumpAndSettle();
-      await tester.enterText(
-        find.byType(TextField).last,
-        '子任务1',
-      );
+      await tester.enterText(find.byType(TextField).last, '子任务1');
       expect(find.text('子任务1'), findsOneWidget);
       await tester.tap(find.byIcon(Icons.delete_outline).last);
       await tester.pumpAndSettle();
@@ -133,18 +121,9 @@ void main() {
 
       await pumpPage(tester, const TemplateEditPage());
 
-      await tester.enterText(
-        find.byType(TextFormField).at(0),
-        '重复模板',
-      );
-      await tester.enterText(
-        find.byType(TextFormField).at(1),
-        '新标题 {date}',
-      );
-      await tester.enterText(
-        find.byType(TextFormField).at(3),
-        '新, 标签',
-      );
+      await tester.enterText(find.byType(TextFormField).at(0), '重复模板');
+      await tester.enterText(find.byType(TextFormField).at(1), '新标题 {date}');
+      await tester.enterText(find.byType(TextFormField).at(3), '新, 标签');
 
       await tester.tap(find.text('保存'));
       await tester.pumpAndSettle();
@@ -195,14 +174,8 @@ void main() {
         testContainer: localContainer,
       );
 
-      await tester.enterText(
-        find.byType(TextFormField).at(0),
-        '重复模板',
-      );
-      await tester.enterText(
-        find.byType(TextFormField).at(1),
-        '新标题',
-      );
+      await tester.enterText(find.byType(TextFormField).at(0), '重复模板');
+      await tester.enterText(find.byType(TextFormField).at(1), '新标题');
 
       await tester.tap(find.text('保存'));
       await tester.pumpAndSettle();

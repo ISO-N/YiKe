@@ -89,8 +89,7 @@ class NotificationDedupStore {
       final mRaw = decoded['milestone'];
       final tRaw = decoded['sent_at_ms'];
       final m = mRaw is int ? mRaw : int.tryParse(mRaw?.toString() ?? '') ?? 0;
-      final ms =
-          tRaw is int ? tRaw : int.tryParse(tRaw?.toString() ?? '') ?? 0;
+      final ms = tRaw is int ? tRaw : int.tryParse(tRaw?.toString() ?? '') ?? 0;
       return (
         milestone: m,
         sentAt: ms <= 0 ? null : DateTime.fromMillisecondsSinceEpoch(ms),
@@ -115,4 +114,3 @@ class NotificationDedupStore {
     );
   }
 }
-

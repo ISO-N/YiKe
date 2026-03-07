@@ -16,7 +16,9 @@ void main() {
     final db = createInMemoryDatabase();
     addTearDown(() async => db.close());
 
-    final tempDir = await Directory.systemTemp.createTemp('yike_provider_smoke');
+    final tempDir = await Directory.systemTemp.createTemp(
+      'yike_provider_smoke',
+    );
     addTearDown(() async {
       if (await tempDir.exists()) {
         await tempDir.delete(recursive: true);
@@ -27,7 +29,9 @@ void main() {
       overrides: <Override>[
         appDatabaseProvider.overrideWithValue(db),
         // 说明：BackupStorage 默认使用 path_provider，测试环境下直接注入临时目录即可。
-        backupStorageProvider.overrideWithValue(BackupStorage(baseDir: tempDir)),
+        backupStorageProvider.overrideWithValue(
+          BackupStorage(baseDir: tempDir),
+        ),
       ],
     );
     addTearDown(container.dispose);
@@ -64,4 +68,3 @@ void main() {
     expect(container.read(exportStatisticsCsvUseCaseProvider), isNotNull);
   });
 }
-

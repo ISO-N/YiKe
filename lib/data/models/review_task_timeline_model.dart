@@ -12,9 +12,11 @@ import 'review_task_with_item_model.dart';
 /// - [occurredAt] 为发生时间（pending 用 scheduledDate，done 用 completedAt，skipped 用 skippedAt；空值回退 scheduledDate）
 class ReviewTaskTimelineModel {
   /// 构造函数。
-  const ReviewTaskTimelineModel({required this.model, required this.occurredAt});
+  const ReviewTaskTimelineModel({
+    required this.model,
+    required this.occurredAt,
+  });
 
   final ReviewTaskWithItemModel model;
   final DateTime occurredAt;
 }
-

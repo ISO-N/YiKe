@@ -27,4 +27,3 @@ class UpdateLearningItemNoteUseCase {
     return _learningItemRepository.updateNote(id: learningItemId, note: note);
   }
 }
-

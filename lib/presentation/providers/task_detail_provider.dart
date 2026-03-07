@@ -35,14 +35,13 @@ class TaskDetailState {
   final List<LearningTopicEntity> topics;
   final String? errorMessage;
 
-  factory TaskDetailState.initial() =>
-      const TaskDetailState(
-        isLoading: true,
-        item: null,
-        plan: [],
-        subtasks: [],
-        topics: [],
-      );
+  factory TaskDetailState.initial() => const TaskDetailState(
+    isLoading: true,
+    item: null,
+    plan: [],
+    subtasks: [],
+    topics: [],
+  );
 
   TaskDetailState copyWith({
     bool? isLoading,
@@ -128,8 +127,10 @@ class TaskDetailNotifier extends StateNotifier<TaskDetailState> {
     }
 
     final normalizedTitle = title.trim();
-    final currentTopicIds =
-        state.topics.map((e) => e.id).whereType<int>().toSet();
+    final currentTopicIds = state.topics
+        .map((e) => e.id)
+        .whereType<int>()
+        .toSet();
 
     final shouldUpdateMeta =
         normalizedTitle != item.title || !_sameStringList(tags, item.tags);
@@ -137,17 +138,18 @@ class TaskDetailNotifier extends StateNotifier<TaskDetailState> {
     if (!shouldUpdateMeta && !shouldUpdateTopics) return;
 
     if (shouldUpdateMeta) {
-      await _ref.read(updateLearningItemMetaUseCaseProvider).execute(
-        learningItemId: learningItemId,
-        title: normalizedTitle,
-        tags: tags,
-      );
+      await _ref
+          .read(updateLearningItemMetaUseCaseProvider)
+          .execute(
+            learningItemId: learningItemId,
+            title: normalizedTitle,
+            tags: tags,
+          );
     }
     if (shouldUpdateTopics) {
-      await _ref.read(setLearningItemTopicsUseCaseProvider).execute(
-        learningItemId: learningItemId,
-        topicIds: topicIds,
-      );
+      await _ref
+          .read(setLearningItemTopicsUseCaseProvider)
+          .execute(learningItemId: learningItemId, topicIds: topicIds);
     }
 
     _invalidateRelatedPages();
@@ -171,7 +173,9 @@ class TaskDetailNotifier extends StateNotifier<TaskDetailState> {
   }
 
   Future<void> deactivate() async {
-    await _ref.read(deactivateLearningItemUseCaseProvider).execute(learningItemId);
+    await _ref
+        .read(deactivateLearningItemUseCaseProvider)
+        .execute(learningItemId);
     _invalidateRelatedPages();
     await load();
   }
@@ -186,11 +190,13 @@ class TaskDetailNotifier extends StateNotifier<TaskDetailState> {
     required int reviewRound,
     required DateTime newDate,
   }) async {
-    await _ref.read(adjustReviewDateUseCaseProvider).execute(
-      learningItemId: learningItemId,
-      reviewRound: reviewRound,
-      newDate: newDate,
-    );
+    await _ref
+        .read(adjustReviewDateUseCaseProvider)
+        .execute(
+          learningItemId: learningItemId,
+          reviewRound: reviewRound,
+          newDate: newDate,
+        );
     _invalidateRelatedPages();
     await load();
   }
@@ -208,10 +214,9 @@ class TaskDetailNotifier extends StateNotifier<TaskDetailState> {
   }
 
   Future<void> createSubtask(String content) async {
-    await _ref.read(createSubtaskUseCaseProvider).execute(
-      learningItemId: learningItemId,
-      content: content,
-    );
+    await _ref
+        .read(createSubtaskUseCaseProvider)
+        .execute(learningItemId: learningItemId, content: content);
     _invalidateRelatedPages();
     await load();
   }
@@ -229,10 +234,9 @@ class TaskDetailNotifier extends StateNotifier<TaskDetailState> {
   }
 
   Future<void> reorderSubtasks(List<int> subtaskIds) async {
-    await _ref.read(reorderSubtasksUseCaseProvider).execute(
-      learningItemId: learningItemId,
-      subtaskIds: subtaskIds,
-    );
+    await _ref
+        .read(reorderSubtasksUseCaseProvider)
+        .execute(learningItemId: learningItemId, subtaskIds: subtaskIds);
     _invalidateRelatedPages();
     await load();
   }
@@ -282,8 +286,8 @@ class TaskDetailNotifier extends StateNotifier<TaskDetailState> {
 /// 任务详情 Provider（按 learningItemId family）。
 final taskDetailProvider =
     StateNotifierProvider.family<TaskDetailNotifier, TaskDetailState, int>((
-  ref,
-  learningItemId,
-) {
-  return TaskDetailNotifier(ref, learningItemId);
-});
+      ref,
+      learningItemId,
+    ) {
+      return TaskDetailNotifier(ref, learningItemId);
+    });

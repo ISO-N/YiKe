@@ -48,4 +48,3 @@ class MigrateNoteToSubtasksUseCase {
     return migrated;
   }
 }
-

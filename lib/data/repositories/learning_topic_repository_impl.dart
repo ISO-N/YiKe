@@ -31,7 +31,9 @@ class LearningTopicRepositoryImpl implements LearningTopicRepository {
   @override
   Future<LearningTopicEntity> create(LearningTopicEntity topic) async {
     final now = DateTime.now();
-    final ensuredUuid = topic.uuid.trim().isEmpty ? _uuid.v4() : topic.uuid.trim();
+    final ensuredUuid = topic.uuid.trim().isEmpty
+        ? _uuid.v4()
+        : topic.uuid.trim();
     final id = await dao.insertTopic(
       LearningTopicsCompanion.insert(
         uuid: Value(ensuredUuid),

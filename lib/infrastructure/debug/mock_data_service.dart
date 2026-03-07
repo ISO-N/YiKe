@@ -167,7 +167,10 @@ class MockDataService {
         );
         final title = _mockTitle(config: config, index: i);
         // v2.6：任务结构升级后，Mock 数据优先写入 description/subtasks（note 渐进式废弃）。
-        final description = _mockDescription(learningDay: learningDay, now: now);
+        final description = _mockDescription(
+          learningDay: learningDay,
+          now: now,
+        );
         final subtasks = _mockSubtasks(config: config, index: i);
 
         final id = await _learningItemDao.insertLearningItem(
@@ -187,17 +190,19 @@ class MockDataService {
         for (var j = 0; j < subtasks.length; j++) {
           final content = subtasks[j].trim();
           if (content.isEmpty) continue;
-          await db.into(db.learningSubtasks).insert(
-            LearningSubtasksCompanion.insert(
-              uuid: Value(_uuid.v4()),
-              learningItemId: id,
-              content: content,
-              sortOrder: Value(j),
-              createdAt: now,
-              updatedAt: Value(now),
-              isMockData: const Value(true),
-            ),
-          );
+          await db
+              .into(db.learningSubtasks)
+              .insert(
+                LearningSubtasksCompanion.insert(
+                  uuid: Value(_uuid.v4()),
+                  learningItemId: id,
+                  content: content,
+                  sortOrder: Value(j),
+                  createdAt: now,
+                  updatedAt: Value(now),
+                  isMockData: const Value(true),
+                ),
+              );
         }
         items.add((id: id, learningDay: learningDay));
       }
@@ -518,7 +523,10 @@ class MockDataService {
     return '历史：$e';
   }
 
-  String _mockDescription({required DateTime learningDay, required DateTime now}) {
+  String _mockDescription({
+    required DateTime learningDay,
+    required DateTime now,
+  }) {
     final y = learningDay.year;
     final m = learningDay.month.toString().padLeft(2, '0');
     final d = learningDay.day.toString().padLeft(2, '0');
@@ -530,7 +538,10 @@ class MockDataService {
   /// 说明：
   /// - 仅用于 Debug 数据，不追求业务真实性，但需覆盖排序/展示/搜索等链路
   /// - 通过 index 的奇偶与模板类型混入不同样式，便于回归验证
-  List<String> _mockSubtasks({required MockDataConfig config, required int index}) {
+  List<String> _mockSubtasks({
+    required MockDataConfig config,
+    required int index,
+  }) {
     final template = _resolveTemplate(config.template);
     // 简单策略：偶数条生成 0 个子任务（仅描述），奇数条生成 2-3 个子任务。
     if (index.isEven) return const <String>[];
@@ -551,10 +562,7 @@ class MockDataService {
         '子任务 2：完成练习',
         if (index % 3 == 0) '子任务 3：复盘总结',
       ],
-      MockDataTemplate.random => <String>[
-        '子任务 1：拆解步骤',
-        '子任务 2：完成并记录',
-      ],
+      MockDataTemplate.random => <String>['子任务 1：拆解步骤', '子任务 2：完成并记录'],
     };
   }
 }

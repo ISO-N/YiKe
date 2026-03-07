@@ -92,28 +92,16 @@ void main() {
       expect(find.text('替换预览'), findsOneWidget);
       expect(find.text('（无）'), findsOneWidget);
 
-      await tester.enterText(
-        find.byType(TextFormField).at(0),
-        '每日复盘模板',
-      );
-      await tester.enterText(
-        find.byType(TextFormField).at(1),
-        '复盘 {date}',
-      );
-      await tester.enterText(
-        find.byType(TextFormField).at(2),
-        '今天复盘重点',
-      );
+      await tester.enterText(find.byType(TextFormField).at(0), '每日复盘模板');
+      await tester.enterText(find.byType(TextFormField).at(1), '复盘 {date}');
+      await tester.enterText(find.byType(TextFormField).at(2), '今天复盘重点');
       await tester.tap(find.text('新增'));
       await tester.pumpAndSettle();
       await tester.enterText(
         find.widgetWithText(TextField, '输入子任务内容（支持占位符）'),
         '整理错题',
       );
-      await tester.enterText(
-        find.byType(TextFormField).last,
-        '复盘, 模板',
-      );
+      await tester.enterText(find.byType(TextFormField).last, '复盘, 模板');
 
       expect(find.textContaining('复盘 2026-02-26'), findsOneWidget);
       expect(find.textContaining('整理错题'), findsWidgets);
@@ -174,18 +162,14 @@ void main() {
         seedContainer,
         title: '单词 B',
       );
-      final topic = await seedContainer.read(manageTopicUseCaseProvider).create(
-        const TopicParams(name: '英语主题', description: '主题说明'),
-      );
-      await seedContainer.read(manageTopicUseCaseProvider).addItemToTopic(
-            topic.id!,
-            firstItemId,
-          );
+      final topic = await seedContainer
+          .read(manageTopicUseCaseProvider)
+          .create(const TopicParams(name: '英语主题', description: '主题说明'));
+      await seedContainer
+          .read(manageTopicUseCaseProvider)
+          .addItemToTopic(topic.id!, firstItemId);
 
-      await pumpPage(
-        tester,
-        TopicDetailPage(topicId: topic.id!),
-      );
+      await pumpPage(tester, TopicDetailPage(topicId: topic.id!));
 
       expect(find.text('英语主题'), findsWidgets);
       expect(find.text('单词 A'), findsOneWidget);
@@ -210,9 +194,9 @@ void main() {
       expect(find.text('单词 A'), findsNothing);
       expect(find.text('单词 B'), findsOneWidget);
 
-      final reloaded = await container.read(manageTopicUseCaseProvider).getById(
-            topic.id!,
-          );
+      final reloaded = await container
+          .read(manageTopicUseCaseProvider)
+          .getById(topic.id!);
       expect(reloaded?.itemIds, <int>[secondItemId]);
     });
 
@@ -236,10 +220,7 @@ void main() {
           text: '英语笔记\n重点内容\n- 子任务一\n- 子任务二',
           confidence: 0.92,
         ),
-        imageB.path: const OcrResult(
-          text: '数学错题\n- 整理公式',
-          confidence: 0.88,
-        ),
+        imageB.path: const OcrResult(text: '数学错题\n- 整理公式', confidence: 0.88),
       });
 
       await pumpPage(
@@ -262,10 +243,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('英语笔记'), findsNothing);
 
-      await tester.enterText(
-        find.widgetWithText(TextField, '标题（必填）'),
-        '',
-      );
+      await tester.enterText(find.widgetWithText(TextField, '标题（必填）'), '');
       await tester.tap(find.text('全部添加到录入'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
@@ -309,6 +287,5 @@ void main() {
       expect(find.text('长休息时长'), findsOneWidget);
       expect(find.text('长休息间隔轮数'), findsOneWidget);
     });
-
   });
 }

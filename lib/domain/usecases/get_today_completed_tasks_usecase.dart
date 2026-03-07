@@ -23,4 +23,3 @@ class GetTodayCompletedTasksUseCase {
     return _reviewTaskRepository.getTodayCompletedTasks();
   }
 }
-

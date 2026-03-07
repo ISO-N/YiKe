@@ -30,9 +30,9 @@ class GoalSettingsPage extends ConsumerWidget {
     Future<void> save(GoalSettingsEntity next) async {
       await notifier.save(next);
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('目标设置已保存')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('目标设置已保存')));
     }
 
     Future<int?> pickNumber({
@@ -133,7 +133,9 @@ class GoalSettingsPage extends ConsumerWidget {
                   padding: const EdgeInsets.all(AppSpacing.lg),
                   child: Text(
                     '加载失败：${state.errorMessage}',
-                    style: TextStyle(color: Theme.of(context).colorScheme.error),
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
+                    ),
                   ),
                 ),
               ),
@@ -270,4 +272,3 @@ class GoalSettingsPage extends ConsumerWidget {
     );
   }
 }
-

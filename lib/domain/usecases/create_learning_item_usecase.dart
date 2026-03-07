@@ -91,10 +91,9 @@ class CreateLearningItemUseCase {
     final item = LearningItemEntity(
       uuid: _uuid.v4(),
       title: params.title.trim(),
-      description:
-          params.description?.trim().isEmpty == true
-              ? null
-              : params.description?.trim(),
+      description: params.description?.trim().isEmpty == true
+          ? null
+          : params.description?.trim(),
       // note 字段渐进式废弃：仍允许外部传入（兼容旧入口），但推荐走 description/subtasks。
       note: params.note?.trim().isEmpty == true ? null : params.note?.trim(),
       tags: params.tags
@@ -109,11 +108,10 @@ class CreateLearningItemUseCase {
     final saved = await _learningItemRepository.create(item);
 
     // v2.6：保存子任务（只做清单能力，不做完成态）。
-    final normalizedSubtasks =
-        params.subtasks
-            .map((e) => e.trim())
-            .where((e) => e.isNotEmpty)
-            .toList();
+    final normalizedSubtasks = params.subtasks
+        .map((e) => e.trim())
+        .where((e) => e.isNotEmpty)
+        .toList();
     if (normalizedSubtasks.isNotEmpty) {
       // 说明：按输入顺序写入 sortOrder（0..n-1）。
       for (var i = 0; i < normalizedSubtasks.length; i++) {

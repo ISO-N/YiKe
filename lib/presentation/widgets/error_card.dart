@@ -18,11 +18,7 @@ import 'glass_card.dart';
 /// 异常：无。
 class ErrorCard extends StatelessWidget {
   /// 错误卡片。
-  const ErrorCard({
-    super.key,
-    required this.message,
-    this.onRetry,
-  });
+  const ErrorCard({super.key, required this.message, this.onRetry});
 
   /// 错误信息。
   final String message;
@@ -58,10 +54,7 @@ class ErrorCard extends StatelessWidget {
               const SizedBox(height: AppSpacing.md),
               Align(
                 alignment: Alignment.centerRight,
-                child: TextButton(
-                  onPressed: onRetry,
-                  child: const Text('重试'),
-                ),
+                child: TextButton(onPressed: onRetry, child: const Text('重试')),
               ),
             ],
           ],

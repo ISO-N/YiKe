@@ -23,4 +23,3 @@ class GetTodaySkippedTasksUseCase {
     return _reviewTaskRepository.getTodaySkippedTasks();
   }
 }
-

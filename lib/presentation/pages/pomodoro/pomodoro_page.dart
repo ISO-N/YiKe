@@ -166,7 +166,9 @@ class PomodoroPage extends ConsumerWidget {
                   const Divider(height: 24),
                   _StatTile(
                     label: '累计专注',
-                    value: _formatFocusMinutes(statsState.stats.totalFocusMinutes),
+                    value: _formatFocusMinutes(
+                      statsState.stats.totalFocusMinutes,
+                    ),
                   ),
                 ],
               ],

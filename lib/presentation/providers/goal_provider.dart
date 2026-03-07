@@ -124,7 +124,9 @@ class GoalProgressItem {
 /// 说明：
 /// - 进度完全由现有任务统计数据派生，不新增数据库字段
 /// - 当统计增强数据尚未加载完成时，返回 loading
-final goalProgressProvider = Provider<AsyncValue<List<GoalProgressItem>>>((ref) {
+final goalProgressProvider = Provider<AsyncValue<List<GoalProgressItem>>>((
+  ref,
+) {
   final goalState = ref.watch(goalSettingsProvider);
   final stats = ref.watch(statisticsProvider);
   final insightsAsync = ref.watch(statisticsInsightsProvider);
@@ -178,8 +180,9 @@ final goalProgressProvider = Provider<AsyncValue<List<GoalProgressItem>>>((ref) 
     // 本周完成率目标：按 weekCompletionRate 计算（0~1）。
     final weeklyRateTarget = settings.weeklyRateTarget;
     if (weeklyRateTarget != null && weeklyRateTarget > 0) {
-      final currentPercent =
-          (stats.weekCompletionRate * 100).clamp(0.0, 100.0).toDouble();
+      final currentPercent = (stats.weekCompletionRate * 100)
+          .clamp(0.0, 100.0)
+          .toDouble();
       final p = (currentPercent / weeklyRateTarget).clamp(0.0, 1.0).toDouble();
       list.add(
         GoalProgressItem(

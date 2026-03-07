@@ -38,10 +38,7 @@ void main() {
         overrides: overrides,
         child: MaterialApp(
           home: Scaffold(
-            body: StatisticsContent(
-              state: state,
-              onRefresh: onRefresh,
-            ),
+            body: StatisticsContent(state: state, onRefresh: onRefresh),
           ),
         ),
       ),
@@ -122,9 +119,7 @@ void main() {
         goalProgressProvider.overrideWithValue(
           const AsyncValue.data(<GoalProgressItem>[]),
         ),
-        statisticsInsightsProvider.overrideWith(
-          (ref) async => buildInsights(),
-        ),
+        statisticsInsightsProvider.overrideWith((ref) async => buildInsights()),
         statisticsHeatmapProvider.overrideWith(
           (ref, year) async => <DateTime, TaskDayStats>{
             DateTime(year, 1, 1): const TaskDayStats(

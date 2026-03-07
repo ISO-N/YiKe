@@ -138,7 +138,9 @@ class _SkeletonShimmerState extends State<SkeletonShimmer>
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final base = isDark ? const Color(0xFF1F2937) : const Color(0xFFE5E7EB);
-    final highlight = isDark ? const Color(0xFF334155) : const Color(0xFFF3F4F6);
+    final highlight = isDark
+        ? const Color(0xFF334155)
+        : const Color(0xFFF3F4F6);
 
     return AnimatedBuilder(
       animation: _controller,
@@ -190,4 +192,3 @@ class SkeletonBox extends StatelessWidget {
     );
   }
 }
-

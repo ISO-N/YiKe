@@ -20,4 +20,3 @@ final statisticsHeatmapProvider =
       final end = DateTime(year + 1, 1, 1);
       return repo.getTaskDayStatsInRange(start, end);
     });
-

@@ -105,16 +105,25 @@ void main() {
 
       // 6) Shell 内主 Tab
       await goToRoute(tester, harness, '/calendar');
-      expect(harness.router.routeInformationProvider.value.uri.path, '/calendar');
+      expect(
+        harness.router.routeInformationProvider.value.uri.path,
+        '/calendar',
+      );
 
       await goToRoute(tester, harness, '/statistics');
       expect(find.text('学习统计'), findsOneWidget);
 
       await goToRoute(tester, harness, '/settings');
-      expect(harness.router.routeInformationProvider.value.uri.path, '/settings');
+      expect(
+        harness.router.routeInformationProvider.value.uri.path,
+        '/settings',
+      );
 
       await goToRoute(tester, harness, '/pomodoro');
-      expect(harness.router.routeInformationProvider.value.uri.path, '/pomodoro');
+      expect(
+        harness.router.routeInformationProvider.value.uri.path,
+        '/pomodoro',
+      );
     });
 
     testWidgets('移动端可覆盖 dialog fallback 分支', (tester) async {

@@ -32,12 +32,10 @@ class ReviewTasks extends Table {
   /// 说明：
   /// - 用于备份/恢复的“合并去重”与外键修复（uuid → id 映射）
   /// - 迁移时会通过 SQL 为历史库补齐该列并回填为真实 UUID，再建立唯一索引
-  TextColumn get uuid =>
-      text()
-          .withLength(min: 1, max: 36)
-          // 关键逻辑：插入时自动生成 uuid，避免默认空字符串触发唯一索引冲突。
-          .clientDefault(() => const Uuid().v4())
-          ();
+  TextColumn get uuid => text()
+      .withLength(min: 1, max: 36)
+      // 关键逻辑：插入时自动生成 uuid，避免默认空字符串触发唯一索引冲突。
+      .clientDefault(() => const Uuid().v4())();
 
   /// 外键：关联的学习内容 ID（删除学习内容时级联删除）。
   IntColumn get learningItemId =>

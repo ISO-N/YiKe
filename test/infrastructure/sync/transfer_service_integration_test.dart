@@ -53,7 +53,10 @@ void main() {
 
       final confirmResponse = await service.confirmPairing(
         ipAddress: '127.0.0.1',
-        request: PairConfirmRequest(sessionId: 'session-1', pairingCode: '654321'),
+        request: PairConfirmRequest(
+          sessionId: 'session-1',
+          pairingCode: '654321',
+        ),
       );
       expect(confirmResponse.authToken, 'token-1');
       expect(lastPeer?.address, anyOf('127.0.0.1', '::1'));

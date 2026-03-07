@@ -24,4 +24,3 @@ class DeactivateLearningItemUseCase {
     return _learningItemRepository.deactivate(learningItemId);
   }
 }
-

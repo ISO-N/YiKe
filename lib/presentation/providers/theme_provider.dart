@@ -66,7 +66,8 @@ final themeModeProvider = Provider<AppThemeMode>((ref) {
 /// 2. 提供切换主题模式/主题色/AMOLED 的方法
 /// 3. 持久化用户选择到数据库（settings 表）
 class ThemeSettingsNotifier extends StateNotifier<ThemeSettingsEntity> {
-  ThemeSettingsNotifier(this._repository) : super(ThemeSettingsEntity.defaults()) {
+  ThemeSettingsNotifier(this._repository)
+    : super(ThemeSettingsEntity.defaults()) {
     _load();
   }
 
@@ -115,4 +116,3 @@ class ThemeSettingsNotifier extends StateNotifier<ThemeSettingsEntity> {
     await save(state.copyWith(amoled: enabled));
   }
 }
-

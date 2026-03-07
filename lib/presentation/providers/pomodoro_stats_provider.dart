@@ -27,8 +27,10 @@ class PomodoroStatsState {
   final String? errorMessage;
 
   /// 初始状态。
-  factory PomodoroStatsState.initial() =>
-      const PomodoroStatsState(isLoading: true, stats: PomodoroStatsEntity.empty);
+  factory PomodoroStatsState.initial() => const PomodoroStatsState(
+    isLoading: true,
+    stats: PomodoroStatsEntity.empty,
+  );
 
   /// 复制状态。
   PomodoroStatsState copyWith({

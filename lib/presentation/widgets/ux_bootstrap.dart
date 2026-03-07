@@ -71,10 +71,11 @@ final uxBootstrapShowNotificationProvider =
 /// UX 启动器预加载启动器。
 ///
 /// 说明：默认使用生产预加载服务，测试中可替换为轻量回调。
-final uxBootstrapPreloadStarterProvider =
-    Provider<void Function(BuildContext)>((ref) {
-      return AppPreloadService.ensureStarted;
-    });
+final uxBootstrapPreloadStarterProvider = Provider<void Function(BuildContext)>(
+  (ref) {
+    return AppPreloadService.ensureStarted;
+  },
+);
 
 /// UX 启动器导航执行器。
 ///
@@ -132,18 +133,18 @@ class _UxBootstrapState extends ConsumerState<UxBootstrap>
     switch (state) {
       case AppLifecycleState.resumed:
         unawaited(
-          ref.read(pomodoroProvider.notifier).handleAppVisibilityChanged(
-                isForeground: true,
-              ),
+          ref
+              .read(pomodoroProvider.notifier)
+              .handleAppVisibilityChanged(isForeground: true),
         );
         break;
       case AppLifecycleState.paused:
       case AppLifecycleState.detached:
       case AppLifecycleState.hidden:
         unawaited(
-          ref.read(pomodoroProvider.notifier).handleAppVisibilityChanged(
-                isForeground: false,
-              ),
+          ref
+              .read(pomodoroProvider.notifier)
+              .handleAppVisibilityChanged(isForeground: false),
         );
         break;
       case AppLifecycleState.inactive:
@@ -155,7 +156,9 @@ class _UxBootstrapState extends ConsumerState<UxBootstrap>
     // 关键逻辑：通知点击监听只需要绑定一次，避免多次订阅导致重复导航。
     if (_tapSub != null) return;
 
-    _tapSub = ref.read(uxBootstrapNotificationTapStreamProvider).listen((route) {
+    _tapSub = ref.read(uxBootstrapNotificationTapStreamProvider).listen((
+      route,
+    ) {
       final r = route.trim();
       if (r.isEmpty) return;
       if (!mounted) return;
@@ -199,8 +202,9 @@ class _UxBootstrapState extends ConsumerState<UxBootstrap>
       final overdue = await reviewRepo.getOverduePendingTasks();
       final todayStart = YikeDateUtils.atStartOfDay(now);
       final threshold = todayStart.subtract(const Duration(days: 3));
-      final hardOverdue =
-          overdue.where((t) => t.scheduledDate.isBefore(threshold)).toList();
+      final hardOverdue = overdue
+          .where((t) => t.scheduledDate.isBefore(threshold))
+          .toList();
 
       if (hardOverdue.isNotEmpty) {
         await showNotification(
@@ -228,7 +232,9 @@ class _UxBootstrapState extends ConsumerState<UxBootstrap>
       );
       final todayStats = todayStatsMap[todayStart] ?? _emptyDayStats();
       final dailyTarget = goalSettings.dailyTarget;
-      if (dailyTarget != null && dailyTarget > 0 && todayStats.doneCount >= dailyTarget) {
+      if (dailyTarget != null &&
+          dailyTarget > 0 &&
+          todayStats.doneCount >= dailyTarget) {
         achieved.add('每日完成');
       }
 
@@ -277,7 +283,8 @@ class _UxBootstrapState extends ConsumerState<UxBootstrap>
         final lastMilestone = state.milestone;
         final lastSentAt = state.sentAt;
         final canSendByTtl =
-            lastSentAt == null || now.difference(lastSentAt) >= const Duration(hours: 24);
+            lastSentAt == null ||
+            now.difference(lastSentAt) >= const Duration(hours: 24);
         if (reached > lastMilestone && canSendByTtl) {
           await showNotification(
             id: 23,

@@ -67,8 +67,8 @@ class ExportStatisticsCsvUseCase {
     final start = DateTime(year, 1, 1);
     final end = DateTime(year + 1, 1, 1);
 
-    final Map<DateTime, TaskDayStats> statsByDay =
-        await _reviewTaskRepository.getTaskDayStatsInRange(start, end);
+    final Map<DateTime, TaskDayStats> statsByDay = await _reviewTaskRepository
+        .getTaskDayStatsInRange(start, end);
     final csv = CsvExportUtils.buildDailyStatisticsCsv(
       start: start,
       end: end,
@@ -105,4 +105,3 @@ class ExportStatisticsCsvUseCase {
     return File('${dir.path}${Platform.pathSeparator}$fileName');
   }
 }
-

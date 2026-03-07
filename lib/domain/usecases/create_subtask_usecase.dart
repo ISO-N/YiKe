@@ -48,10 +48,9 @@ class CreateSubtaskUseCase {
     final existing = await _learningSubtaskRepository.getByLearningItemId(
       learningItemId,
     );
-    final nextSort =
-        existing.isEmpty
-            ? 0
-            : existing
+    final nextSort = existing.isEmpty
+        ? 0
+        : existing
                   .map((e) => e.sortOrder)
                   .fold<int>(0, (a, b) => a > b ? a : b) +
               1;
@@ -69,4 +68,3 @@ class CreateSubtaskUseCase {
     return _learningSubtaskRepository.create(entity);
   }
 }
-

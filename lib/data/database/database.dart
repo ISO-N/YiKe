@@ -271,7 +271,8 @@ class AppDatabase extends _$AppDatabase {
         }
 
         // 4) 基于历史任务状态回填 review_records（仅 done/skipped）。
-        if (await hasTable('review_records') && await hasTable('review_tasks')) {
+        if (await hasTable('review_records') &&
+            await hasTable('review_tasks')) {
           await _backfillReviewRecordsFromTasks(uuidGen: uuidGen);
         }
 
@@ -346,8 +347,7 @@ class AppDatabase extends _$AppDatabase {
         }
 
         // 回填历史 occurred_at（尽量保证非空，便于后续走索引）。
-        await customStatement(
-          '''
+        await customStatement('''
 UPDATE review_tasks
 SET occurred_at = CASE status
   WHEN 'pending' THEN scheduled_date
@@ -356,8 +356,7 @@ SET occurred_at = CASE status
   ELSE scheduled_date
 END
 WHERE occurred_at IS NULL
-''',
-        );
+''');
 
         // 复合索引：occurred_at + id（稳定排序/游标分页），以及 status 组合索引（筛选场景）。
         await customStatement(
@@ -395,8 +394,7 @@ WHERE occurred_at IS NULL
     //
     // 兼容：部分平台/测试环境可能缺少 FTS5 扩展能力。此时应保持应用可用并回退到 LIKE 搜索。
     try {
-      await customStatement(
-        '''
+      await customStatement('''
 CREATE VIRTUAL TABLE IF NOT EXISTS learning_items_fts
 USING fts5(
   title,
@@ -405,15 +403,13 @@ USING fts5(
   subtasks,
   tokenize = 'unicode61'
 )
-''',
-      );
+''');
     } catch (_) {
       return;
     }
 
     // 2) 触发器：learning_items 变更维护。
-    await customStatement(
-      '''
+    await customStatement('''
 CREATE TRIGGER IF NOT EXISTS trg_learning_items_fts_ai
 AFTER INSERT ON learning_items
 BEGIN
@@ -426,10 +422,8 @@ BEGIN
     COALESCE((SELECT group_concat(content, '\n') FROM learning_subtasks WHERE learning_item_id = NEW.id), '')
   WHERE NEW.is_deleted = 0;
 END
-''',
-    );
-    await customStatement(
-      '''
+''');
+    await customStatement('''
 CREATE TRIGGER IF NOT EXISTS trg_learning_items_fts_au
 AFTER UPDATE ON learning_items
 BEGIN
@@ -443,21 +437,17 @@ BEGIN
     COALESCE((SELECT group_concat(content, '\n') FROM learning_subtasks WHERE learning_item_id = NEW.id), '')
   WHERE NEW.is_deleted = 0;
 END
-''',
-    );
-    await customStatement(
-      '''
+''');
+    await customStatement('''
 CREATE TRIGGER IF NOT EXISTS trg_learning_items_fts_ad
 AFTER DELETE ON learning_items
 BEGIN
   DELETE FROM learning_items_fts WHERE rowid = OLD.id;
 END
-''',
-    );
+''');
 
     // 3) 触发器：learning_subtasks 变更维护（聚合字段 subtasks）。
-    await customStatement(
-      '''
+    await customStatement('''
 CREATE TRIGGER IF NOT EXISTS trg_learning_subtasks_fts_ai
 AFTER INSERT ON learning_subtasks
 BEGIN
@@ -472,10 +462,8 @@ BEGIN
   FROM learning_items li
   WHERE li.id = NEW.learning_item_id AND li.is_deleted = 0;
 END
-''',
-    );
-    await customStatement(
-      '''
+''');
+    await customStatement('''
 CREATE TRIGGER IF NOT EXISTS trg_learning_subtasks_fts_au
 AFTER UPDATE ON learning_subtasks
 BEGIN
@@ -502,10 +490,8 @@ BEGIN
   FROM learning_items li
   WHERE li.id = NEW.learning_item_id AND li.is_deleted = 0;
 END
-''',
-    );
-    await customStatement(
-      '''
+''');
+    await customStatement('''
 CREATE TRIGGER IF NOT EXISTS trg_learning_subtasks_fts_ad
 AFTER DELETE ON learning_subtasks
 BEGIN
@@ -520,8 +506,7 @@ BEGIN
   FROM learning_items li
   WHERE li.id = OLD.learning_item_id AND li.is_deleted = 0;
 END
-''',
-    );
+''');
 
     // 4) 回填：用当前 learning_items + learning_subtasks 生成全量索引（幂等）。
     //
@@ -529,8 +514,7 @@ END
     // - 这里采用“清空后重建”策略，保证触发器缺失/历史脏数据场景也能被修复
     // - FTS 表本身不参与同步与备份一致性（可由源数据重建）
     await customStatement('DELETE FROM learning_items_fts');
-    await customStatement(
-      '''
+    await customStatement('''
 INSERT INTO learning_items_fts(rowid, title, description, note, subtasks)
 SELECT
   li.id,
@@ -540,8 +524,7 @@ SELECT
   COALESCE((SELECT group_concat(ls.content, '\n') FROM learning_subtasks ls WHERE ls.learning_item_id = li.id), '')
 FROM learning_items li
 WHERE li.is_deleted = 0
-''',
-    );
+''');
   }
 
   /// 为指定表回填 uuid（仅处理 uuid 为空字符串的记录）。
@@ -561,10 +544,10 @@ WHERE li.is_deleted = 0
     ).get();
     for (final row in rows) {
       final id = row.read<int>('id');
-      await customStatement(
-        'UPDATE $table SET uuid = ? WHERE id = ?',
-        [uuidGen.v4(), id],
-      );
+      await customStatement('UPDATE $table SET uuid = ? WHERE id = ?', [
+        uuidGen.v4(),
+        id,
+      ]);
     }
   }
 
@@ -574,13 +557,11 @@ WHERE li.is_deleted = 0
   /// - 仅用于从旧版本升级到包含 review_records 的版本
   /// - 以任务的 completedAt/skippedAt 作为 occurredAt（缺失时回退 scheduledDate）
   Future<void> _backfillReviewRecordsFromTasks({required Uuid uuidGen}) async {
-    final rows = await customSelect(
-      '''
+    final rows = await customSelect('''
 SELECT id, status, completed_at, skipped_at, scheduled_date
 FROM review_tasks
 WHERE status IN ('done', 'skipped')
-''',
-    ).get();
+''').get();
 
     for (final row in rows) {
       final taskId = row.read<int>('id');

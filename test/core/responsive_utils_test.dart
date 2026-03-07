@@ -10,8 +10,10 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   /// 构建一个最小 Widget，并在 build 阶段读取响应式工具类的结果。
-  Future<({bool isMobile, bool isTablet, bool isDesktop, int columns})>
-  measure(WidgetTester tester, double width) async {
+  Future<({bool isMobile, bool isTablet, bool isDesktop, int columns})> measure(
+    WidgetTester tester,
+    double width,
+  ) async {
     var isMobile = false;
     var isTablet = false;
     var isDesktop = false;

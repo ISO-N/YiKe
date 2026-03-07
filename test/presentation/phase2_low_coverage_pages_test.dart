@@ -66,18 +66,24 @@ void main() {
 
   /// 创建一条包含子任务的学习内容，便于详情页走真实查询链路。
   Future<int> createLearningItemForDetail() async {
-    final result = await container.read(createLearningItemUseCaseProvider).execute(
-      CreateLearningItemParams(
-        title: '搜索跳转的学习内容',
-        description: '结构化描述',
-        subtasks: const <String>['第一条子任务', '第二条子任务'],
-        tags: const <String>['详情', '测试'],
-        learningDate: DateTime(2026, 3, 6),
-        reviewIntervals: <ReviewIntervalConfigEntity>[
-          ReviewIntervalConfigEntity(round: 1, intervalDays: 1, enabled: true),
-        ],
-      ),
-    );
+    final result = await container
+        .read(createLearningItemUseCaseProvider)
+        .execute(
+          CreateLearningItemParams(
+            title: '搜索跳转的学习内容',
+            description: '结构化描述',
+            subtasks: const <String>['第一条子任务', '第二条子任务'],
+            tags: const <String>['详情', '测试'],
+            learningDate: DateTime(2026, 3, 6),
+            reviewIntervals: <ReviewIntervalConfigEntity>[
+              ReviewIntervalConfigEntity(
+                round: 1,
+                intervalDays: 1,
+                enabled: true,
+              ),
+            ],
+          ),
+        );
     return result.item.id!;
   }
 
@@ -213,10 +219,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('自定义').last);
       await tester.pumpAndSettle();
-      await tester.enterText(
-        find.widgetWithText(TextField, '自定义模板前缀'),
-        '联调',
-      );
+      await tester.enterText(find.widgetWithText(TextField, '自定义模板前缀'), '联调');
 
       await tester.tap(find.text('生成数据'));
       await tester.pumpAndSettle();

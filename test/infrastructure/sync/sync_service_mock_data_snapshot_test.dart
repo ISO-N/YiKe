@@ -94,46 +94,54 @@ void main() {
         localDeviceId: 'desktop_device',
       );
 
-      final itemId = await db.into(db.learningItems).insert(
-        LearningItemsCompanion.insert(
-          title: '快照内容',
-          note: const Value('用于快照验证'),
-          tags: const Value('["快照"]'),
-          learningDate: now,
-          createdAt: Value(now),
-          updatedAt: Value(now),
-        ),
-      );
-      await db.into(db.learningSubtasks).insert(
-        LearningSubtasksCompanion.insert(
-          learningItemId: itemId,
-          content: '快照子任务',
-          sortOrder: const Value(0),
-          createdAt: now,
-          updatedAt: Value(now),
-        ),
-      );
-      await db.into(db.reviewTasks).insert(
-        ReviewTasksCompanion.insert(
-          learningItemId: itemId,
-          reviewRound: 1,
-          scheduledDate: now.add(const Duration(days: 1)),
-          occurredAt: Value(now.add(const Duration(days: 1))),
-          status: const Value('pending'),
-          createdAt: Value(now),
-          updatedAt: Value(now),
-        ),
-      );
-      await db.into(db.learningTemplates).insert(
-        LearningTemplatesCompanion.insert(
-          name: '快照模板',
-          titlePattern: '模板 {date}',
-          tags: const Value('["模板"]'),
-          sortOrder: const Value(0),
-          createdAt: Value(now),
-          updatedAt: Value(now),
-        ),
-      );
+      final itemId = await db
+          .into(db.learningItems)
+          .insert(
+            LearningItemsCompanion.insert(
+              title: '快照内容',
+              note: const Value('用于快照验证'),
+              tags: const Value('["快照"]'),
+              learningDate: now,
+              createdAt: Value(now),
+              updatedAt: Value(now),
+            ),
+          );
+      await db
+          .into(db.learningSubtasks)
+          .insert(
+            LearningSubtasksCompanion.insert(
+              learningItemId: itemId,
+              content: '快照子任务',
+              sortOrder: const Value(0),
+              createdAt: now,
+              updatedAt: Value(now),
+            ),
+          );
+      await db
+          .into(db.reviewTasks)
+          .insert(
+            ReviewTasksCompanion.insert(
+              learningItemId: itemId,
+              reviewRound: 1,
+              scheduledDate: now.add(const Duration(days: 1)),
+              occurredAt: Value(now.add(const Duration(days: 1))),
+              status: const Value('pending'),
+              createdAt: Value(now),
+              updatedAt: Value(now),
+            ),
+          );
+      await db
+          .into(db.learningTemplates)
+          .insert(
+            LearningTemplatesCompanion.insert(
+              name: '快照模板',
+              titlePattern: '模板 {date}',
+              tags: const Value('["模板"]'),
+              sortOrder: const Value(0),
+              createdAt: Value(now),
+              updatedAt: Value(now),
+            ),
+          );
       final topicId = await topicDao.insertTopic(
         LearningTopicsCompanion.insert(
           name: '快照主题',
@@ -149,14 +157,17 @@ void main() {
       final firstTypes = firstLogs.map((row) => row.entityType).toSet();
 
       expect(firstLogs, hasLength(6));
-      expect(firstTypes, containsAll(<String>{
-        SyncService.entityLearningItem,
-        SyncService.entityLearningSubtask,
-        SyncService.entityReviewTask,
-        SyncService.entityTemplate,
-        SyncService.entityTopic,
-        SyncService.entityTopicItemRelation,
-      }));
+      expect(
+        firstTypes,
+        containsAll(<String>{
+          SyncService.entityLearningItem,
+          SyncService.entityLearningSubtask,
+          SyncService.entityReviewTask,
+          SyncService.entityTemplate,
+          SyncService.entityTopic,
+          SyncService.entityTopicItemRelation,
+        }),
+      );
 
       await service.ensureLocalSnapshotLogs(includeMockData: false);
       final secondLogs = await db.select(db.syncLogs).get();

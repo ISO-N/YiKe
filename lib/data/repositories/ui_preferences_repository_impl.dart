@@ -133,4 +133,3 @@ class UiPreferencesRepositoryImpl implements UiPreferencesRepository {
     }
   }
 }
-

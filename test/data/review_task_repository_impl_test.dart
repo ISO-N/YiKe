@@ -188,59 +188,64 @@ void main() {
     expect(plan.map((e) => e.reviewRound).toList(), [1, 2]);
   });
 
-  test('adjustReviewDate: 成功更新 scheduledDate；学习内容缺失/已停用会抛 StateError', () async {
-    await expectLater(
-      () => repo.adjustReviewDate(
-        learningItemId: 999,
-        reviewRound: 1,
-        scheduledDate: DateTime(2026, 2, 28),
-      ),
-      throwsA(isA<StateError>()),
-    );
+  test(
+    'adjustReviewDate: 成功更新 scheduledDate；学习内容缺失/已停用会抛 StateError',
+    () async {
+      await expectLater(
+        () => repo.adjustReviewDate(
+          learningItemId: 999,
+          reviewRound: 1,
+          scheduledDate: DateTime(2026, 2, 28),
+        ),
+        throwsA(isA<StateError>()),
+      );
 
-    final deletedId = await db.into(db.learningItems).insert(
-      LearningItemsCompanion.insert(
-        uuid: drift.Value(testUuid(uuidSeed++)),
-        title: 'Deleted',
-        note: const drift.Value.absent(),
-        tags: const drift.Value('[]'),
-        learningDate: DateTime(2026, 2, 25),
-        createdAt: drift.Value(DateTime(2026, 2, 25, 9)),
-        isDeleted: const drift.Value(true),
-        deletedAt: drift.Value(DateTime(2026, 2, 28)),
-      ),
-    );
-    await expectLater(
-      () => repo.adjustReviewDate(
-        learningItemId: deletedId,
-        reviewRound: 1,
-        scheduledDate: DateTime(2026, 2, 28),
-      ),
-      throwsA(isA<StateError>()),
-    );
+      final deletedId = await db
+          .into(db.learningItems)
+          .insert(
+            LearningItemsCompanion.insert(
+              uuid: drift.Value(testUuid(uuidSeed++)),
+              title: 'Deleted',
+              note: const drift.Value.absent(),
+              tags: const drift.Value('[]'),
+              learningDate: DateTime(2026, 2, 25),
+              createdAt: drift.Value(DateTime(2026, 2, 25, 9)),
+              isDeleted: const drift.Value(true),
+              deletedAt: drift.Value(DateTime(2026, 2, 28)),
+            ),
+          );
+      await expectLater(
+        () => repo.adjustReviewDate(
+          learningItemId: deletedId,
+          reviewRound: 1,
+          scheduledDate: DateTime(2026, 2, 28),
+        ),
+        throwsA(isA<StateError>()),
+      );
 
-    final itemId = await insertItemWithTags(jsonEncode([]));
-    final base = DateTime(2026, 2, 25);
-    await dao.insertReviewTask(
-      ReviewTasksCompanion.insert(
-        uuid: drift.Value(testUuid(uuidSeed++)),
+      final itemId = await insertItemWithTags(jsonEncode([]));
+      final base = DateTime(2026, 2, 25);
+      await dao.insertReviewTask(
+        ReviewTasksCompanion.insert(
+          uuid: drift.Value(testUuid(uuidSeed++)),
+          learningItemId: itemId,
+          reviewRound: 1,
+          scheduledDate: base,
+          status: const drift.Value('pending'),
+          createdAt: drift.Value(base),
+        ),
+      );
+
+      final newDate = DateTime(2026, 2, 28);
+      await repo.adjustReviewDate(
         learningItemId: itemId,
         reviewRound: 1,
-        scheduledDate: base,
-        status: const drift.Value('pending'),
-        createdAt: drift.Value(base),
-      ),
-    );
-
-    final newDate = DateTime(2026, 2, 28);
-    await repo.adjustReviewDate(
-      learningItemId: itemId,
-      reviewRound: 1,
-      scheduledDate: newDate,
-    );
-    final row = await dao.getTaskByLearningItemAndRound(itemId, 1);
-    expect(row!.scheduledDate, newDate);
-  });
+        scheduledDate: newDate,
+      );
+      final row = await dao.getTaskByLearningItemAndRound(itemId, 1);
+      expect(row!.scheduledDate, newDate);
+    },
+  );
 
   test('adjustReviewDate: 任务不存在会抛 StateError', () async {
     final itemId = await insertItemWithTags(jsonEncode([]));
@@ -295,25 +300,36 @@ void main() {
         createdAt: drift.Value(base),
       ),
     );
-    await expectLater(() => repo.addReviewRound(itemId), throwsA(isA<StateError>()));
+    await expectLater(
+      () => repo.addReviewRound(itemId),
+      throwsA(isA<StateError>()),
+    );
   });
 
   test('addReviewRound: 学习内容不存在/已停用/缺少复习任务均会抛 StateError', () async {
-    await expectLater(() => repo.addReviewRound(999), throwsA(isA<StateError>()));
-
-    final deletedId = await db.into(db.learningItems).insert(
-      LearningItemsCompanion.insert(
-        uuid: drift.Value(testUuid(uuidSeed++)),
-        title: 'Deleted',
-        note: const drift.Value.absent(),
-        tags: const drift.Value('[]'),
-        learningDate: DateTime(2026, 2, 25),
-        createdAt: drift.Value(DateTime(2026, 2, 25, 9)),
-        isDeleted: const drift.Value(true),
-        deletedAt: drift.Value(DateTime(2026, 2, 28)),
-      ),
+    await expectLater(
+      () => repo.addReviewRound(999),
+      throwsA(isA<StateError>()),
     );
-    await expectLater(() => repo.addReviewRound(deletedId), throwsA(isA<StateError>()));
+
+    final deletedId = await db
+        .into(db.learningItems)
+        .insert(
+          LearningItemsCompanion.insert(
+            uuid: drift.Value(testUuid(uuidSeed++)),
+            title: 'Deleted',
+            note: const drift.Value.absent(),
+            tags: const drift.Value('[]'),
+            learningDate: DateTime(2026, 2, 25),
+            createdAt: drift.Value(DateTime(2026, 2, 25, 9)),
+            isDeleted: const drift.Value(true),
+            deletedAt: drift.Value(DateTime(2026, 2, 28)),
+          ),
+        );
+    await expectLater(
+      () => repo.addReviewRound(deletedId),
+      throwsA(isA<StateError>()),
+    );
 
     final emptyTasksId = await insertItemWithTags(jsonEncode([]));
     await expectLater(
@@ -389,8 +405,18 @@ void main() {
     await syncRepo.completeTask(created.id!);
 
     final logs = await getSyncLogs();
-    expect(logs.where((e) => e.entityType == 'review_task' && e.operation == 'create'), isNotEmpty);
-    expect(logs.where((e) => e.entityType == 'review_task' && e.operation == 'update'), isNotEmpty);
+    expect(
+      logs.where(
+        (e) => e.entityType == 'review_task' && e.operation == 'create',
+      ),
+      isNotEmpty,
+    );
+    expect(
+      logs.where(
+        (e) => e.entityType == 'review_task' && e.operation == 'update',
+      ),
+      isNotEmpty,
+    );
   });
 
   test('completeTasks / skipTasks 会批量更新并逐条触发同步 update 日志', () async {
@@ -437,7 +463,11 @@ void main() {
     final logs = await getSyncLogs();
     // 至少包含 2 次 create 与多次 update（complete/skip 各一轮，每条任务都会写 update）。
     expect(
-      logs.where((e) => e.entityType == 'review_task' && e.operation == 'update').length,
+      logs
+          .where(
+            (e) => e.entityType == 'review_task' && e.operation == 'update',
+          )
+          .length,
       greaterThanOrEqualTo(4),
     );
   });

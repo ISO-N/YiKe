@@ -51,20 +51,34 @@ void main() {
     List<String> subtasks = const <String>[],
     List<String> tags = const <String>[],
   }) async {
-    final result = await container.read(createLearningItemUseCaseProvider).execute(
-      CreateLearningItemParams(
-        title: title,
-        description: description,
-        subtasks: subtasks,
-        tags: tags,
-        learningDate: startOfDay(DateTime.now()),
-        reviewIntervals: <ReviewIntervalConfigEntity>[
-          ReviewIntervalConfigEntity(round: 1, intervalDays: 1, enabled: true),
-          ReviewIntervalConfigEntity(round: 2, intervalDays: 3, enabled: true),
-          ReviewIntervalConfigEntity(round: 3, intervalDays: 7, enabled: true),
-        ],
-      ),
-    );
+    final result = await container
+        .read(createLearningItemUseCaseProvider)
+        .execute(
+          CreateLearningItemParams(
+            title: title,
+            description: description,
+            subtasks: subtasks,
+            tags: tags,
+            learningDate: startOfDay(DateTime.now()),
+            reviewIntervals: <ReviewIntervalConfigEntity>[
+              ReviewIntervalConfigEntity(
+                round: 1,
+                intervalDays: 1,
+                enabled: true,
+              ),
+              ReviewIntervalConfigEntity(
+                round: 2,
+                intervalDays: 3,
+                enabled: true,
+              ),
+              ReviewIntervalConfigEntity(
+                round: 3,
+                intervalDays: 7,
+                enabled: true,
+              ),
+            ],
+          ),
+        );
     return result.item.id!;
   }
 
@@ -114,7 +128,10 @@ void main() {
       await waitFor(() => !container.read(settingsProvider).isLoading);
 
       final initialState = container.read(settingsProvider);
-      expect(initialState.settings.reminderTime, AppSettingsEntity.defaults.reminderTime);
+      expect(
+        initialState.settings.reminderTime,
+        AppSettingsEntity.defaults.reminderTime,
+      );
       expect(
         initialState.settings.notificationsEnabled,
         AppSettingsEntity.defaults.notificationsEnabled,
@@ -145,7 +162,9 @@ void main() {
       expect(savedState.settings.notificationsEnabled, isFalse);
       expect(savedState.settings.topicGuideDismissed, isTrue);
 
-      final persisted = await container.read(settingsRepositoryProvider).getSettings();
+      final persisted = await container
+          .read(settingsRepositoryProvider)
+          .getSettings();
       expect(persisted.reminderTime, '07:30');
       expect(persisted.doNotDisturbStart, '23:00');
       expect(persisted.lastNotifiedDate, '2026-03-06');
@@ -204,13 +223,18 @@ void main() {
       });
 
       final updatedTemplates = container.read(templatesProvider).templates;
-      final updatedMorning = updatedTemplates.firstWhere((t) => t.id == morning.id);
-      final updatedEvening = updatedTemplates.firstWhere((t) => t.id == evening.id);
+      final updatedMorning = updatedTemplates.firstWhere(
+        (t) => t.id == morning.id,
+      );
+      final updatedEvening = updatedTemplates.firstWhere(
+        (t) => t.id == evening.id,
+      );
 
       await notifier.reorder([updatedEvening, updatedMorning]);
       await waitFor(() {
         final state = container.read(templatesProvider);
-        return !state.isLoading && state.templates.first.id == updatedEvening.id;
+        return !state.isLoading &&
+            state.templates.first.id == updatedEvening.id;
       });
 
       await notifier.delete(updatedMorning.id!);
@@ -258,8 +282,7 @@ void main() {
       );
       await waitFor(() {
         final state = container.read(topicsProvider);
-        return !state.isLoading &&
-            state.overviews.single.topic.name == '语言-更新';
+        return !state.isLoading && state.overviews.single.topic.name == '语言-更新';
       });
 
       await notifier.delete(topic.id!);
@@ -293,7 +316,9 @@ void main() {
       await topicUseCase.addItemToTopic(topicA.id!, itemId);
 
       final notifier = container.read(taskDetailProvider(itemId).notifier);
-      await waitFor(() => !container.read(taskDetailProvider(itemId)).isLoading);
+      await waitFor(
+        () => !container.read(taskDetailProvider(itemId)).isLoading,
+      );
 
       final initialState = container.read(taskDetailProvider(itemId));
       expect(initialState.item?.title, '任务详情-编辑');
@@ -348,7 +373,8 @@ void main() {
       await notifier.reorderSubtasks(reorderedIds);
       await waitFor(() {
         final state = container.read(taskDetailProvider(itemId));
-        return !state.isLoading && state.subtasks.first.id == reorderedIds.first;
+        return !state.isLoading &&
+            state.subtasks.first.id == reorderedIds.first;
       });
 
       await notifier.deleteSubtask(createdSubtask.id!);
@@ -370,19 +396,25 @@ void main() {
       );
       keepDetailDependenciesAlive();
       final notifier = container.read(taskDetailProvider(itemId).notifier);
-      await waitFor(() => !container.read(taskDetailProvider(itemId)).isLoading);
+      await waitFor(
+        () => !container.read(taskDetailProvider(itemId)).isLoading,
+      );
 
       final initialPlan = container.read(taskDetailProvider(itemId)).plan;
       expect(initialPlan.length, 3);
 
-      await container.read(completeReviewTaskUseCaseProvider).execute(
-        initialPlan.first.taskId,
-      );
+      await container
+          .read(completeReviewTaskUseCaseProvider)
+          .execute(initialPlan.first.taskId);
       await notifier.load();
       await waitFor(() {
         final state = container.read(taskDetailProvider(itemId));
         return !state.isLoading &&
-            state.plan.firstWhere((task) => task.taskId == initialPlan.first.taskId).status ==
+            state.plan
+                    .firstWhere(
+                      (task) => task.taskId == initialPlan.first.taskId,
+                    )
+                    .status ==
                 ReviewTaskStatus.done;
       });
 
@@ -390,11 +422,17 @@ void main() {
       await waitFor(() {
         final state = container.read(taskDetailProvider(itemId));
         return !state.isLoading &&
-            state.plan.firstWhere((task) => task.taskId == initialPlan.first.taskId).status ==
+            state.plan
+                    .firstWhere(
+                      (task) => task.taskId == initialPlan.first.taskId,
+                    )
+                    .status ==
                 ReviewTaskStatus.pending;
       });
 
-      final adjustedDate = startOfDay(DateTime.now()).add(const Duration(days: 5));
+      final adjustedDate = startOfDay(
+        DateTime.now(),
+      ).add(const Duration(days: 5));
       await notifier.adjustReviewDate(reviewRound: 2, newDate: adjustedDate);
       await waitFor(() {
         final state = container.read(taskDetailProvider(itemId));

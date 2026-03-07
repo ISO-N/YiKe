@@ -126,9 +126,8 @@ void main() {
     });
 
     test('hasPendingNotification 与 cancelAll 在 Windows 分支可正常返回', () async {
-      final hasPending = await NotificationService.instance.hasPendingNotification(
-        9,
-      );
+      final hasPending = await NotificationService.instance
+          .hasPendingNotification(9);
       expect(hasPending, isFalse);
 
       await NotificationService.instance.cancelAll();

@@ -116,13 +116,12 @@ class _CalendarGridState extends State<CalendarGrid> {
           isLoading: true,
           strategy: widget.skeletonStrategy,
           skeleton: const SkeletonShimmer(child: _CalendarGridSkeleton()),
-          child:
-              widget.skeletonStrategy == 'off'
-                  ? const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 24),
-                      child: Center(child: CircularProgressIndicator()),
-                    )
-                  : const SizedBox.shrink(),
+          child: widget.skeletonStrategy == 'off'
+              ? const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 24),
+                  child: Center(child: CircularProgressIndicator()),
+                )
+              : const SizedBox.shrink(),
         ),
       );
     }
@@ -157,10 +156,9 @@ class _CalendarGridState extends State<CalendarGrid> {
                   onPageChanged: _handlePageChanged,
                   itemBuilder: (context, index) {
                     final month = _monthForIndex(index);
-                    final stats =
-                        _isSameMonth(widget.loadedMonth, month)
-                            ? widget.dayStats
-                            : const <DateTime, TaskDayStats>{};
+                    final stats = _isSameMonth(widget.loadedMonth, month)
+                        ? widget.dayStats
+                        : const <DateTime, TaskDayStats>{};
                     return _CalendarMonthPage(
                       month: month,
                       selectedDay: widget.selectedDay,
@@ -170,11 +168,7 @@ class _CalendarGridState extends State<CalendarGrid> {
                   },
                 ),
                 if (widget.isLoading)
-                  const Positioned(
-                    top: 8,
-                    right: 8,
-                    child: _LoadingBadge(),
-                  ),
+                  const Positioned(top: 8, right: 8, child: _LoadingBadge()),
               ],
             ),
           ),
@@ -219,7 +213,9 @@ class _CalendarGridState extends State<CalendarGrid> {
 
   /// 将月份映射到 PageView 索引。
   int _monthIndex(DateTime month) {
-    return (month.year - _firstMonth.year) * 12 + month.month - _firstMonth.month;
+    return (month.year - _firstMonth.year) * 12 +
+        month.month -
+        _firstMonth.month;
   }
 
   /// 根据 PageView 索引计算月份。
@@ -347,7 +343,9 @@ class _CalendarMonthPage extends StatelessWidget {
         return _CalendarDayCell(
           day: day,
           selectedDay: selectedDay,
-          dayStats: day == null ? null : dayStats[YikeDateUtils.atStartOfDay(day)],
+          dayStats: day == null
+              ? null
+              : dayStats[YikeDateUtils.atStartOfDay(day)],
           onTap: day == null ? null : () => onDaySelected(day),
         );
       },
@@ -362,7 +360,11 @@ class _CalendarMonthPage extends StatelessWidget {
   List<DateTime?> _buildMonthCells(DateTime targetMonth) {
     final firstDay = DateTime(targetMonth.year, targetMonth.month, 1);
     final leadingEmpty = firstDay.weekday - DateTime.monday;
-    final daysInMonth = DateTime(targetMonth.year, targetMonth.month + 1, 0).day;
+    final daysInMonth = DateTime(
+      targetMonth.year,
+      targetMonth.month + 1,
+      0,
+    ).day;
     final result = List<DateTime?>.filled(
       _CalendarGridState._rowCount * _CalendarGridState._columnCount,
       null,
@@ -420,12 +422,11 @@ class _CalendarDayCell extends StatelessWidget {
           onTap: onTap,
           child: DecoratedBox(
             decoration: BoxDecoration(
-              color:
-                  isSelected
-                      ? primary
-                      : isToday
-                      ? primary.withValues(alpha: isDark ? 0.22 : 0.16)
-                      : Colors.transparent,
+              color: isSelected
+                  ? primary
+                  : isToday
+                  ? primary.withValues(alpha: isDark ? 0.22 : 0.16)
+                  : Colors.transparent,
               borderRadius: BorderRadius.circular(12),
             ),
             child: Padding(
@@ -446,15 +447,14 @@ class _CalendarDayCell extends StatelessWidget {
                   SizedBox(
                     width: 6,
                     height: 6,
-                    child:
-                        markerColor == null
-                            ? const SizedBox.shrink()
-                            : DecoratedBox(
-                                decoration: BoxDecoration(
-                                  color: markerColor,
-                                  shape: BoxShape.circle,
-                                ),
-                              ),
+                    child: markerColor == null
+                        ? const SizedBox.shrink()
+                        : DecoratedBox(
+                            decoration: BoxDecoration(
+                              color: markerColor,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
                   ),
                 ],
               ),

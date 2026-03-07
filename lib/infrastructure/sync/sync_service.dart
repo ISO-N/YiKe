@@ -286,10 +286,9 @@ class SyncService {
             LearningItemsCompanion.insert(
               uuid: Value(_uuid.v4()),
               title: title,
-              description:
-                  description == null
-                      ? const Value.absent()
-                      : Value(description),
+              description: description == null
+                  ? const Value.absent()
+                  : Value(description),
               note: note == null ? const Value.absent() : Value(note),
               tags: Value(jsonEncode(tags)),
               learningDate: learningDate ?? DateTime.now(),
@@ -801,7 +800,10 @@ class SyncService {
     }
     // v1.4.0：通知开关 key 迁移（notifications_enabled → notification_enabled）。
     if (map.containsKey('notification_enabled')) {
-      await upsertEncrypted('notification_enabled', map['notification_enabled']);
+      await upsertEncrypted(
+        'notification_enabled',
+        map['notification_enabled'],
+      );
       await upsertEncrypted(
         'notifications_enabled',
         map['notification_enabled'],
@@ -995,7 +997,9 @@ class SyncService {
     }
   }
 
-  Future<void> _snapshotLearningSubtasks({required bool includeMockData}) async {
+  Future<void> _snapshotLearningSubtasks({
+    required bool includeMockData,
+  }) async {
     final rows = await db.select(db.learningSubtasks).get();
     if (rows.isEmpty) return;
 

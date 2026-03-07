@@ -130,14 +130,11 @@ class ExportDataUseCase {
               .where((e) => !e.isMockData)
               .toList()
         : const <LearningItemEntity>[];
-    final subtasks =
-        params.includeItems && items.isNotEmpty
-            ? (await _learningSubtaskRepository.getByLearningItemIds(
-                  items.map((e) => e.id).whereType<int>().toList(),
-                ))
-                .where((e) => !e.isMockData)
-                .toList()
-            : const <LearningSubtaskEntity>[];
+    final subtasks = params.includeItems && items.isNotEmpty
+        ? (await _learningSubtaskRepository.getByLearningItemIds(
+            items.map((e) => e.id).whereType<int>().toList(),
+          )).where((e) => !e.isMockData).toList()
+        : const <LearningSubtaskEntity>[];
     final tasks = params.includeTasks
         ? (await _reviewTaskRepository.getAllTasks())
               .where((e) => !e.isMockData)

@@ -56,7 +56,9 @@ class GoalSettingsRepositoryImpl implements GoalSettingsRepository {
     return GoalSettingsEntity(
       dailyTarget: daily.exists ? daily.value : defaults.dailyTarget,
       streakTarget: streak.exists ? streak.value : defaults.streakTarget,
-      weeklyRateTarget: weekly.exists ? weekly.value : defaults.weeklyRateTarget,
+      weeklyRateTarget: weekly.exists
+          ? weekly.value
+          : defaults.weeklyRateTarget,
     );
   }
 

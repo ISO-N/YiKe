@@ -68,4 +68,3 @@ class HapticUtils {
     return !(mq.disableAnimations || mq.accessibleNavigation);
   }
 }
-

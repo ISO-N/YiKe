@@ -41,7 +41,10 @@ class PomodoroSettingsRepositoryImpl implements PomodoroSettingsRepository {
   Future<PomodoroSettingsEntity> getSettings() async {
     final defaults = PomodoroSettingsEntity.defaults;
     return PomodoroSettingsEntity(
-      workMinutes: await _getIntOrDefault(_keyWorkMinutes, defaults.workMinutes),
+      workMinutes: await _getIntOrDefault(
+        _keyWorkMinutes,
+        defaults.workMinutes,
+      ),
       shortBreakMinutes: await _getIntOrDefault(
         _keyShortBreakMinutes,
         defaults.shortBreakMinutes,
@@ -78,7 +81,9 @@ class PomodoroSettingsRepositoryImpl implements PomodoroSettingsRepository {
     );
 
     await dao.upsertValues({
-      _keyWorkMinutes: await _crypto.encrypt(jsonEncode(normalized.workMinutes)),
+      _keyWorkMinutes: await _crypto.encrypt(
+        jsonEncode(normalized.workMinutes),
+      ),
       _keyShortBreakMinutes: await _crypto.encrypt(
         jsonEncode(normalized.shortBreakMinutes),
       ),

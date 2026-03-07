@@ -231,9 +231,11 @@ class _InputPageState extends ConsumerState<InputPage> {
   /// 计算“近 7 天标签使用次数”的起始时间（按自然日包含今天）。
   DateTime _recentTagsSince() {
     final now = DateTime.now();
-    return DateTime(now.year, now.month, now.day).subtract(
-      const Duration(days: 6),
-    );
+    return DateTime(
+      now.year,
+      now.month,
+      now.day,
+    ).subtract(const Duration(days: 6));
   }
 
   /// 将“描述 + 子任务列表”拼接成模板的 notePattern（渐进式迁移）。
@@ -246,7 +248,10 @@ class _InputPageState extends ConsumerState<InputPage> {
     required List<String> subtasks,
   }) {
     final desc = description.trim();
-    final list = subtasks.map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
+    final list = subtasks
+        .map((e) => e.trim())
+        .where((e) => e.isNotEmpty)
+        .toList();
     final buffer = StringBuffer();
     if (desc.isNotEmpty) {
       buffer.writeln(desc);
@@ -271,7 +276,8 @@ class _InputPageState extends ConsumerState<InputPage> {
         final c = _DraftItemControllers();
         c.title.text = d.title;
         final hasNewFields =
-            (d.description?.trim().isNotEmpty ?? false) || d.subtasks.isNotEmpty;
+            (d.description?.trim().isNotEmpty ?? false) ||
+            d.subtasks.isNotEmpty;
         if (hasNewFields) {
           c.description.text = d.description ?? '';
           c.replaceSubtasks(d.subtasks);
@@ -318,298 +324,307 @@ class _InputPageState extends ConsumerState<InputPage> {
           _handlePopBlockedByUnsavedReviewIntervals();
         },
         child: Scaffold(
-      appBar: AppBar(
-        title: const Text('录入'),
-        actions: [
-          TextButton(
-            onPressed: _saving ? null : _onSave,
-            child: _saving ? const Text('保存中...') : const Text('保存'),
+          appBar: AppBar(
+            title: const Text('录入'),
+            actions: [
+              TextButton(
+                onPressed: _saving ? null : _onSave,
+                child: _saving ? const Text('保存中...') : const Text('保存'),
+              ),
+            ],
           ),
-        ],
-      ),
-      bottomNavigationBar: SafeArea(
-        child: Container(
-          padding: const EdgeInsets.fromLTRB(
-            AppSpacing.lg,
-            AppSpacing.sm,
-            AppSpacing.lg,
-            AppSpacing.lg,
-          ),
-          decoration: BoxDecoration(
-            color: isDark
-                ? AppColors.darkSurface.withValues(alpha: 0.95)
-                : Colors.white.withAlpha(240),
-            boxShadow: [
-              BoxShadow(
-                blurRadius: 12,
-                offset: const Offset(0, -2),
+          bottomNavigationBar: SafeArea(
+            child: Container(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.lg,
+                AppSpacing.sm,
+                AppSpacing.lg,
+                AppSpacing.lg,
+              ),
+              decoration: BoxDecoration(
                 color: isDark
-                    ? Colors.black.withValues(alpha: 0.45)
-                    : const Color(0x22000000),
+                    ? AppColors.darkSurface.withValues(alpha: 0.95)
+                    : Colors.white.withAlpha(240),
+                boxShadow: [
+                  BoxShadow(
+                    blurRadius: 12,
+                    offset: const Offset(0, -2),
+                    color: isDark
+                        ? Colors.black.withValues(alpha: 0.45)
+                        : const Color(0x22000000),
+                  ),
+                ],
               ),
-            ],
-          ),
-          child: Row(
-            children: [
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: _saving
-                      ? null
-                      : () async {
-                          final drafts = await Navigator.of(context)
-                              .push<List<DraftLearningItem>>(
-                                MaterialPageRoute(
-                                  builder: (_) => const ImportPreviewPage(),
-                                  fullscreenDialog: true,
-                                ),
-                              );
-                          if (drafts == null || drafts.isEmpty) return;
-                          _addDrafts(drafts);
-                        },
-                  icon: const Icon(Icons.folder_open),
-                  label: const Text('批量导入'),
-                ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: _saving ? null : _showTemplateSheet,
-                  icon: const Icon(Icons.content_paste),
-                  label: const Text('模板'),
-                ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: _saving ? null : _startOcrFlow,
-                  icon: const Icon(Icons.document_scanner),
-                  label: const Text('OCR'),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-      body: Stack(
-        children: [
-          Form(
-            key: _formKey,
-            child: ListView(
-              padding: const EdgeInsets.all(AppSpacing.lg),
-              children: [
-                GlassCard(
-                  child: Padding(
-                    padding: const EdgeInsets.all(AppSpacing.lg),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('今天学了什么？', style: AppTypography.h2(context)),
-                        const SizedBox(height: AppSpacing.sm),
-                        Text(
-                          '录入后会按复习间隔自动生成复习任务（可在下方预览调整）。',
-                          style: AppTypography.bodySecondary(context),
-                        ),
-                      ],
+              child: Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: _saving
+                          ? null
+                          : () async {
+                              final drafts = await Navigator.of(context)
+                                  .push<List<DraftLearningItem>>(
+                                    MaterialPageRoute(
+                                      builder: (_) => const ImportPreviewPage(),
+                                      fullscreenDialog: true,
+                                    ),
+                                  );
+                              if (drafts == null || drafts.isEmpty) return;
+                              _addDrafts(drafts);
+                            },
+                      icon: const Icon(Icons.folder_open),
+                      label: const Text('批量导入'),
                     ),
                   ),
-                ),
-                const SizedBox(height: AppSpacing.lg),
-                ..._items.asMap().entries.map((entry) {
-                  final index = entry.key;
-                  final controllers = entry.value;
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: AppSpacing.lg),
-                    child: GestureDetector(
-                      onTap: () => setState(() => _activeIndex = index),
-                      child: GlassCard(
-                        child: Padding(
-                          padding: const EdgeInsets.all(AppSpacing.lg),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: _saving ? null : _showTemplateSheet,
+                      icon: const Icon(Icons.content_paste),
+                      label: const Text('模板'),
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: _saving ? null : _startOcrFlow,
+                      icon: const Icon(Icons.document_scanner),
+                      label: const Text('OCR'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          body: Stack(
+            children: [
+              Form(
+                key: _formKey,
+                child: ListView(
+                  padding: const EdgeInsets.all(AppSpacing.lg),
+                  children: [
+                    GlassCard(
+                      child: Padding(
+                        padding: const EdgeInsets.all(AppSpacing.lg),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('今天学了什么？', style: AppTypography.h2(context)),
+                            const SizedBox(height: AppSpacing.sm),
+                            Text(
+                              '录入后会按复习间隔自动生成复习任务（可在下方预览调整）。',
+                              style: AppTypography.bodySecondary(context),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+                    ..._items.asMap().entries.map((entry) {
+                      final index = entry.key;
+                      final controllers = entry.value;
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: AppSpacing.lg),
+                        child: GestureDetector(
+                          onTap: () => setState(() => _activeIndex = index),
+                          child: GlassCard(
+                            child: Padding(
+                              padding: const EdgeInsets.all(AppSpacing.lg),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(
-                                    '条目 ${index + 1}',
-                                    style: AppTypography.h2(context),
+                                  Row(
+                                    children: [
+                                      Text(
+                                        '条目 ${index + 1}',
+                                        style: AppTypography.h2(context),
+                                      ),
+                                      if (_activeIndex == index) ...[
+                                        const SizedBox(width: AppSpacing.sm),
+                                        Text(
+                                          '当前',
+                                          style: AppTypography.bodySecondary(
+                                            context,
+                                          ),
+                                        ),
+                                      ],
+                                      const Spacer(),
+                                      IconButton(
+                                        tooltip: '删除条目',
+                                        onPressed: _saving
+                                            ? null
+                                            : () => _removeItem(index),
+                                        icon: const Icon(Icons.delete_outline),
+                                        color: _items.length <= 1
+                                            ? secondaryText
+                                            : AppColors.error,
+                                      ),
+                                    ],
                                   ),
-                                  if (_activeIndex == index) ...[
-                                    const SizedBox(width: AppSpacing.sm),
-                                    Text(
-                                      '当前',
+                                  const SizedBox(height: AppSpacing.md),
+                                  SpeechInputField(
+                                    controller: controllers.title,
+                                    labelText: '标题（必填）',
+                                    hintText: '例如：Java 集合框架',
+                                    maxLength: 50,
+                                    enabled: !_saving,
+                                    validator: (v) {
+                                      final value = v?.trim() ?? '';
+                                      if (value.isEmpty) return '请输入标题';
+                                      if (value.length > 50) return '标题最多 50 字';
+                                      return null;
+                                    },
+                                  ),
+                                  const SizedBox(height: AppSpacing.md),
+                                  SpeechInputField(
+                                    controller: controllers.description,
+                                    labelText: '描述（选填）',
+                                    hintText: '补充重点、易错点等（可留空）',
+                                    minLines: 2,
+                                    maxLines: 6,
+                                    enabled: !_saving,
+                                  ),
+                                  const SizedBox(height: AppSpacing.md),
+                                  _SubtasksEditor(
+                                    controllers: controllers,
+                                    enabled: !_saving,
+                                    onChanged: () => setState(() {}),
+                                  ),
+                                  const SizedBox(height: AppSpacing.md),
+                                  TextFormField(
+                                    controller: controllers.tags,
+                                    onChanged: (_) => setState(() {}),
+                                    decoration: const InputDecoration(
+                                      labelText: '标签（选填，用逗号分隔）',
+                                      hintText: '例如：Java, 面试',
+                                    ),
+                                  ),
+                                  const SizedBox(height: AppSpacing.sm),
+                                  ListTile(
+                                    contentPadding: EdgeInsets.zero,
+                                    title: const Text('添加到主题'),
+                                    subtitle: Text(
+                                      _topicName(controllers.topicId) ??
+                                          '不选择主题',
                                       style: AppTypography.bodySecondary(
                                         context,
                                       ),
                                     ),
-                                  ],
-                                  const Spacer(),
-                                  IconButton(
-                                    tooltip: '删除条目',
-                                    onPressed: _saving
+                                    trailing: const Icon(Icons.chevron_right),
+                                    onTap: _saving
                                         ? null
-                                        : () => _removeItem(index),
-                                    icon: const Icon(Icons.delete_outline),
-                                    color: _items.length <= 1
-                                        ? secondaryText
-                                        : AppColors.error,
+                                        : () => _pickTopic(index),
+                                  ),
+                                  const SizedBox(height: AppSpacing.sm),
+                                  FutureBuilder<List<TagUsageStatEntity>>(
+                                    future: _tagUsageFuture,
+                                    builder: (context, snapshot) {
+                                      final tags =
+                                          snapshot.data ??
+                                          const <TagUsageStatEntity>[];
+                                      if (tags.isEmpty) {
+                                        return Text(
+                                          '还没有标签，创建一个吧',
+                                          style: AppTypography.bodySecondary(
+                                            context,
+                                          ),
+                                        );
+                                      }
+                                      final selectedTags = _parseTags(
+                                        controllers.tags.text,
+                                      );
+                                      return Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
+                                            children: [
+                                              Text(
+                                                '快捷标签',
+                                                style:
+                                                    AppTypography.bodySecondary(
+                                                      context,
+                                                    ),
+                                              ),
+                                              const Spacer(),
+                                              TextButton(
+                                                onPressed: _saving
+                                                    ? null
+                                                    : () => _openAllTagsPage(
+                                                        controllers.tags,
+                                                        tags: tags,
+                                                      ),
+                                                child: const Text('更多'),
+                                              ),
+                                            ],
+                                          ),
+                                          Wrap(
+                                            spacing: 6,
+                                            runSpacing: 6,
+                                            children: tags.take(3).map((entry) {
+                                              return FilterChip(
+                                                label: Text(entry.tag),
+                                                selected: selectedTags.contains(
+                                                  entry.tag,
+                                                ),
+                                                onSelected: _saving
+                                                    ? null
+                                                    : (_) {
+                                                        _toggleTag(
+                                                          controllers.tags,
+                                                          entry.tag,
+                                                        );
+                                                        setState(() {});
+                                                      },
+                                              );
+                                            }).toList(),
+                                          ),
+                                        ],
+                                      );
+                                    },
                                   ),
                                 ],
                               ),
-                              const SizedBox(height: AppSpacing.md),
-                              SpeechInputField(
-                                controller: controllers.title,
-                                labelText: '标题（必填）',
-                                hintText: '例如：Java 集合框架',
-                                maxLength: 50,
-                                enabled: !_saving,
-                                validator: (v) {
-                                  final value = v?.trim() ?? '';
-                                  if (value.isEmpty) return '请输入标题';
-                                  if (value.length > 50) return '标题最多 50 字';
-                                  return null;
-                                },
-                              ),
-                              const SizedBox(height: AppSpacing.md),
-                              SpeechInputField(
-                                controller: controllers.description,
-                                labelText: '描述（选填）',
-                                hintText: '补充重点、易错点等（可留空）',
-                                minLines: 2,
-                                maxLines: 6,
-                                enabled: !_saving,
-                              ),
-                              const SizedBox(height: AppSpacing.md),
-                              _SubtasksEditor(
-                                controllers: controllers,
-                                enabled: !_saving,
-                                onChanged: () => setState(() {}),
-                              ),
-                              const SizedBox(height: AppSpacing.md),
-                              TextFormField(
-                                controller: controllers.tags,
-                                onChanged: (_) => setState(() {}),
-                                decoration: const InputDecoration(
-                                  labelText: '标签（选填，用逗号分隔）',
-                                  hintText: '例如：Java, 面试',
-                                ),
-                              ),
-                              const SizedBox(height: AppSpacing.sm),
-                              ListTile(
-                                contentPadding: EdgeInsets.zero,
-                                title: const Text('添加到主题'),
-                                subtitle: Text(
-                                  _topicName(controllers.topicId) ?? '不选择主题',
-                                  style: AppTypography.bodySecondary(context),
-                                ),
-                                trailing: const Icon(Icons.chevron_right),
-                                onTap: _saving ? null : () => _pickTopic(index),
-                              ),
-                              const SizedBox(height: AppSpacing.sm),
-                              FutureBuilder<List<TagUsageStatEntity>>(
-                                future: _tagUsageFuture,
-                                builder: (context, snapshot) {
-                                  final tags =
-                                      snapshot.data ??
-                                      const <TagUsageStatEntity>[];
-                                  if (tags.isEmpty) {
-                                    return Text(
-                                      '还没有标签，创建一个吧',
-                                      style: AppTypography.bodySecondary(
-                                        context,
-                                      ),
-                                    );
-                                  }
-                                  final selectedTags = _parseTags(
-                                    controllers.tags.text,
-                                  );
-                                  return Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Row(
-                                        children: [
-                                          Text(
-                                            '快捷标签',
-                                            style: AppTypography.bodySecondary(
-                                              context,
-                                            ),
-                                          ),
-                                          const Spacer(),
-                                          TextButton(
-                                            onPressed: _saving
-                                                ? null
-                                                : () => _openAllTagsPage(
-                                                    controllers.tags,
-                                                    tags: tags,
-                                                  ),
-                                            child: const Text('更多'),
-                                          ),
-                                        ],
-                                      ),
-                                      Wrap(
-                                        spacing: 6,
-                                        runSpacing: 6,
-                                        children: tags.take(3).map((entry) {
-                                          return FilterChip(
-                                            label: Text(entry.tag),
-                                            selected: selectedTags.contains(
-                                              entry.tag,
-                                            ),
-                                            onSelected: _saving
-                                                ? null
-                                                : (_) {
-                                                    _toggleTag(
-                                                      controllers.tags,
-                                                      entry.tag,
-                                                    );
-                                                    setState(() {});
-                                                  },
-                                          );
-                                        }).toList(),
-                                      ),
-                                    ],
-                                  );
-                                },
-                              ),
-                            ],
+                            ),
                           ),
                         ),
-                      ),
+                      );
+                    }),
+                    OutlinedButton.icon(
+                      onPressed: _saving ? null : _addItem,
+                      icon: const Icon(Icons.add),
+                      label: const Text('再添加一条'),
                     ),
-                  );
-                }),
-                OutlinedButton.icon(
-                  onPressed: _saving ? null : _addItem,
-                  icon: const Icon(Icons.add),
-                  label: const Text('再添加一条'),
+                    const SizedBox(height: AppSpacing.lg),
+                    ReviewPreviewPanel(
+                      learningDate: DateTime(
+                        DateTime.now().year,
+                        DateTime.now().month,
+                        DateTime.now().day,
+                      ),
+                      onUnsavedChangesChanged: (hasUnsaved) {
+                        if (_hasUnsavedReviewIntervalsChanges == hasUnsaved)
+                          return;
+                        setState(
+                          () => _hasUnsavedReviewIntervalsChanges = hasUnsaved,
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 120),
+                  ],
                 ),
-                const SizedBox(height: AppSpacing.lg),
-                ReviewPreviewPanel(
-                  learningDate: DateTime(
-                    DateTime.now().year,
-                    DateTime.now().month,
-                    DateTime.now().day,
-                  ),
-                  onUnsavedChangesChanged: (hasUnsaved) {
-                    if (_hasUnsavedReviewIntervalsChanges == hasUnsaved) return;
-                    setState(() => _hasUnsavedReviewIntervalsChanges = hasUnsaved);
-                  },
-                ),
-                const SizedBox(height: 120),
-              ],
-            ),
-          ),
-          if (_saving)
-            Positioned.fill(
-              child: ColoredBox(
-                // v1.0 MVP：避免使用 withOpacity 的精度警告，改为 withAlpha。
-                color: Colors.black.withAlpha((0.15 * 255).round()),
-                child: const Center(child: CircularProgressIndicator()),
               ),
-            ),
-        ],
-      ),
-      ),
+              if (_saving)
+                Positioned.fill(
+                  child: ColoredBox(
+                    // v1.0 MVP：避免使用 withOpacity 的精度警告，改为 withAlpha。
+                    color: Colors.black.withAlpha((0.15 * 255).round()),
+                    child: const Center(child: CircularProgressIndicator()),
+                  ),
+                ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -655,10 +670,7 @@ class _InputPageState extends ConsumerState<InputPage> {
   void _toggleTag(TextEditingController controller, String tag) {
     final current = _parseTags(controller.text);
     if (current.contains(tag)) {
-      _setTags(
-        controller,
-        current.where((item) => item != tag).toList(),
-      );
+      _setTags(controller, current.where((item) => item != tag).toList());
       return;
     }
     _setTags(controller, [...current, tag]);
@@ -879,7 +891,9 @@ class _InputPageState extends ConsumerState<InputPage> {
                                 final c = _items[idx];
                                 c.title.text = applied['title'] ?? '';
                                 final legacy = applied['note'] ?? '';
-                                final parsed = NoteMigrationParser.parse(legacy);
+                                final parsed = NoteMigrationParser.parse(
+                                  legacy,
+                                );
                                 c.description.text = parsed.description ?? '';
                                 c.replaceSubtasks(parsed.subtasks);
                                 c.tags.text = t.tags.join(', ');
@@ -1013,11 +1027,10 @@ class _InputPageState extends ConsumerState<InputPage> {
       name: name,
       titlePattern: title,
       // 说明：模板表仍使用 notePattern 存储（渐进式迁移），这里将 description + subtasks 拼接成可解析文本。
-      notePattern:
-          _buildTemplateNotePattern(
-            description: description,
-            subtasks: subtasks,
-          ),
+      notePattern: _buildTemplateNotePattern(
+        description: description,
+        subtasks: subtasks,
+      ),
       tags: tags,
       sortOrder: 0,
     );
@@ -1194,16 +1207,15 @@ class _SubtasksEditor extends StatelessWidget {
             physics: const NeverScrollableScrollPhysics(),
             itemCount: list.length,
             buildDefaultDragHandles: false,
-            onReorder:
-                enabled
-                    ? (oldIndex, newIndex) {
-                      var target = newIndex;
-                      if (newIndex > oldIndex) target = newIndex - 1;
-                      final moved = list.removeAt(oldIndex);
-                      list.insert(target, moved);
-                      onChanged();
-                    }
-                    : (oldIndex, newIndex) {},
+            onReorder: enabled
+                ? (oldIndex, newIndex) {
+                    var target = newIndex;
+                    if (newIndex > oldIndex) target = newIndex - 1;
+                    final moved = list.removeAt(oldIndex);
+                    list.insert(target, moved);
+                    onChanged();
+                  }
+                : (oldIndex, newIndex) {},
             itemBuilder: (context, index) {
               final s = list[index];
               return Padding(
@@ -1232,14 +1244,13 @@ class _SubtasksEditor extends StatelessWidget {
                     const SizedBox(width: 6),
                     IconButton(
                       tooltip: '删除',
-                      onPressed:
-                          enabled
-                              ? () {
-                                final removed = list.removeAt(index);
-                                removed.dispose();
-                                onChanged();
-                              }
-                              : null,
+                      onPressed: enabled
+                          ? () {
+                              final removed = list.removeAt(index);
+                              removed.dispose();
+                              onChanged();
+                            }
+                          : null,
                       icon: const Icon(Icons.delete_outline, size: 20),
                     ),
                   ],
@@ -1249,13 +1260,12 @@ class _SubtasksEditor extends StatelessWidget {
           ),
         if (list.isEmpty)
           OutlinedButton.icon(
-            onPressed:
-                enabled
-                    ? () {
-                        controllers.addSubtask();
-                        onChanged();
-                      }
-                    : null,
+            onPressed: enabled
+                ? () {
+                    controllers.addSubtask();
+                    onChanged();
+                  }
+                : null,
             icon: const Icon(Icons.add, size: 18),
             label: const Text('新增子任务'),
           )
@@ -1264,13 +1274,12 @@ class _SubtasksEditor extends StatelessWidget {
           Align(
             alignment: Alignment.centerLeft,
             child: OutlinedButton.icon(
-              onPressed:
-                  enabled
-                      ? () {
-                          controllers.addSubtask();
-                          onChanged();
-                        }
-                      : null,
+              onPressed: enabled
+                  ? () {
+                      controllers.addSubtask();
+                      onChanged();
+                    }
+                  : null,
               icon: const Icon(Icons.add, size: 18),
               label: const Text('新增子任务'),
             ),

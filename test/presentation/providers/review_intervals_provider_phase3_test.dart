@@ -33,7 +33,9 @@ class _FakeSettingsRepository implements SettingsRepository {
 void main() {
   group('ReviewIntervalsNotifier Phase3', () {
     test('save 会校验空配置/轮次不连续/无启用/间隔不递增', () async {
-      final repo = _FakeSettingsRepository(const <ReviewIntervalConfigEntity>[]);
+      final repo = _FakeSettingsRepository(
+        const <ReviewIntervalConfigEntity>[],
+      );
       final notifier = ReviewIntervalsNotifier(repo);
 
       expect(
@@ -45,27 +47,18 @@ void main() {
         ReviewIntervalConfigEntity(round: 1, intervalDays: 1, enabled: true),
         ReviewIntervalConfigEntity(round: 3, intervalDays: 3, enabled: true),
       ];
-      expect(
-        () => notifier.save(nonContiguous),
-        throwsA(isA<ArgumentError>()),
-      );
+      expect(() => notifier.save(nonContiguous), throwsA(isA<ArgumentError>()));
 
       final noneEnabled = <ReviewIntervalConfigEntity>[
         ReviewIntervalConfigEntity(round: 1, intervalDays: 1, enabled: false),
       ];
-      expect(
-        () => notifier.save(noneEnabled),
-        throwsA(isA<ArgumentError>()),
-      );
+      expect(() => notifier.save(noneEnabled), throwsA(isA<ArgumentError>()));
 
       final notIncreasing = <ReviewIntervalConfigEntity>[
         ReviewIntervalConfigEntity(round: 1, intervalDays: 2, enabled: true),
         ReviewIntervalConfigEntity(round: 2, intervalDays: 1, enabled: true),
       ];
-      expect(
-        () => notifier.save(notIncreasing),
-        throwsA(isA<ArgumentError>()),
-      );
+      expect(() => notifier.save(notIncreasing), throwsA(isA<ArgumentError>()));
     });
 
     test('updateRound 禁止关闭最后一轮启用，并可更新后持久化', () async {
@@ -76,7 +69,10 @@ void main() {
       final notifier = ReviewIntervalsNotifier(repo);
 
       // 初始化 state，模拟已加载完成。
-      notifier.state = notifier.state.copyWith(isLoading: false, configs: await repo.getReviewIntervalConfigs());
+      notifier.state = notifier.state.copyWith(
+        isLoading: false,
+        configs: await repo.getReviewIntervalConfigs(),
+      );
 
       await expectLater(
         () => notifier.updateRound(1, enabled: false),
@@ -95,7 +91,10 @@ void main() {
         ReviewIntervalConfigEntity(round: 2, intervalDays: 2, enabled: false),
       ]);
       final notifier = ReviewIntervalsNotifier(repo);
-      notifier.state = notifier.state.copyWith(isLoading: false, configs: await repo.getReviewIntervalConfigs());
+      notifier.state = notifier.state.copyWith(
+        isLoading: false,
+        configs: await repo.getReviewIntervalConfigs(),
+      );
 
       await notifier.enableAll();
       expect(notifier.state.configs.every((c) => c.enabled), isTrue);

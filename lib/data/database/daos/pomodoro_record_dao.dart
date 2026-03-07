@@ -50,9 +50,9 @@ class PomodoroRecordDao {
   ///
   /// 返回值：按开始时间倒序排列的记录列表。
   Future<List<PomodoroRecord>> getAllRecords() {
-    return (db.select(db.pomodoroRecords)
-          ..orderBy([(t) => OrderingTerm.desc(t.startTime)]))
-        .get();
+    return (db.select(
+      db.pomodoroRecords,
+    )..orderBy([(t) => OrderingTerm.desc(t.startTime)])).get();
   }
 
   /// 查询今日完成的工作阶段数量。
@@ -75,7 +75,9 @@ class PomodoroRecordDao {
   Future<int> getWeekCompletedWorkCount({DateTime? now}) async {
     final anchor = now ?? DateTime.now();
     final today = DateTime(anchor.year, anchor.month, anchor.day);
-    final start = today.subtract(Duration(days: today.weekday - DateTime.monday));
+    final start = today.subtract(
+      Duration(days: today.weekday - DateTime.monday),
+    );
     final end = start.add(const Duration(days: 7));
     return _countCompletedWork(start: start, end: end);
   }

@@ -13,4 +13,3 @@ import 'task_filter_provider.dart';
 final homeTaskFilterProvider = StateProvider<ReviewTaskFilter>(
   (ref) => ReviewTaskFilter.pending,
 );
-

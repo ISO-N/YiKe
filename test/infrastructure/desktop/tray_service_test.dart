@@ -69,19 +69,18 @@ void main() {
     test('init 与 updateStatus 会更新图标、提示与上下文菜单', () async {
       await TrayService.instance.init();
 
-      expect(trayCalls.map((call) => call.method), containsAll(<String>[
-        'setIcon',
-        'setToolTip',
-        'setContextMenu',
-      ]));
+      expect(
+        trayCalls.map((call) => call.method),
+        containsAll(<String>['setIcon', 'setToolTip', 'setContextMenu']),
+      );
 
       await TrayService.instance.updateStatus(TrayStatus.syncing);
       final syncingMenuCall = trayCalls.lastWhere(
         (call) => call.method == 'setContextMenu',
       );
       final syncingMenu = syncingMenuCall.arguments as Map<dynamic, dynamic>;
-      final syncingItems =
-          (syncingMenu['menu']['items'] as List<dynamic>).cast<Map<dynamic, dynamic>>();
+      final syncingItems = (syncingMenu['menu']['items'] as List<dynamic>)
+          .cast<Map<dynamic, dynamic>>();
       expect(syncingItems.first['label'], '状态：同步中');
 
       await TrayService.instance.updateStatus(TrayStatus.offline);
@@ -89,8 +88,8 @@ void main() {
         (call) => call.method == 'setContextMenu',
       );
       final offlineMenu = offlineMenuCall.arguments as Map<dynamic, dynamic>;
-      final offlineItems =
-          (offlineMenu['menu']['items'] as List<dynamic>).cast<Map<dynamic, dynamic>>();
+      final offlineItems = (offlineMenu['menu']['items'] as List<dynamic>)
+          .cast<Map<dynamic, dynamic>>();
       expect(offlineItems.first['label'], '状态：离线');
     });
 
@@ -101,12 +100,10 @@ void main() {
       await TrayService.instance.showMainWindow();
       TrayService.instance.onTrayIconRightMouseDown();
 
-      expect(windowCalls, containsAll(<String>[
-        'setSkipTaskbar',
-        'hide',
-        'show',
-        'focus',
-      ]));
+      expect(
+        windowCalls,
+        containsAll(<String>['setSkipTaskbar', 'hide', 'show', 'focus']),
+      );
       expect(
         trayCalls.map((call) => call.method),
         contains('popUpContextMenu'),
@@ -117,10 +114,7 @@ void main() {
       await TrayService.instance.init();
       await TrayService.instance.dispose();
 
-      expect(
-        trayCalls.map((call) => call.method),
-        contains('destroy'),
-      );
+      expect(trayCalls.map((call) => call.method), contains('destroy'));
     });
   });
 }

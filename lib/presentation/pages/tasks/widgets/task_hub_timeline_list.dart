@@ -148,7 +148,10 @@ class TaskHubTimelineSliver extends StatelessWidget {
     Widget buildTaskRow(TaskHubTimelineTaskRow row) {
       final onComplete = row.status == ReviewTaskStatus.pending
           ? () async {
-              await runAction(() => notifier.completeTask(row.taskId), ok: '已完成');
+              await runAction(
+                () => notifier.completeTask(row.taskId),
+                ok: '已完成',
+              );
             }
           : null;
       final onSkip = row.status == ReviewTaskStatus.pending
@@ -174,12 +177,11 @@ class TaskHubTimelineSliver extends StatelessWidget {
                 onUndo: row.status == ReviewTaskStatus.pending
                     ? null
                     : () => confirmUndo(row.taskId),
-                onOpenDetail: () => context.push('/tasks/detail/${row.learningItemId}'),
+                onOpenDetail: () =>
+                    context.push('/tasks/detail/${row.learningItemId}'),
               ),
             ),
-            SizedBox(
-              height: row.isLastInGroup ? AppSpacing.lg : AppSpacing.md,
-            ),
+            SizedBox(height: row.isLastInGroup ? AppSpacing.lg : AppSpacing.md),
           ],
         ),
       );
@@ -210,35 +212,31 @@ class TaskHubTimelineSliver extends StatelessWidget {
     Widget buildBottomSpacerRow() => const SizedBox(height: 48);
 
     return SliverList(
-      delegate: SliverChildBuilderDelegate(
-        (context, index) {
-          var i = index;
-          if (hasError) {
-            if (i == 0) return buildErrorRow();
-            i -= 1;
-          }
+      delegate: SliverChildBuilderDelegate((context, index) {
+        var i = index;
+        if (hasError) {
+          if (i == 0) return buildErrorRow();
+          i -= 1;
+        }
 
-          if (!hasItems) {
-            return isInitialLoading ? buildLoadingRow() : buildEmptyRow();
-          }
+        if (!hasItems) {
+          return isInitialLoading ? buildLoadingRow() : buildEmptyRow();
+        }
 
-          // items 非空：按 index 映射到 timelineRows / footer / spacer。
-          final rowsLen = state.timelineRows.length;
-          if (i < rowsLen) {
-            final row = state.timelineRows[i];
-            return switch (row) {
-              TaskHubTimelineHeaderRow() =>
-                buildHeaderRow(row),
-              TaskHubTimelineTaskRow() => buildTaskRow(row),
-            };
-          }
+        // items 非空：按 index 映射到 timelineRows / footer / spacer。
+        final rowsLen = state.timelineRows.length;
+        if (i < rowsLen) {
+          final row = state.timelineRows[i];
+          return switch (row) {
+            TaskHubTimelineHeaderRow() => buildHeaderRow(row),
+            TaskHubTimelineTaskRow() => buildTaskRow(row),
+          };
+        }
 
-          i -= rowsLen;
-          if (i == 0) return buildFooterRow();
-          return buildBottomSpacerRow();
-        },
-        childCount: childCount,
-      ),
+        i -= rowsLen;
+        if (i == 0) return buildFooterRow();
+        return buildBottomSpacerRow();
+      }, childCount: childCount),
     );
   }
 

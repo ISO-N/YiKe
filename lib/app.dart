@@ -32,7 +32,8 @@ class YiKeApp extends ConsumerWidget {
     final themeMode = ref.watch(themeModeProvider);
     final themeSettings = ref.watch(themeSettingsProvider);
     final seedColor =
-        ColorUtils.tryParseHex(themeSettings.seedColorHex) ?? const Color(0xFF2196F3);
+        ColorUtils.tryParseHex(themeSettings.seedColorHex) ??
+        const Color(0xFF2196F3);
 
     // 关键逻辑：尊重系统“减少动态效果”设置；若系统要求关闭动画则禁用主题切换动画。
     final features =

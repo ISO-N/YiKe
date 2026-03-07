@@ -24,4 +24,3 @@ class UndoTaskStatusUseCase {
     return _reviewTaskRepository.undoTaskStatus(id);
   }
 }
-

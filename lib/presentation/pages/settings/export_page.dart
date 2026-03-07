@@ -144,22 +144,20 @@ class _ExportPageState extends ConsumerState<ExportPage> {
         }
       }
 
-      final result = await ref.read(exportStatisticsCsvUseCaseProvider).execute(
-            year: _statsYear,
-            outputPath: outputPath,
-          );
+      final result = await ref
+          .read(exportStatisticsCsvUseCaseProvider)
+          .execute(year: _statsYear, outputPath: outputPath);
 
       if (isDesktop) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('已导出：${result.file.path}')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('已导出：${result.file.path}')));
         }
       } else {
-        await Share.shareXFiles(
-          [XFile(result.file.path)],
-          text: '忆刻统计数据导出（$_statsYear）',
-        );
+        await Share.shareXFiles([
+          XFile(result.file.path),
+        ], text: '忆刻统计数据导出（$_statsYear）');
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -174,9 +172,9 @@ class _ExportPageState extends ConsumerState<ExportPage> {
     } catch (e) {
       if (mounted) {
         setState(() => _error = e.toString());
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('统计导出失败：$e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('统计导出失败：$e')));
       }
     } finally {
       if (mounted) {
@@ -299,7 +297,11 @@ class _ExportPageState extends ConsumerState<ExportPage> {
                             items: [
                               for (
                                 var y = DateTime.now().year;
-                                y >= (DateTime.now().year - 10).clamp(2000, 9999);
+                                y >=
+                                    (DateTime.now().year - 10).clamp(
+                                      2000,
+                                      9999,
+                                    );
                                 y--
                               )
                                 DropdownMenuItem(value: y, child: Text('$y')),

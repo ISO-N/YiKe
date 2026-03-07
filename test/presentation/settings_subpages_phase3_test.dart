@@ -25,10 +25,7 @@ void main() {
     VisibilityDetectorController.instance.updateInterval = Duration.zero;
   });
 
-  Future<ProviderContainer> pumpPage(
-    WidgetTester tester,
-    Widget page,
-  ) async {
+  Future<ProviderContainer> pumpPage(WidgetTester tester, Widget page) async {
     // 说明：设置仓储会读取 flutter_secure_storage；在 widget_test 环境下统一 mock 为抛异常，
     // 触发 SecureStorageService 的内存兜底路径，避免平台通道卡死。
     final messenger =
@@ -78,7 +75,10 @@ void main() {
 
       expect(find.text('学习目标'), findsOneWidget);
       expect(find.text('目标说明'), findsOneWidget);
-      await pumpUntilVisible(tester, find.widgetWithText(SwitchListTile, '每日完成目标'));
+      await pumpUntilVisible(
+        tester,
+        find.widgetWithText(SwitchListTile, '每日完成目标'),
+      );
       await pumpUntilVisible(tester, find.text('设置每日目标值'));
 
       await tester.tap(find.byTooltip('刷新'));

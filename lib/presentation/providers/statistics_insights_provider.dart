@@ -19,4 +19,3 @@ final statisticsInsightsProvider = FutureProvider<StatisticsInsightsEntity>((
   final useCase = ref.read(getStatisticsInsightsUseCaseProvider);
   return useCase.execute();
 });
-

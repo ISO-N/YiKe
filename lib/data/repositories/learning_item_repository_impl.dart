@@ -33,15 +33,16 @@ class LearningItemRepositoryImpl implements LearningItemRepository {
   @override
   Future<LearningItemEntity> create(LearningItemEntity item) async {
     final now = DateTime.now();
-    final ensuredUuid = item.uuid.trim().isEmpty ? _uuid.v4() : item.uuid.trim();
+    final ensuredUuid = item.uuid.trim().isEmpty
+        ? _uuid.v4()
+        : item.uuid.trim();
     final id = await dao.insertLearningItem(
       LearningItemsCompanion.insert(
         uuid: Value(ensuredUuid),
         title: item.title,
-        description:
-            item.description == null
-                ? const Value.absent()
-                : Value(item.description),
+        description: item.description == null
+            ? const Value.absent()
+            : Value(item.description),
         note: item.note == null ? const Value.absent() : Value(item.note),
         tags: Value(jsonEncode(item.tags)),
         learningDate: item.learningDate,
@@ -271,8 +272,9 @@ class LearningItemRepositoryImpl implements LearningItemRepository {
       throw StateError('学习内容已停用，无法编辑描述（id=$id）');
     }
 
-    final normalized =
-        description?.trim().isEmpty == true ? null : description?.trim();
+    final normalized = description?.trim().isEmpty == true
+        ? null
+        : description?.trim();
     final updated = await dao.updateLearningItemDescription(id, normalized);
     if (updated <= 0) {
       throw StateError('学习内容描述更新失败（id=$id）');

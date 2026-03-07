@@ -201,26 +201,21 @@ class FileParser {
       String cell(int idx) =>
           idx >= 0 && idx < row.length ? (row[idx] ?? '').toString() : '';
 
-      final titleIndex =
-          headers == null
-              ? 0
-              : (indexOfHeader(headers, const ['标题', 'title']) ?? 0);
-      final noteIndex =
-          headers == null
-              ? 1
-              : (indexOfHeader(headers, const ['备注', 'note']) ?? -1);
-      final descIndex =
-          headers == null
-              ? -1
-              : (indexOfHeader(headers, const ['描述', 'description']) ?? -1);
-      final subtasksIndex =
-          headers == null
-              ? -1
-              : (indexOfHeader(headers, const ['子任务', 'subtasks']) ?? -1);
-      final tagsIndex =
-          headers == null
-              ? 2
-              : (indexOfHeader(headers, const ['标签', 'tags']) ?? -1);
+      final titleIndex = headers == null
+          ? 0
+          : (indexOfHeader(headers, const ['标题', 'title']) ?? 0);
+      final noteIndex = headers == null
+          ? 1
+          : (indexOfHeader(headers, const ['备注', 'note']) ?? -1);
+      final descIndex = headers == null
+          ? -1
+          : (indexOfHeader(headers, const ['描述', 'description']) ?? -1);
+      final subtasksIndex = headers == null
+          ? -1
+          : (indexOfHeader(headers, const ['子任务', 'subtasks']) ?? -1);
+      final tagsIndex = headers == null
+          ? 2
+          : (indexOfHeader(headers, const ['标签', 'tags']) ?? -1);
 
       final title = cell(titleIndex).trim();
       final rawTags = tagsIndex >= 0 ? cell(tagsIndex).trim() : '';
@@ -325,10 +320,10 @@ class FileParser {
       }
 
       // 标签行：形如 “标签: a,b” 或 “tags: a,b”。
-      final tagMatch =
-          RegExp(r'^(标签|tags)\s*:\s*(.*)$', caseSensitive: false).firstMatch(
-            trimmed,
-          );
+      final tagMatch = RegExp(
+        r'^(标签|tags)\s*:\s*(.*)$',
+        caseSensitive: false,
+      ).firstMatch(trimmed);
       if (tagMatch != null) {
         final rawTags = (tagMatch.group(2) ?? '').trim();
         tags

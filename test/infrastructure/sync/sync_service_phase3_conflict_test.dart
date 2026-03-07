@@ -105,8 +105,7 @@ void main() {
           localDeviceId: localDeviceId,
         );
 
-        await service.applyIncomingEvents(
-          <SyncEvent>[
+        await service.applyIncomingEvents(<SyncEvent>[
           buildEvent(
             entityType: SyncService.entityLearningItem,
             entityId: 101,
@@ -130,9 +129,7 @@ void main() {
             timestampMs: 2,
             data: const <String, dynamic>{'foo': 'bar'},
           ),
-        ],
-          isMaster: false,
-        );
+        ], isMaster: false);
 
         final items = await db.select(db.learningItems).get();
         expect(items, isEmpty);
@@ -141,99 +138,95 @@ void main() {
       }
     });
 
-    test('applyIncomingEvents 对 learning_item 支持 Last-Write-Wins（较新事件覆盖）', () async {
-      final db = createInMemoryDatabase();
-      try {
-        final service = SyncService(
-          db: db,
-          syncLogDao: SyncLogDao(db),
-          syncEntityMappingDao: SyncEntityMappingDao(db),
-          settingsDao: SettingsDao(db),
-          secureStorageService: SecureStorageService(),
-          localDeviceId: localDeviceId,
-        );
+    test(
+      'applyIncomingEvents 对 learning_item 支持 Last-Write-Wins（较新事件覆盖）',
+      () async {
+        final db = createInMemoryDatabase();
+        try {
+          final service = SyncService(
+            db: db,
+            syncLogDao: SyncLogDao(db),
+            syncEntityMappingDao: SyncEntityMappingDao(db),
+            settingsDao: SettingsDao(db),
+            secureStorageService: SecureStorageService(),
+            localDeviceId: localDeviceId,
+          );
 
-        final baseDate = DateTime(2026, 3, 7, 9);
+          final baseDate = DateTime(2026, 3, 7, 9);
 
-        await service.applyIncomingEvents(
-          <SyncEvent>[
-          buildEvent(
-            entityType: SyncService.entityLearningItem,
-            entityId: 777,
-            operation: SyncOperation.create,
-            timestampMs: 1000,
-            data: <String, dynamic>{
-              'title': '旧标题',
-              'description': '旧描述',
-              'note': null,
-              'tags': <String>['同步'],
-              'learning_date': baseDate.toIso8601String(),
-              'created_at': baseDate.toIso8601String(),
-              'updated_at': baseDate.toIso8601String(),
-              'deleted_at': null,
-              'is_deleted': false,
-              'is_mock_data': false,
-            },
-          ),
-        ],
-          isMaster: false,
-        );
+          await service.applyIncomingEvents(<SyncEvent>[
+            buildEvent(
+              entityType: SyncService.entityLearningItem,
+              entityId: 777,
+              operation: SyncOperation.create,
+              timestampMs: 1000,
+              data: <String, dynamic>{
+                'title': '旧标题',
+                'description': '旧描述',
+                'note': null,
+                'tags': <String>['同步'],
+                'learning_date': baseDate.toIso8601String(),
+                'created_at': baseDate.toIso8601String(),
+                'updated_at': baseDate.toIso8601String(),
+                'deleted_at': null,
+                'is_deleted': false,
+                'is_mock_data': false,
+              },
+            ),
+          ], isMaster: false);
 
-        var items = await db.select(db.learningItems).get();
-        expect(items, hasLength(1));
-        expect(items.single.title, '旧标题');
+          var items = await db.select(db.learningItems).get();
+          expect(items, hasLength(1));
+          expect(items.single.title, '旧标题');
 
-        await service.applyIncomingEvents(
-          <SyncEvent>[
-          buildEvent(
-            entityType: SyncService.entityLearningItem,
-            entityId: 777,
-            operation: SyncOperation.update,
-            timestampMs: 2000,
-            data: <String, dynamic>{
-              'title': '新标题',
-              'description': '新描述',
-              'tags': <String>['同步', '覆盖'],
-              'learning_date': baseDate.toIso8601String(),
-              'created_at': baseDate.toIso8601String(),
-              'updated_at': baseDate.add(const Duration(hours: 1)).toIso8601String(),
-              'is_deleted': false,
-              'is_mock_data': false,
-            },
-          ),
-        ],
-          isMaster: false,
-        );
+          await service.applyIncomingEvents(<SyncEvent>[
+            buildEvent(
+              entityType: SyncService.entityLearningItem,
+              entityId: 777,
+              operation: SyncOperation.update,
+              timestampMs: 2000,
+              data: <String, dynamic>{
+                'title': '新标题',
+                'description': '新描述',
+                'tags': <String>['同步', '覆盖'],
+                'learning_date': baseDate.toIso8601String(),
+                'created_at': baseDate.toIso8601String(),
+                'updated_at': baseDate
+                    .add(const Duration(hours: 1))
+                    .toIso8601String(),
+                'is_deleted': false,
+                'is_mock_data': false,
+              },
+            ),
+          ], isMaster: false);
 
-        items = await db.select(db.learningItems).get();
-        expect(items.single.title, '新标题');
+          items = await db.select(db.learningItems).get();
+          expect(items.single.title, '新标题');
 
-        // 应用更旧的事件，不应回滚到旧标题。
-        await service.applyIncomingEvents(
-          <SyncEvent>[
-          buildEvent(
-            entityType: SyncService.entityLearningItem,
-            entityId: 777,
-            operation: SyncOperation.update,
-            timestampMs: 1500,
-            data: <String, dynamic>{
-              'title': '更旧标题',
-              'learning_date': baseDate.toIso8601String(),
-              'created_at': baseDate.toIso8601String(),
-              'updated_at': baseDate.toIso8601String(),
-              'is_deleted': false,
-              'is_mock_data': false,
-            },
-          ),
-        ],
-          isMaster: false,
-        );
+          // 应用更旧的事件，不应回滚到旧标题。
+          await service.applyIncomingEvents(<SyncEvent>[
+            buildEvent(
+              entityType: SyncService.entityLearningItem,
+              entityId: 777,
+              operation: SyncOperation.update,
+              timestampMs: 1500,
+              data: <String, dynamic>{
+                'title': '更旧标题',
+                'learning_date': baseDate.toIso8601String(),
+                'created_at': baseDate.toIso8601String(),
+                'updated_at': baseDate.toIso8601String(),
+                'is_deleted': false,
+                'is_mock_data': false,
+              },
+            ),
+          ], isMaster: false);
 
-        items = await db.select(db.learningItems).get();
-        expect(items.single.title, '新标题');
-      } finally {
-        await db.close();
-      }
-    });
+          items = await db.select(db.learningItems).get();
+          expect(items.single.title, '新标题');
+        } finally {
+          await db.close();
+        }
+      },
+    );
   });
 }

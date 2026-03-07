@@ -61,6 +61,9 @@ void main() {
     expect(token.isCanceled, isFalse);
     token.cancel();
     expect(token.isCanceled, isTrue);
-    expect(() => token.throwIfCanceled(), throwsA(isA<BackupCanceledException>()));
+    expect(
+      () => token.throwIfCanceled(),
+      throwsA(isA<BackupCanceledException>()),
+    );
   });
 }

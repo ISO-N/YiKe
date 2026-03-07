@@ -99,16 +99,14 @@ class _ReviewPreviewPanelState extends ConsumerState<ReviewPreviewPanel> {
   List<ReviewIntervalConfigEntity> _buildDefaultDraft() {
     final defaults = EbbinghausUtils.defaultIntervalsDays.take(_maxRounds);
     var round = 0;
-    return defaults
-        .map((days) {
-          round++;
-          return ReviewIntervalConfigEntity(
-            round: round,
-            intervalDays: days,
-            enabled: true,
-          );
-        })
-        .toList();
+    return defaults.map((days) {
+      round++;
+      return ReviewIntervalConfigEntity(
+        round: round,
+        intervalDays: days,
+        enabled: true,
+      );
+    }).toList();
   }
 
   /// 增加一轮复习（末尾追加，间隔约为前一轮的 2 倍）。
@@ -117,13 +115,16 @@ class _ReviewPreviewPanelState extends ConsumerState<ReviewPreviewPanel> {
     if (_draft.isEmpty) return;
 
     final maxRound = _maxRound;
-    final last =
-        _draft.firstWhere((e) => e.round == maxRound, orElse: () => _draft.last);
+    final last = _draft.firstWhere(
+      (e) => e.round == maxRound,
+      orElse: () => _draft.last,
+    );
     final nextRound = maxRound + 1;
 
     // 约 2 倍：与需求保持一致，同时上限收敛到 Slider 的可展示范围。
-    final nextIntervalDays =
-        (last.intervalDays * 2).clamp(1, _maxIntervalDays).toInt();
+    final nextIntervalDays = (last.intervalDays * 2)
+        .clamp(1, _maxIntervalDays)
+        .toInt();
 
     _setDraft(
       [
@@ -168,9 +169,9 @@ class _ReviewPreviewPanelState extends ConsumerState<ReviewPreviewPanel> {
 
     final validationMessage = _validateDraft();
     if (validationMessage != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(validationMessage)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(validationMessage)));
       return;
     }
 
@@ -187,9 +188,9 @@ class _ReviewPreviewPanelState extends ConsumerState<ReviewPreviewPanel> {
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('保存失败：$e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('保存失败：$e')));
     }
   }
 
@@ -386,10 +387,10 @@ class _ReviewPreviewPanelState extends ConsumerState<ReviewPreviewPanel> {
                       FilledButton(
                         onPressed:
                             _hasUnsavedChanges &&
-                                    validationMessage == null &&
-                                    !state.isLoading
-                                ? () => _saveChanges(notifier)
-                                : null,
+                                validationMessage == null &&
+                                !state.isLoading
+                            ? () => _saveChanges(notifier)
+                            : null,
                         child: const Text('确认保存'),
                       ),
                     ],

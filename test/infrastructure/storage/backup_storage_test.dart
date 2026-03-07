@@ -13,7 +13,9 @@ void main() {
   late BackupStorage storage;
 
   setUp(() async {
-    tempDir = await Directory.systemTemp.createTemp('yike_backup_storage_test_');
+    tempDir = await Directory.systemTemp.createTemp(
+      'yike_backup_storage_test_',
+    );
     storage = BackupStorage(baseDir: tempDir);
   });
 
@@ -34,10 +36,7 @@ void main() {
 
       expect(await backupsDir.exists(), isTrue);
       expect(await snapshotsDir.exists(), isTrue);
-      expect(
-        await storage.getSnapshotFile('snapshot.yikebackup'),
-        isNotNull,
-      );
+      expect(await storage.getSnapshotFile('snapshot.yikebackup'), isNotNull);
       expect(await snapshot.readAsString(), '{"snapshot":true}');
     });
 
@@ -66,8 +65,14 @@ void main() {
       );
 
       await storage.cleanupTempFiles();
-      expect(await File(p.join(backupsDir.path, 'stale.tmp')).exists(), isFalse);
-      expect(await File(p.join(snapshotsDir.path, 'stale.tmp')).exists(), isFalse);
+      expect(
+        await File(p.join(backupsDir.path, 'stale.tmp')).exists(),
+        isFalse,
+      );
+      expect(
+        await File(p.join(snapshotsDir.path, 'stale.tmp')).exists(),
+        isFalse,
+      );
 
       await storage.deleteBackupFile(second);
       expect(await second.exists(), isFalse);

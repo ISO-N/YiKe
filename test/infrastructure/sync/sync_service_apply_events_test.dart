@@ -240,10 +240,16 @@ void main() {
             'description': '描述已更新',
             'note': null,
             'tags': <String>['同步', '更新'],
-            'learning_date': itemCreatedAt.add(const Duration(days: 1)).toIso8601String(),
-            'updated_at': itemCreatedAt.add(const Duration(days: 1)).toIso8601String(),
+            'learning_date': itemCreatedAt
+                .add(const Duration(days: 1))
+                .toIso8601String(),
+            'updated_at': itemCreatedAt
+                .add(const Duration(days: 1))
+                .toIso8601String(),
             'is_deleted': true,
-            'deleted_at': itemCreatedAt.add(const Duration(days: 1)).toIso8601String(),
+            'deleted_at': itemCreatedAt
+                .add(const Duration(days: 1))
+                .toIso8601String(),
             'is_mock_data': true,
           },
         ),
@@ -258,7 +264,9 @@ void main() {
             'learning_origin_entity_id': 101,
             'content': '远端子任务-更新',
             'sort_order': 2,
-            'updated_at': itemCreatedAt.add(const Duration(days: 1)).toIso8601String(),
+            'updated_at': itemCreatedAt
+                .add(const Duration(days: 1))
+                .toIso8601String(),
             'is_mock_data': true,
           },
         ),
@@ -273,8 +281,12 @@ void main() {
             'review_round': 1,
             'scheduled_date': taskScheduledAt.toIso8601String(),
             'status': 'done',
-            'completed_at': taskScheduledAt.add(const Duration(hours: 8)).toIso8601String(),
-            'updated_at': taskScheduledAt.add(const Duration(hours: 8)).toIso8601String(),
+            'completed_at': taskScheduledAt
+                .add(const Duration(hours: 8))
+                .toIso8601String(),
+            'updated_at': taskScheduledAt
+                .add(const Duration(hours: 8))
+                .toIso8601String(),
             'is_mock_data': true,
           },
         ),
@@ -289,7 +301,9 @@ void main() {
             'note_pattern': null,
             'tags': <String>['更新'],
             'sort_order': 9,
-            'updated_at': itemCreatedAt.add(const Duration(days: 1)).toIso8601String(),
+            'updated_at': itemCreatedAt
+                .add(const Duration(days: 1))
+                .toIso8601String(),
           },
         ),
         buildEvent(
@@ -300,7 +314,9 @@ void main() {
           data: <String, dynamic>{
             'name': '远端主题-更新',
             'description': '主题描述已更新',
-            'updated_at': itemCreatedAt.add(const Duration(days: 1)).toIso8601String(),
+            'updated_at': itemCreatedAt
+                .add(const Duration(days: 1))
+                .toIso8601String(),
           },
         ),
         buildEvent(
@@ -419,7 +435,9 @@ void main() {
             'title': '最新标题-更新',
             'description': '更新描述',
             'learning_date': now.toIso8601String(),
-            'updated_at': now.add(const Duration(minutes: 10)).toIso8601String(),
+            'updated_at': now
+                .add(const Duration(minutes: 10))
+                .toIso8601String(),
             'is_deleted': false,
             'is_mock_data': false,
           },
@@ -483,7 +501,9 @@ void main() {
             'title': '过期标题',
             'description': '过期描述',
             'learning_date': now.toIso8601String(),
-            'updated_at': now.subtract(const Duration(minutes: 10)).toIso8601String(),
+            'updated_at': now
+                .subtract(const Duration(minutes: 10))
+                .toIso8601String(),
             'is_deleted': false,
             'is_mock_data': false,
           },
@@ -507,16 +527,18 @@ void main() {
   group('SyncService.handleExchangeRequest', () {
     test('首次交换会兜底生成本地快照并返回排除请求方后的增量', () async {
       final now = DateTime(2026, 3, 6, 10);
-      final localItemId = await db.into(db.learningItems).insert(
-        LearningItemsCompanion.insert(
-          title: '本地学习内容',
-          note: const drift.Value('本地备注'),
-          tags: const drift.Value('["本地"]'),
-          learningDate: now,
-          createdAt: drift.Value(now),
-          updatedAt: drift.Value(now),
-        ),
-      );
+      final localItemId = await db
+          .into(db.learningItems)
+          .insert(
+            LearningItemsCompanion.insert(
+              title: '本地学习内容',
+              note: const drift.Value('本地备注'),
+              tags: const drift.Value('["本地"]'),
+              learningDate: now,
+              createdAt: drift.Value(now),
+              updatedAt: drift.Value(now),
+            ),
+          );
 
       final request = SyncExchangeRequest(
         fromDeviceId: 'peer-device',
@@ -562,7 +584,9 @@ void main() {
         isFalse,
       );
 
-      final incomingTemplate = await db.select(db.learningTemplates).getSingle();
+      final incomingTemplate = await db
+          .select(db.learningTemplates)
+          .getSingle();
       expect(incomingTemplate.name, '交换进来的模板');
 
       final persistedLogs = await syncLogDao.getLogsFromDeviceSince(
@@ -571,9 +595,14 @@ void main() {
       );
       expect(persistedLogs, hasLength(1));
 
-      final localLogs = await syncLogDao.getLogsFromDeviceSince(localDeviceId, 0);
+      final localLogs = await syncLogDao.getLogsFromDeviceSince(
+        localDeviceId,
+        0,
+      );
       expect(
-        localLogs.any((log) => log.entityType == SyncService.entityLearningItem),
+        localLogs.any(
+          (log) => log.entityType == SyncService.entityLearningItem,
+        ),
         isTrue,
       );
     });
@@ -641,7 +670,10 @@ void main() {
 
       await service.persistIncomingEvents(<SyncEvent>[incomingEvent]);
 
-      final remoteLogs = await syncLogDao.getLogsFromDeviceSince(remoteDeviceId, 0);
+      final remoteLogs = await syncLogDao.getLogsFromDeviceSince(
+        remoteDeviceId,
+        0,
+      );
       expect(remoteLogs, hasLength(2));
       expect(
         remoteLogs.any(

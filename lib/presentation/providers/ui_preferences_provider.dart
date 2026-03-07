@@ -41,12 +41,11 @@ class TaskListBlurNotifier extends StateNotifier<bool> {
 }
 
 /// 任务列表毛玻璃效果开关 Provider。
-final taskListBlurEnabledProvider = StateNotifierProvider<TaskListBlurNotifier, bool>((
-  ref,
-) {
-  final repo = ref.read(uiPreferencesRepositoryProvider);
-  return TaskListBlurNotifier(repo);
-});
+final taskListBlurEnabledProvider =
+    StateNotifierProvider<TaskListBlurNotifier, bool>((ref) {
+      final repo = ref.read(uiPreferencesRepositoryProvider);
+      return TaskListBlurNotifier(repo);
+    });
 
 /// 撤销 Snackbar 开关 Notifier（默认开启）。
 class UndoSnackbarNotifier extends StateNotifier<bool> {
@@ -137,4 +136,3 @@ final skeletonStrategyProvider =
       final repo = ref.read(uiPreferencesRepositoryProvider);
       return SkeletonStrategyNotifier(repo);
     });
-

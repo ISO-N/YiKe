@@ -81,7 +81,10 @@ void main() {
     testWidgets('加载态与错误态会渲染 Skeleton/错误卡片', (tester) async {
       // 说明：HomePage 采用 CustomScrollView + SliverList 懒构建；
       // 提高视口高度，确保错误卡片位于首屏范围内，避免因未构建导致 finder 失败。
-      final harness = await pumpHomeHarness(tester, size: const Size(1440, 1800));
+      final harness = await pumpHomeHarness(
+        tester,
+        size: const Size(1440, 1800),
+      );
       final notifier = harness.container.read(homeTasksProvider.notifier);
 
       notifier.state = HomeTasksState.initial().copyWith(
@@ -101,7 +104,10 @@ void main() {
     });
 
     testWidgets('冷启动空态会展示今日无任务提示', (tester) async {
-      final harness = await pumpHomeHarness(tester, size: const Size(1440, 1800));
+      final harness = await pumpHomeHarness(
+        tester,
+        size: const Size(1440, 1800),
+      );
       final notifier = harness.container.read(homeTasksProvider.notifier);
 
       notifier.state = HomeTasksState.initial().copyWith(
@@ -122,11 +128,15 @@ void main() {
 
     testWidgets('高负载 + 选择模式 + 多分区数据会渲染批量操作栏与统计指标', (tester) async {
       final now = DateTime.now();
-      final harness = await pumpHomeHarness(tester, size: const Size(1440, 900));
+      final harness = await pumpHomeHarness(
+        tester,
+        size: const Size(1440, 900),
+      );
       final notifier = harness.container.read(homeTasksProvider.notifier);
 
       // 覆盖：切到今日 tab，且筛选为 pending 时允许选择模式。
-      harness.container.read(homeTaskTabProvider.notifier).state = HomeTaskTab.today;
+      harness.container.read(homeTaskTabProvider.notifier).state =
+          HomeTaskTab.today;
       harness.container.read(homeTaskFilterProvider.notifier).state =
           ReviewTaskFilter.pending;
 
@@ -182,9 +192,13 @@ void main() {
         todayCompleted: todayCompleted,
         todaySkipped: todaySkipped,
         completedCount: todayCompleted.length,
-        totalCount: todayPending.length + overduePending.length + todayCompleted.length,
+        totalCount:
+            todayPending.length + overduePending.length + todayCompleted.length,
         isSelectionMode: true,
-        selectedTaskIds: <int>{todayPending.first.taskId, todayPending.last.taskId},
+        selectedTaskIds: <int>{
+          todayPending.first.taskId,
+          todayPending.last.taskId,
+        },
         expandedTaskIds: <int>{todayPending.first.taskId},
         lastDoneOrSkippedRoundByLearningItemId: <int, int>{
           todayCompleted.first.learningItemId: 1,
@@ -205,7 +219,8 @@ void main() {
       expect(find.text('跳过所选'), findsWidgets);
 
       // 覆盖：all-tab 下会挂载 taskHubProvider（避免“未监听时 loadMore 不触发”）。
-      harness.container.read(homeTaskTabProvider.notifier).state = HomeTaskTab.all;
+      harness.container.read(homeTaskTabProvider.notifier).state =
+          HomeTaskTab.all;
       // 手动触发 TaskHubProvider 首次加载，避免 HomePage 中 hubState/hubNotifier 分支被短路。
       // ignore: unused_result
       harness.container.read(taskHubProvider);

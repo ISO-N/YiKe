@@ -170,20 +170,19 @@ class _HelpPageState extends State<HelpPage> {
                       // 这里对帮助页正文（Markdown）禁用语义输出，避免噪声与潜在的不稳定。
                       //
                       // 说明：这会影响屏幕阅读器读取帮助页正文，但不影响鼠标/键盘交互与文本选择复制。
-                      child:
-                          defaultTargetPlatform == TargetPlatform.windows
-                              ? ExcludeSemantics(
-                                child: _buildMarkdownBody(
-                                  context: context,
-                                  data: data,
-                                  builders: builders,
-                                ),
-                              )
-                              : _buildMarkdownBody(
+                      child: defaultTargetPlatform == TargetPlatform.windows
+                          ? ExcludeSemantics(
+                              child: _buildMarkdownBody(
                                 context: context,
                                 data: data,
                                 builders: builders,
                               ),
+                            )
+                          : _buildMarkdownBody(
+                              context: context,
+                              data: data,
+                              builders: builders,
+                            ),
                     ),
                   ),
                   const SizedBox(height: AppSpacing.lg),
@@ -194,9 +193,9 @@ class _HelpPageState extends State<HelpPage> {
             );
 
             return ScrollConfiguration(
-              behavior: ScrollConfiguration.of(context).copyWith(
-                scrollbars: false,
-              ),
+              behavior: ScrollConfiguration.of(
+                context,
+              ).copyWith(scrollbars: false),
               child: Scrollbar(
                 controller: _scrollController,
                 thumbVisibility: true,
@@ -227,16 +226,13 @@ class _HelpPageState extends State<HelpPage> {
       data: data.markdown,
       selectable: true,
       builders: builders,
-      styleSheet:
-          MarkdownStyleSheet.fromTheme(
-            Theme.of(context),
-          ).copyWith(
-            h1: Theme.of(context).textTheme.headlineMedium,
-            h2: Theme.of(context).textTheme.titleLarge,
-            h3: Theme.of(context).textTheme.titleMedium,
-            p: Theme.of(context).textTheme.bodyMedium?.copyWith(height: 1.6),
-            blockquotePadding: const EdgeInsets.all(12),
-          ),
+      styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
+        h1: Theme.of(context).textTheme.headlineMedium,
+        h2: Theme.of(context).textTheme.titleLarge,
+        h3: Theme.of(context).textTheme.titleMedium,
+        p: Theme.of(context).textTheme.bodyMedium?.copyWith(height: 1.6),
+        blockquotePadding: const EdgeInsets.all(12),
+      ),
     );
   }
 }

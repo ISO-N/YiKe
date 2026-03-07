@@ -17,4 +17,3 @@ class DeleteSubtaskUseCase {
   /// 删除子任务。
   Future<void> execute(int id) => _learningSubtaskRepository.delete(id);
 }
-

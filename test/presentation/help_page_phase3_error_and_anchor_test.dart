@@ -55,7 +55,9 @@ void main() {
       messenger.setMockMessageHandler(assetChannel, (message) async {
         final key = utf8.decode(message!.buffer.asUint8List());
         if (key == 'AssetManifest.bin') {
-          return const StandardMessageCodec().encodeMessage(<String, dynamic>{});
+          return const StandardMessageCodec().encodeMessage(
+            <String, dynamic>{},
+          );
         }
         if (key == 'AssetManifest.json') {
           return _utf8Bytes('{}');

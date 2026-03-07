@@ -49,11 +49,13 @@ ORDER BY id ASC
 LIMIT ?
 ''';
 
-    final rows = await db.customSelect(
-      sql,
-      variables: [Variable<int>(capped)],
-      readsFrom: {db.learningItems},
-    ).get();
+    final rows = await db
+        .customSelect(
+          sql,
+          variables: [Variable<int>(capped)],
+          readsFrom: {db.learningItems},
+        )
+        .get();
 
     return rows
         .map(
@@ -85,18 +87,21 @@ LIMIT ?
     required String? migratedDescription,
     required List<String> migratedSubtasks,
   }) async {
-    final normalizedDescription =
-        migratedDescription?.trim().isEmpty == true
-            ? null
-            : migratedDescription?.trim();
-    final normalizedSubtasks =
-        migratedSubtasks.map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
+    final normalizedDescription = migratedDescription?.trim().isEmpty == true
+        ? null
+        : migratedDescription?.trim();
+    final normalizedSubtasks = migratedSubtasks
+        .map((e) => e.trim())
+        .where((e) => e.isNotEmpty)
+        .toList();
 
     final now = DateTime.now();
     final insertedSubtaskIds = <int>[];
 
     await db.transaction(() async {
-      final existingSubtaskCount = await getExistingSubtaskCount(learningItemId);
+      final existingSubtaskCount = await getExistingSubtaskCount(
+        learningItemId,
+      );
 
       if (existingSubtaskCount == 0 && normalizedSubtasks.isNotEmpty) {
         for (var i = 0; i < normalizedSubtasks.length; i++) {
@@ -116,23 +121,22 @@ LIMIT ?
       }
 
       // 说明：description 若已存在且非空，则不覆盖（避免用户已开始使用新字段）。
-      final existing = await (db.select(db.learningItems)
-            ..where((t) => t.id.equals(learningItemId)))
-          .getSingleOrNull();
+      final existing = await (db.select(
+        db.learningItems,
+      )..where((t) => t.id.equals(learningItemId))).getSingleOrNull();
       if (existing == null) return;
 
       final shouldWriteDescription =
           (existing.description?.trim().isEmpty ?? true) &&
           normalizedDescription != null;
 
-      await (db.update(db.learningItems)
-            ..where((t) => t.id.equals(learningItemId)))
-          .write(
+      await (db.update(
+        db.learningItems,
+      )..where((t) => t.id.equals(learningItemId))).write(
         LearningItemsCompanion(
-          description:
-              shouldWriteDescription
-                  ? Value(normalizedDescription)
-                  : const Value.absent(),
+          description: shouldWriteDescription
+              ? Value(normalizedDescription)
+              : const Value.absent(),
           // 幂等锚点：迁移成功后置空 note。
           note: const Value(null),
           updatedAt: Value(now),
@@ -147,9 +151,9 @@ LIMIT ?
     final ts = now.millisecondsSinceEpoch;
 
     // 1) learning_item：写入 update 事件（包含 description 字段）。
-    final itemRow = await (db.select(db.learningItems)
-          ..where((t) => t.id.equals(learningItemId)))
-        .getSingleOrNull();
+    final itemRow = await (db.select(
+      db.learningItems,
+    )..where((t) => t.id.equals(learningItemId))).getSingleOrNull();
     if (itemRow != null) {
       final origin = await sync.resolveOriginKey(
         entityType: 'learning_item',
@@ -167,7 +171,8 @@ LIMIT ?
           'tags': _parseTags(itemRow.tags),
           'learning_date': itemRow.learningDate.toIso8601String(),
           'created_at': itemRow.createdAt.toIso8601String(),
-          'updated_at': (itemRow.updatedAt ?? itemRow.createdAt).toIso8601String(),
+          'updated_at': (itemRow.updatedAt ?? itemRow.createdAt)
+              .toIso8601String(),
           'is_deleted': itemRow.isDeleted,
           'deleted_at': itemRow.deletedAt?.toIso8601String(),
           'is_mock_data': itemRow.isMockData,
@@ -186,9 +191,9 @@ LIMIT ?
     );
 
     for (final id in insertedSubtaskIds) {
-      final subtask = await (db.select(db.learningSubtasks)
-            ..where((t) => t.id.equals(id)))
-          .getSingleOrNull();
+      final subtask = await (db.select(
+        db.learningSubtasks,
+      )..where((t) => t.id.equals(id))).getSingleOrNull();
       if (subtask == null) continue;
 
       final origin = await sync.resolveOriginKey(
@@ -207,7 +212,8 @@ LIMIT ?
           'content': subtask.content,
           'sort_order': subtask.sortOrder,
           'created_at': subtask.createdAt.toIso8601String(),
-          'updated_at': (subtask.updatedAt ?? subtask.createdAt).toIso8601String(),
+          'updated_at': (subtask.updatedAt ?? subtask.createdAt)
+              .toIso8601String(),
           'is_mock_data': subtask.isMockData,
         },
         timestampMs: ts,

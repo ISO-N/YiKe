@@ -60,8 +60,8 @@ class LearningItemDetailPage extends ConsumerWidget {
                 final subtasks = item.subtasks;
                 final description =
                     (item.item.description ?? '').trim().isNotEmpty
-                        ? item.item.description!.trim()
-                        : (item.item.note ?? '').trim();
+                    ? item.item.description!.trim()
+                    : (item.item.note ?? '').trim();
 
                 return ListView(
                   children: [
@@ -94,7 +94,8 @@ class LearningItemDetailPage extends ConsumerWidget {
                                 (s) => Padding(
                                   padding: const EdgeInsets.only(bottom: 6),
                                   child: Row(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       const Text('• '),
                                       Expanded(
@@ -144,10 +145,9 @@ class LearningItemDetailPage extends ConsumerWidget {
                             const SizedBox(height: 8),
                             _InfoRow(
                               label: '数据类型',
-                              value:
-                                  item.item.isMockData
-                                      ? 'Mock（仅调试）'
-                                      : '真实数据',
+                              value: item.item.isMockData
+                                  ? 'Mock（仅调试）'
+                                  : '真实数据',
                             ),
                           ],
                         ),

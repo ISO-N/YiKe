@@ -292,30 +292,30 @@ void main() {
   });
 
   testWidgets('DesktopTitleBar 支持拖动、最大化切换与关闭', (tester) async {
-    final binding = TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    final binding =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
     final windowCalls = <String>[];
     var maximized = false;
 
-    binding.setMockMethodCallHandler(
-      const MethodChannel('window_manager'),
-      (call) async {
-        windowCalls.add(call.method);
-        switch (call.method) {
-          case 'isFullScreen':
-            return false;
-          case 'isMaximized':
-            return maximized;
-          case 'maximize':
-            maximized = true;
-            return null;
-          case 'unmaximize':
-            maximized = false;
-            return null;
-          default:
-            return null;
-        }
-      },
-    );
+    binding.setMockMethodCallHandler(const MethodChannel('window_manager'), (
+      call,
+    ) async {
+      windowCalls.add(call.method);
+      switch (call.method) {
+        case 'isFullScreen':
+          return false;
+        case 'isMaximized':
+          return maximized;
+        case 'maximize':
+          maximized = true;
+          return null;
+        case 'unmaximize':
+          maximized = false;
+          return null;
+        default:
+          return null;
+      }
+    });
     addTearDown(
       () => binding.setMockMethodCallHandler(
         const MethodChannel('window_manager'),
@@ -325,10 +325,7 @@ void main() {
 
     await pumpScopedWidget(
       tester,
-      const DesktopTitleBar(
-        title: '忆刻桌面端',
-        actions: <Widget>[Text('附加操作')],
-      ),
+      const DesktopTitleBar(title: '忆刻桌面端', actions: <Widget>[Text('附加操作')]),
     );
 
     expect(find.text('附加操作'), findsOneWidget);
@@ -346,7 +343,10 @@ void main() {
     await tester.tap(find.byTooltip('关闭'));
     await tester.pumpAndSettle();
 
-    expect(windowCalls, containsAll(<String>['maximize', 'unmaximize', 'close']));
+    expect(
+      windowCalls,
+      containsAll(<String>['maximize', 'unmaximize', 'close']),
+    );
   });
 
   testWidgets('DesktopShortcuts 支持新建、帮助、设置、搜索与保存快捷键', (tester) async {
@@ -361,9 +361,7 @@ void main() {
             return ShortcutActionsScope(
               onFocusSearch: () => focusTriggered = true,
               onSave: () => saveTriggered = true,
-              child: const DesktopShortcuts(
-                child: Scaffold(body: Text('主页')),
-              ),
+              child: const DesktopShortcuts(child: Scaffold(body: Text('主页'))),
             );
           },
         ),
@@ -387,9 +385,7 @@ void main() {
 
     try {
       await tester.pumpWidget(
-        ProviderScope(
-          child: MaterialApp.router(routerConfig: router),
-        ),
+        ProviderScope(child: MaterialApp.router(routerConfig: router)),
       );
       await tester.pumpAndSettle();
 

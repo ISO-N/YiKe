@@ -51,17 +51,19 @@ void main() {
     List<String> tags = const <String>[],
     required DateTime learningDate,
   }) {
-    return db.into(db.learningItems).insert(
-      LearningItemsCompanion.insert(
-        title: title,
-        description: drift.Value(description),
-        note: drift.Value(note),
-        tags: drift.Value(jsonEncode(tags)),
-        learningDate: learningDate,
-        createdAt: drift.Value(learningDate),
-        updatedAt: drift.Value(learningDate),
-      ),
-    );
+    return db
+        .into(db.learningItems)
+        .insert(
+          LearningItemsCompanion.insert(
+            title: title,
+            description: drift.Value(description),
+            note: drift.Value(note),
+            tags: drift.Value(jsonEncode(tags)),
+            learningDate: learningDate,
+            createdAt: drift.Value(learningDate),
+            updatedAt: drift.Value(learningDate),
+          ),
+        );
   }
 
   /// 插入复习任务，并显式维护 occurredAt，贴近生产口径。
@@ -79,19 +81,21 @@ void main() {
       ReviewTaskStatus.done => completedAt ?? scheduledDate,
       ReviewTaskStatus.skipped => skippedAt ?? scheduledDate,
     };
-    return db.into(db.reviewTasks).insert(
-      ReviewTasksCompanion.insert(
-        learningItemId: learningItemId,
-        reviewRound: reviewRound,
-        scheduledDate: scheduledDate,
-        occurredAt: drift.Value(occurredAt),
-        status: drift.Value(status.toDbValue()),
-        completedAt: drift.Value(completedAt),
-        skippedAt: drift.Value(skippedAt),
-        createdAt: drift.Value(scheduledDate),
-        updatedAt: drift.Value(occurredAt),
-      ),
-    );
+    return db
+        .into(db.reviewTasks)
+        .insert(
+          ReviewTasksCompanion.insert(
+            learningItemId: learningItemId,
+            reviewRound: reviewRound,
+            scheduledDate: scheduledDate,
+            occurredAt: drift.Value(occurredAt),
+            status: drift.Value(status.toDbValue()),
+            completedAt: drift.Value(completedAt),
+            skippedAt: drift.Value(skippedAt),
+            createdAt: drift.Value(scheduledDate),
+            updatedAt: drift.Value(occurredAt),
+          ),
+        );
   }
 
   group('任务中心主链路', () {
@@ -208,9 +212,9 @@ void main() {
         await tester.pumpAndSettle();
         expect(find.text('已完成'), findsAtLeastNWidgets(1));
 
-        await harness.container.read(taskHubProvider.notifier).undoTaskStatus(
-          todayTaskId,
-        );
+        await harness.container
+            .read(taskHubProvider.notifier)
+            .undoTaskStatus(todayTaskId);
         await tester.pumpAndSettle();
 
         expect(find.text('今天待复习任务（第1次）'), findsOneWidget);
@@ -314,13 +318,15 @@ void main() {
         await tester.pumpAndSettle();
         expect(find.text('当天待复习'), findsOneWidget);
 
-        await container.read(calendarProvider.notifier).completeTask(pendingTaskId);
+        await container
+            .read(calendarProvider.notifier)
+            .completeTask(pendingTaskId);
         await tester.pumpAndSettle();
         expect(find.text('已完成'), findsAtLeastNWidgets(1));
 
-        await container.read(calendarProvider.notifier).undoTaskStatus(
-          pendingTaskId,
-        );
+        await container
+            .read(calendarProvider.notifier)
+            .undoTaskStatus(pendingTaskId);
         await tester.pumpAndSettle();
         expect(find.text('完成'), findsWidgets);
 

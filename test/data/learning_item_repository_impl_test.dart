@@ -184,43 +184,46 @@ void main() {
     );
   });
 
-  test('create/update/delete/updateNote/deactivate 在启用同步写入器时会写入 sync_logs', () async {
-    final syncRepo = LearningItemRepositoryImpl(
-      dao,
-      syncLogWriter: createSyncWriter(),
-    );
+  test(
+    'create/update/delete/updateNote/deactivate 在启用同步写入器时会写入 sync_logs',
+    () async {
+      final syncRepo = LearningItemRepositoryImpl(
+        dao,
+        syncLogWriter: createSyncWriter(),
+      );
 
-    final now = DateTime(2026, 2, 25, 10);
-    final created = await syncRepo.create(
-      LearningItemEntity(
-        uuid: testUuid(8),
-        title: 'T',
-        note: null,
-        tags: const ['a', 'b'],
-        learningDate: DateTime(2026, 2, 25),
-        createdAt: now,
-        updatedAt: now,
-      ),
-    );
+      final now = DateTime(2026, 2, 25, 10);
+      final created = await syncRepo.create(
+        LearningItemEntity(
+          uuid: testUuid(8),
+          title: 'T',
+          note: null,
+          tags: const ['a', 'b'],
+          learningDate: DateTime(2026, 2, 25),
+          createdAt: now,
+          updatedAt: now,
+        ),
+      );
 
-    await syncRepo.update(created.copyWith(title: 'T2'));
-    await syncRepo.updateNote(id: created.id!, note: '  '); // 会归一化为 null
-    await syncRepo.deactivate(created.id!);
-    await syncRepo.delete(created.id!);
+      await syncRepo.update(created.copyWith(title: 'T2'));
+      await syncRepo.updateNote(id: created.id!, note: '  '); // 会归一化为 null
+      await syncRepo.deactivate(created.id!);
+      await syncRepo.delete(created.id!);
 
-    final logs = await getSyncLogs();
-    final operations = logs.map((e) => e.operation).toList();
-    expect(operations, contains('create'));
-    expect(operations, contains('update'));
-    expect(operations, contains('delete'));
+      final logs = await getSyncLogs();
+      final operations = logs.map((e) => e.operation).toList();
+      expect(operations, contains('create'));
+      expect(operations, contains('update'));
+      expect(operations, contains('delete'));
 
-    // 额外校验：学习内容 create 的 data 字段应包含 tags（List<String>），避免串行化丢失。
-    final createLog = logs.firstWhere(
-      (e) => e.entityType == 'learning_item' && e.operation == 'create',
-    );
-    final data = jsonDecode(createLog.data) as Map<String, dynamic>;
-    expect(data['tags'], isA<List<dynamic>>());
-  });
+      // 额外校验：学习内容 create 的 data 字段应包含 tags（List<String>），避免串行化丢失。
+      final createLog = logs.firstWhere(
+        (e) => e.entityType == 'learning_item' && e.operation == 'create',
+      );
+      final data = jsonDecode(createLog.data) as Map<String, dynamic>;
+      expect(data['tags'], isA<List<dynamic>>());
+    },
+  );
 
   test('Mock 数据不会写入 delete 日志（v3.1）', () async {
     final syncRepo = LearningItemRepositoryImpl(

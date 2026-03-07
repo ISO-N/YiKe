@@ -63,9 +63,9 @@ void main() {
         overrides: <Override>[appDatabaseProvider.overrideWithValue(db)],
       );
       addTearDown(seedContainer.dispose);
-      final topic = await seedContainer.read(manageTopicUseCaseProvider).create(
-        const TopicParams(name: '编程主题', description: '测试主题'),
-      );
+      final topic = await seedContainer
+          .read(manageTopicUseCaseProvider)
+          .create(const TopicParams(name: '编程主题', description: '测试主题'));
 
       await pumpPage(tester);
 
@@ -109,17 +109,21 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 800));
 
-      final items = await container.read(learningItemRepositoryProvider).getAll();
-      expect(items.map((item) => item.title), containsAll(<String>[
-        'Riverpod 状态管理',
-        'GoRouter 深链',
-      ]));
+      final items = await container
+          .read(learningItemRepositoryProvider)
+          .getAll();
+      expect(
+        items.map((item) => item.title),
+        containsAll(<String>['Riverpod 状态管理', 'GoRouter 深链']),
+      );
 
-      final reloadedTopic = await container.read(manageTopicUseCaseProvider).getById(
-            topic.id!,
-          );
+      final reloadedTopic = await container
+          .read(manageTopicUseCaseProvider)
+          .getById(topic.id!);
       expect(reloadedTopic?.itemIds.length, 1);
-      final tasks = await container.read(reviewTaskRepositoryProvider).getAllTasks();
+      final tasks = await container
+          .read(reviewTaskRepositoryProvider)
+          .getAllTasks();
       expect(tasks.length, greaterThanOrEqualTo(20));
     });
 
@@ -353,7 +357,9 @@ void main() {
       );
       addTearDown(seedContainer.dispose);
 
-      await seedContainer.read(createLearningItemUseCaseProvider).execute(
+      await seedContainer
+          .read(createLearningItemUseCaseProvider)
+          .execute(
             CreateLearningItemParams(
               title: '标签种子',
               tags: const <String>['已有标签'],
@@ -366,9 +372,9 @@ void main() {
               ],
             ),
           );
-      await seedContainer.read(manageTopicUseCaseProvider).create(
-            const TopicParams(name: '可取消主题', description: '用于取消关联'),
-          );
+      await seedContainer
+          .read(manageTopicUseCaseProvider)
+          .create(const TopicParams(name: '可取消主题', description: '用于取消关联'));
 
       await pumpPage(tester);
 
@@ -422,7 +428,10 @@ void main() {
       await tester.tap(find.text('去设置'));
       await tester.pumpAndSettle();
 
-      expect(fakePermissionPlatform.requestedPermissions, contains(Permission.camera));
+      expect(
+        fakePermissionPlatform.requestedPermissions,
+        contains(Permission.camera),
+      );
       expect(fakePermissionPlatform.openSettingsCalled, isTrue);
     });
 

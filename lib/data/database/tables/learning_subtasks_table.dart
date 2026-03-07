@@ -26,10 +26,9 @@ class LearningSubtasks extends Table {
   /// 说明：
   /// - 用于备份合并去重、跨设备映射的稳定 key
   /// - 插入时自动生成，避免空字符串触发唯一约束冲突
-  TextColumn get uuid =>
-      text()
-          .withLength(min: 1, max: 36)
-          .clientDefault(() => const Uuid().v4())();
+  TextColumn get uuid => text()
+      .withLength(min: 1, max: 36)
+      .clientDefault(() => const Uuid().v4())();
 
   /// 外键：关联的学习内容 ID（删除学习内容时级联删除）。
   IntColumn get learningItemId =>
@@ -57,4 +56,3 @@ class LearningSubtasks extends Table {
     {uuid},
   ];
 }
-

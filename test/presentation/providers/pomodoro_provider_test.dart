@@ -42,9 +42,13 @@ void main() {
     return ProviderContainer(
       overrides: [
         appDatabaseProvider.overrideWithValue(db),
-        pomodoroSettingsRepositoryProvider.overrideWithValue(settingsRepository),
+        pomodoroSettingsRepositoryProvider.overrideWithValue(
+          settingsRepository,
+        ),
         pomodoroClockProvider.overrideWithValue(() => fakeNow),
-        pomodoroPhaseNotificationSenderProvider.overrideWithValue((phase) async {
+        pomodoroPhaseNotificationSenderProvider.overrideWithValue((
+          phase,
+        ) async {
           notifications.add(phase);
         }),
       ],
@@ -73,10 +77,12 @@ void main() {
       'pomodoro_timer.remaining_seconds': 1500,
       'pomodoro_timer.completed_rounds': 0,
       'pomodoro_timer.elapsed_seconds_before_run': 0,
-      'pomodoro_timer.phase_started_at_ms':
-          fakeNow.subtract(const Duration(minutes: 25)).millisecondsSinceEpoch,
-      'pomodoro_timer.last_resumed_at_ms':
-          fakeNow.subtract(const Duration(minutes: 25)).millisecondsSinceEpoch,
+      'pomodoro_timer.phase_started_at_ms': fakeNow
+          .subtract(const Duration(minutes: 25))
+          .millisecondsSinceEpoch,
+      'pomodoro_timer.last_resumed_at_ms': fakeNow
+          .subtract(const Duration(minutes: 25))
+          .millisecondsSinceEpoch,
     });
 
     final container = createContainer();
@@ -121,10 +127,12 @@ void main() {
       'pomodoro_timer.remaining_seconds': 300,
       'pomodoro_timer.completed_rounds': 1,
       'pomodoro_timer.elapsed_seconds_before_run': 0,
-      'pomodoro_timer.phase_started_at_ms':
-          fakeNow.subtract(const Duration(minutes: 5)).millisecondsSinceEpoch,
-      'pomodoro_timer.last_resumed_at_ms':
-          fakeNow.subtract(const Duration(minutes: 5)).millisecondsSinceEpoch,
+      'pomodoro_timer.phase_started_at_ms': fakeNow
+          .subtract(const Duration(minutes: 5))
+          .millisecondsSinceEpoch,
+      'pomodoro_timer.last_resumed_at_ms': fakeNow
+          .subtract(const Duration(minutes: 5))
+          .millisecondsSinceEpoch,
     });
 
     final container = createContainer();
@@ -242,10 +250,12 @@ void main() {
       'pomodoro_timer.remaining_seconds': 1500,
       'pomodoro_timer.completed_rounds': 0,
       'pomodoro_timer.elapsed_seconds_before_run': 0,
-      'pomodoro_timer.phase_started_at_ms':
-          fakeNow.subtract(const Duration(minutes: 25)).millisecondsSinceEpoch,
-      'pomodoro_timer.last_resumed_at_ms':
-          fakeNow.subtract(const Duration(minutes: 25)).millisecondsSinceEpoch,
+      'pomodoro_timer.phase_started_at_ms': fakeNow
+          .subtract(const Duration(minutes: 25))
+          .millisecondsSinceEpoch,
+      'pomodoro_timer.last_resumed_at_ms': fakeNow
+          .subtract(const Duration(minutes: 25))
+          .millisecondsSinceEpoch,
     });
 
     final container = createContainer();
@@ -271,10 +281,12 @@ void main() {
       'pomodoro_timer.remaining_seconds': 300,
       'pomodoro_timer.completed_rounds': 1,
       'pomodoro_timer.elapsed_seconds_before_run': 0,
-      'pomodoro_timer.phase_started_at_ms':
-          fakeNow.subtract(const Duration(minutes: 5)).millisecondsSinceEpoch,
-      'pomodoro_timer.last_resumed_at_ms':
-          fakeNow.subtract(const Duration(minutes: 5)).millisecondsSinceEpoch,
+      'pomodoro_timer.phase_started_at_ms': fakeNow
+          .subtract(const Duration(minutes: 5))
+          .millisecondsSinceEpoch,
+      'pomodoro_timer.last_resumed_at_ms': fakeNow
+          .subtract(const Duration(minutes: 5))
+          .millisecondsSinceEpoch,
     });
 
     final container = createContainer();

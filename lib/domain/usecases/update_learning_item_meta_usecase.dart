@@ -51,7 +51,10 @@ class UpdateLearningItemMetaUseCase {
     // 关键逻辑：标签归一化（trim/过滤空值/去重），避免 UI 输入差异导致无意义的重复更新。
     final normalizedTags = _normalizeTags(tags);
 
-    final next = existing.copyWith(title: normalizedTitle, tags: normalizedTags);
+    final next = existing.copyWith(
+      title: normalizedTitle,
+      tags: normalizedTags,
+    );
     await _learningItemRepository.update(next);
   }
 

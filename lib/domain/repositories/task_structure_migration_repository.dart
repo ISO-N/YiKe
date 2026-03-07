@@ -49,4 +49,3 @@ abstract class TaskStructureMigrationRepository {
     required List<String> migratedSubtasks,
   });
 }
-

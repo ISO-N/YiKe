@@ -540,10 +540,7 @@ WHERE rt.is_mock_data = 0
         ...normalized.data.learningSubtasks,
         ...migratedSubtasks,
       ];
-      await _upsertLearningSubtasks(
-        mergedSubtasks,
-        itemUuidToId: itemUuidToId,
-      );
+      await _upsertLearningSubtasks(mergedSubtasks, itemUuidToId: itemUuidToId);
       cancelToken.throwIfCanceled();
 
       // 2) review_tasks
@@ -821,7 +818,8 @@ WHERE rt.is_mock_data = 0
   /// 返回值：
   /// - itemUuid → localId 映射（用于外键修复）
   /// - 由 note 迁移生成的子任务列表（用于后续写入 learning_subtasks）
-  Future<(Map<String, int>, List<BackupLearningSubtaskEntity>)> _upsertLearningItems(
+  Future<(Map<String, int>, List<BackupLearningSubtaskEntity>)>
+  _upsertLearningItems(
     List<BackupLearningItemEntity> items, {
     required Set<String> hasSubtasksFromBackup,
   }) async {
@@ -850,8 +848,8 @@ WHERE rt.is_mock_data = 0
 
       final effectiveDescription =
           (item.description?.trim().isNotEmpty ?? false)
-              ? item.description?.trim()
-              : migration?.description?.trim();
+          ? item.description?.trim()
+          : migration?.description?.trim();
       final effectiveNote = migration == null ? item.note : null;
 
       if (migration != null && migration.subtasks.isNotEmpty) {
@@ -949,7 +947,9 @@ WHERE rt.is_mock_data = 0
           LearningSubtasksCompanion(
             content: Value(subtask.content),
             sortOrder: Value(subtask.sortOrder),
-            updatedAt: updatedAt != null ? Value(updatedAt) : const Value.absent(),
+            updatedAt: updatedAt != null
+                ? Value(updatedAt)
+                : const Value.absent(),
             isMockData: const Value(false),
           ),
         );
@@ -959,17 +959,21 @@ WHERE rt.is_mock_data = 0
           throw const FormatException('备份文件格式无效');
         }
 
-        await _db.into(_db.learningSubtasks).insert(
-          LearningSubtasksCompanion.insert(
-            uuid: Value(subtask.uuid),
-            learningItemId: itemId,
-            content: subtask.content,
-            sortOrder: Value(subtask.sortOrder),
-            createdAt: createdAt,
-            updatedAt: updatedAt != null ? Value(updatedAt) : const Value.absent(),
-            isMockData: const Value(false),
-          ),
-        );
+        await _db
+            .into(_db.learningSubtasks)
+            .insert(
+              LearningSubtasksCompanion.insert(
+                uuid: Value(subtask.uuid),
+                learningItemId: itemId,
+                content: subtask.content,
+                sortOrder: Value(subtask.sortOrder),
+                createdAt: createdAt,
+                updatedAt: updatedAt != null
+                    ? Value(updatedAt)
+                    : const Value.absent(),
+                isMockData: const Value(false),
+              ),
+            );
       }
     }
   }

@@ -94,7 +94,8 @@ void main() {
     });
 
     testWidgets('解析失败时展示错误信息并允许重试', (tester) async {
-      final missingPath = '${Directory.systemTemp.path}${Platform.pathSeparator}missing.csv';
+      final missingPath =
+          '${Directory.systemTemp.path}${Platform.pathSeparator}missing.csv';
       fakePicker.nextResult = FilePickerResult(<PlatformFile>[
         PlatformFile(path: missingPath, name: 'missing.csv', size: 0),
       ]);

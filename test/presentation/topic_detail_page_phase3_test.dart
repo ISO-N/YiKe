@@ -18,10 +18,7 @@ void main() {
   late AppDatabase db;
   late ProviderContainer container;
 
-  Future<void> pumpPage(
-    WidgetTester tester, {
-    required int topicId,
-  }) async {
+  Future<void> pumpPage(WidgetTester tester, {required int topicId}) async {
     container = ProviderContainer(
       overrides: <Override>[appDatabaseProvider.overrideWithValue(db)],
     );
@@ -68,33 +65,51 @@ void main() {
       final topic = await useCase.create(
         const TopicParams(name: 'Phase3 主题', description: '用于详情页测试'),
       );
-      final itemA = await seedContainer.read(createLearningItemUseCaseProvider).execute(
-        CreateLearningItemParams(
-          title: '已完成内容',
-          description: '第一个内容',
-          reviewIntervals: <ReviewIntervalConfigEntity>[
-            ReviewIntervalConfigEntity(round: 1, intervalDays: 1, enabled: true),
-          ],
-        ),
-      );
-      final itemB = await seedContainer.read(createLearningItemUseCaseProvider).execute(
-        CreateLearningItemParams(
-          title: '待复习内容',
-          description: '第二个内容',
-          reviewIntervals: <ReviewIntervalConfigEntity>[
-            ReviewIntervalConfigEntity(round: 1, intervalDays: 1, enabled: true),
-          ],
-        ),
-      );
-      final itemC = await seedContainer.read(createLearningItemUseCaseProvider).execute(
-        CreateLearningItemParams(
-          title: '待添加内容',
-          description: '第三个内容',
-          reviewIntervals: <ReviewIntervalConfigEntity>[
-            ReviewIntervalConfigEntity(round: 1, intervalDays: 1, enabled: true),
-          ],
-        ),
-      );
+      final itemA = await seedContainer
+          .read(createLearningItemUseCaseProvider)
+          .execute(
+            CreateLearningItemParams(
+              title: '已完成内容',
+              description: '第一个内容',
+              reviewIntervals: <ReviewIntervalConfigEntity>[
+                ReviewIntervalConfigEntity(
+                  round: 1,
+                  intervalDays: 1,
+                  enabled: true,
+                ),
+              ],
+            ),
+          );
+      final itemB = await seedContainer
+          .read(createLearningItemUseCaseProvider)
+          .execute(
+            CreateLearningItemParams(
+              title: '待复习内容',
+              description: '第二个内容',
+              reviewIntervals: <ReviewIntervalConfigEntity>[
+                ReviewIntervalConfigEntity(
+                  round: 1,
+                  intervalDays: 1,
+                  enabled: true,
+                ),
+              ],
+            ),
+          );
+      final itemC = await seedContainer
+          .read(createLearningItemUseCaseProvider)
+          .execute(
+            CreateLearningItemParams(
+              title: '待添加内容',
+              description: '第三个内容',
+              reviewIntervals: <ReviewIntervalConfigEntity>[
+                ReviewIntervalConfigEntity(
+                  round: 1,
+                  intervalDays: 1,
+                  enabled: true,
+                ),
+              ],
+            ),
+          );
 
       await useCase.addItemToTopic(topic.id!, itemA.item.id!);
       await useCase.addItemToTopic(topic.id!, itemB.item.id!);
@@ -124,10 +139,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('添加'));
       await tester.pumpAndSettle();
-      await pumpUntil(
-        tester,
-        () => find.text('待添加内容').evaluate().isNotEmpty,
-      );
+      await pumpUntil(tester, () => find.text('待添加内容').evaluate().isNotEmpty);
       expect(find.textContaining('3 条内容'), findsOneWidget);
 
       await tester.drag(find.text('待复习内容'), const Offset(-500, 0));
@@ -135,16 +147,16 @@ void main() {
       expect(find.text('移除关联'), findsOneWidget);
       await tester.tap(find.text('移除'));
       await tester.pumpAndSettle();
-      await pumpUntil(
-        tester,
-        () => find.text('待复习内容').evaluate().isEmpty,
-      );
+      await pumpUntil(tester, () => find.text('待复习内容').evaluate().isEmpty);
       expect(find.text('待复习内容'), findsNothing);
 
-      final reloadedTopic = await container.read(manageTopicUseCaseProvider).getById(
-            topic.id!,
-          );
-      expect(reloadedTopic?.itemIds, containsAll(<int>[itemA.item.id!, itemC.item.id!]));
+      final reloadedTopic = await container
+          .read(manageTopicUseCaseProvider)
+          .getById(topic.id!);
+      expect(
+        reloadedTopic?.itemIds,
+        containsAll(<int>[itemA.item.id!, itemC.item.id!]),
+      );
       expect(reloadedTopic?.itemIds, isNot(contains(itemB.item.id!)));
     });
 

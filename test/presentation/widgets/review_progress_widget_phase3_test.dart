@@ -37,9 +37,7 @@ void main() {
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
-        child: const MaterialApp(
-          home: Scaffold(body: ReviewProgressWidget()),
-        ),
+        child: const MaterialApp(home: Scaffold(body: ReviewProgressWidget())),
       ),
     );
     await tester.pump();
@@ -72,9 +70,7 @@ void main() {
     });
 
     testWidgets('loading -> data 会渲染进度并支持展开详情', (tester) async {
-      final progressStateProvider = StateProvider<(int, int)>(
-        (ref) => (0, 0),
-      );
+      final progressStateProvider = StateProvider<(int, int)>((ref) => (0, 0));
       final fakeStats = _FakeStatisticsNotifier(StatisticsState.initial());
 
       final container = ProviderContainer(

@@ -30,7 +30,9 @@ class LearningSubtaskRepositoryImpl implements LearningSubtaskRepository {
   static const Uuid _uuid = Uuid();
 
   @override
-  Future<List<LearningSubtaskEntity>> getByLearningItemId(int learningItemId) async {
+  Future<List<LearningSubtaskEntity>> getByLearningItemId(
+    int learningItemId,
+  ) async {
     final rows = await dao.getByLearningItemId(learningItemId);
     return rows.map(_toEntity).toList();
   }
@@ -46,8 +48,9 @@ class LearningSubtaskRepositoryImpl implements LearningSubtaskRepository {
   @override
   Future<LearningSubtaskEntity> create(LearningSubtaskEntity subtask) async {
     final now = DateTime.now();
-    final ensuredUuid =
-        subtask.uuid.trim().isEmpty ? _uuid.v4() : subtask.uuid.trim();
+    final ensuredUuid = subtask.uuid.trim().isEmpty
+        ? _uuid.v4()
+        : subtask.uuid.trim();
 
     final id = await dao.insertSubtask(
       LearningSubtasksCompanion.insert(
@@ -161,9 +164,9 @@ class LearningSubtaskRepositoryImpl implements LearningSubtaskRepository {
   @override
   Future<void> delete(int id) async {
     // 读取一次用于判定是否为 Mock 数据与补齐同步事件字段。
-    final row = await (dao.db.select(dao.db.learningSubtasks)
-          ..where((t) => t.id.equals(id)))
-        .getSingleOrNull();
+    final row = await (dao.db.select(
+      dao.db.learningSubtasks,
+    )..where((t) => t.id.equals(id))).getSingleOrNull();
     if (row == null) return;
 
     final isMockData = row.isMockData;

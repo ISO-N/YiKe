@@ -11,4 +11,3 @@ String testUuid([int seed = 1]) {
   final tail = seed.toString().padLeft(12, '0');
   return '00000000-0000-4000-8000-$tail';
 }
-

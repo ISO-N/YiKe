@@ -28,7 +28,9 @@ class _DelayingCreateLearningItemUseCase implements CreateLearningItemUseCase {
   bool _delayedOnce = false;
 
   @override
-  Future<CreateLearningItemResult> execute(CreateLearningItemParams params) async {
+  Future<CreateLearningItemResult> execute(
+    CreateLearningItemParams params,
+  ) async {
     // 首次保存做延迟：覆盖 InputPage 的 saving 遮罩。
     if (!_delayedOnce) {
       _delayedOnce = true;
@@ -87,7 +89,9 @@ void main() {
         createLearningItemUseCaseProvider.overrideWith((ref) {
           final delegate = CreateLearningItemUseCase(
             learningItemRepository: ref.read(learningItemRepositoryProvider),
-            learningSubtaskRepository: ref.read(learningSubtaskRepositoryProvider),
+            learningSubtaskRepository: ref.read(
+              learningSubtaskRepositoryProvider,
+            ),
             reviewTaskRepository: ref.read(reviewTaskRepositoryProvider),
           );
           return _DelayingCreateLearningItemUseCase(
@@ -99,7 +103,9 @@ void main() {
     );
 
     // 预置一个主题，供“添加到主题”选择。
-    await container.read(manageTopicUseCaseProvider).create(
+    await container
+        .read(manageTopicUseCaseProvider)
+        .create(
           const TopicParams(name: '测试主题', description: '用于触发 addItemToTopic'),
         );
 
@@ -112,9 +118,7 @@ void main() {
               // 说明：将 InputPage 作为二级路由打开，便于使用 pageBack 触发 PopScope 拦截逻辑。
               WidgetsBinding.instance.addPostFrameCallback((_) {
                 Navigator.of(context).push<void>(
-                  MaterialPageRoute<void>(
-                    builder: (_) => const InputPage(),
-                  ),
+                  MaterialPageRoute<void>(builder: (_) => const InputPage()),
                 );
               });
               return const Scaffold(body: Text('根页面'));
@@ -133,10 +137,7 @@ void main() {
       await pumpPage(tester, saveGate: gate);
 
       // 第一条：可保存 + 选择主题（但关联主题会失败，进入 errors 列表）。
-      await tester.enterText(
-        find.widgetWithText(TextField, '标题（必填）'),
-        '成功条目',
-      );
+      await tester.enterText(find.widgetWithText(TextField, '标题（必填）'), '成功条目');
       await tester.tap(find.text('添加到主题'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('测试主题'));

@@ -37,14 +37,14 @@ class CsvExportUtils {
 
     final days = end.difference(start).inDays;
     for (var i = 0; i < days; i++) {
-      final day = DateTime(start.year, start.month, start.day).add(
-        Duration(days: i),
-      );
-      final stats = statsByDay[day] ?? const TaskDayStats(
-        pendingCount: 0,
-        doneCount: 0,
-        skippedCount: 0,
-      );
+      final day = DateTime(
+        start.year,
+        start.month,
+        start.day,
+      ).add(Duration(days: i));
+      final stats =
+          statsByDay[day] ??
+          const TaskDayStats(pendingCount: 0, doneCount: 0, skippedCount: 0);
 
       final completed = stats.doneCount;
       final skipped = stats.skippedCount;
@@ -82,4 +82,3 @@ class CsvExportUtils {
   /// 将 CSV 文本编码为 UTF-8 bytes（无 BOM）。
   static List<int> toUtf8Bytes(String csvText) => utf8.encode(csvText);
 }
-

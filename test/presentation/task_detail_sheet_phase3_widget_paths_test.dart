@@ -65,10 +65,9 @@ class _TestTaskDetailNotifier extends TaskDetailNotifier {
   }) async {
     final current = state.item;
     if (current == null) return;
-    final nextTopics =
-        state.topics
-            .where((t) => t.id != null && topicIds.contains(t.id))
-            .toList();
+    final nextTopics = state.topics
+        .where((t) => t.id != null && topicIds.contains(t.id))
+        .toList();
     state = state.copyWith(
       item: current.copyWith(title: title, tags: tags),
       topics: nextTopics,
@@ -207,7 +206,10 @@ void main() {
       );
       expect(infoCard, findsOneWidget);
       await tester.tap(
-        find.descendant(of: infoCard, matching: find.widgetWithText(OutlinedButton, '编辑')),
+        find.descendant(
+          of: infoCard,
+          matching: find.widgetWithText(OutlinedButton, '编辑'),
+        ),
       );
       await tester.pumpAndSettle();
       expect(find.text('编辑基本信息'), findsOneWidget);

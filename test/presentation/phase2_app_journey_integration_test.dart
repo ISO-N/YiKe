@@ -43,17 +43,17 @@ void main() {
     await tester.pumpAndSettle();
 
     final homeState = harness.container.read(homeTasksProvider);
-    expect(
-      homeState.todayPending.any((task) => task.title == title),
-      isTrue,
-    );
+    expect(homeState.todayPending.any((task) => task.title == title), isTrue);
 
-    await harness.container.read(calendarProvider.notifier).selectDay(DateTime.now());
+    await harness.container
+        .read(calendarProvider.notifier)
+        .selectDay(DateTime.now());
     await tester.pumpAndSettle();
     expect(
-      harness.container.read(calendarProvider).selectedDayTasks.any(
-        (task) => task.title == title,
-      ),
+      harness.container
+          .read(calendarProvider)
+          .selectedDayTasks
+          .any((task) => task.title == title),
       isTrue,
     );
   });
@@ -81,20 +81,18 @@ void main() {
         .firstWhere((task) => task.title == title)
         .taskId;
 
-    await harness.container.read(homeTasksProvider.notifier).completeTask(taskId);
+    await harness.container
+        .read(homeTasksProvider.notifier)
+        .completeTask(taskId);
     await tester.pumpAndSettle();
 
     final homeState = harness.container.read(homeTasksProvider);
-    expect(
-      homeState.todayCompleted.any((task) => task.title == title),
-      isTrue,
-    );
-    expect(
-      homeState.todayPending.any((task) => task.title == title),
-      isFalse,
-    );
+    expect(homeState.todayCompleted.any((task) => task.title == title), isTrue);
+    expect(homeState.todayPending.any((task) => task.title == title), isFalse);
 
-    await harness.container.read(calendarProvider.notifier).selectDay(DateTime.now());
+    await harness.container
+        .read(calendarProvider.notifier)
+        .selectDay(DateTime.now());
     await tester.pumpAndSettle();
     final calendarTask = harness.container
         .read(calendarProvider)
@@ -133,42 +131,49 @@ void main() {
     await harness.container.read(homeTasksProvider.notifier).skipTask(taskId);
     await tester.pumpAndSettle();
     expect(
-      harness.container.read(homeTasksProvider).todaySkipped.any(
-        (task) => task.title == title,
-      ),
+      harness.container
+          .read(homeTasksProvider)
+          .todaySkipped
+          .any((task) => task.title == title),
       isTrue,
     );
 
-    await harness.container.read(calendarProvider.notifier).selectDay(DateTime.now());
+    await harness.container
+        .read(calendarProvider.notifier)
+        .selectDay(DateTime.now());
     await tester.pumpAndSettle();
     expect(
-      harness.container.read(calendarProvider).selectedDayTasks.any(
-        (task) =>
-            task.title == title && task.status == ReviewTaskStatus.skipped,
-      ),
+      harness.container
+          .read(calendarProvider)
+          .selectedDayTasks
+          .any(
+            (task) =>
+                task.title == title && task.status == ReviewTaskStatus.skipped,
+          ),
       isTrue,
     );
 
-    await harness.container.read(homeTasksProvider.notifier).undoTaskStatus(taskId);
+    await harness.container
+        .read(homeTasksProvider.notifier)
+        .undoTaskStatus(taskId);
     await tester.pumpAndSettle();
 
     final homeState = harness.container.read(homeTasksProvider);
-    expect(
-      homeState.todayPending.any((task) => task.title == title),
-      isTrue,
-    );
-    expect(
-      homeState.todaySkipped.any((task) => task.title == title),
-      isFalse,
-    );
+    expect(homeState.todayPending.any((task) => task.title == title), isTrue);
+    expect(homeState.todaySkipped.any((task) => task.title == title), isFalse);
 
-    await harness.container.read(calendarProvider.notifier).selectDay(DateTime.now());
+    await harness.container
+        .read(calendarProvider.notifier)
+        .selectDay(DateTime.now());
     await tester.pumpAndSettle();
     expect(
-      harness.container.read(calendarProvider).selectedDayTasks.any(
-        (task) =>
-            task.title == title && task.status == ReviewTaskStatus.pending,
-      ),
+      harness.container
+          .read(calendarProvider)
+          .selectedDayTasks
+          .any(
+            (task) =>
+                task.title == title && task.status == ReviewTaskStatus.pending,
+          ),
       isTrue,
     );
   });
@@ -210,16 +215,17 @@ void main() {
     expect(find.textContaining('保存成功：2 条'), findsOneWidget);
 
     final homeState = harness.container.read(homeTasksProvider);
-    final allItems = await harness.container.read(learningItemRepositoryProvider).getAll();
-    final allTasks = await harness.container.read(reviewTaskRepositoryProvider).getAllTasks();
+    final allItems = await harness.container
+        .read(learningItemRepositoryProvider)
+        .getAll();
+    final allTasks = await harness.container
+        .read(reviewTaskRepositoryProvider)
+        .getAllTasks();
     expect(
       allItems.map((item) => item.title),
       containsAll(<String>['导入条目一', '导入条目二']),
     );
-    expect(
-      allTasks.length,
-      20,
-    );
+    expect(allTasks.length, 20);
     expect(homeState.errorMessage, isNull);
   });
 }

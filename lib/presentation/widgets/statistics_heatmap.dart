@@ -77,15 +77,14 @@ class _StatisticsHeatmapState extends ConsumerState<StatisticsHeatmap> {
                 isLoading: true,
                 strategy: skeletonStrategy,
                 skeleton: const SkeletonShimmer(child: _HeatmapSkeleton()),
-                child:
-                    skeletonStrategy == 'off'
-                        ? const Center(
-                            child: Padding(
-                              padding: EdgeInsets.all(12),
-                              child: CircularProgressIndicator(),
-                            ),
-                          )
-                        : const SizedBox.shrink(),
+                child: skeletonStrategy == 'off'
+                    ? const Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(12),
+                          child: CircularProgressIndicator(),
+                        ),
+                      )
+                    : const SizedBox.shrink(),
               ),
               error: (e, _) => Padding(
                 padding: const EdgeInsets.symmetric(vertical: 12),
@@ -121,11 +120,7 @@ class _HeatmapSkeleton extends StatelessWidget {
                 children: List<Widget>.generate(7, (j) {
                   return Padding(
                     padding: EdgeInsets.only(bottom: j == 6 ? 0 : 2),
-                    child: const SkeletonBox(
-                      width: 12,
-                      height: 12,
-                      radius: 3,
-                    ),
+                    child: const SkeletonBox(width: 12, height: 12, radius: 3),
                   );
                 }),
               ),
@@ -154,9 +149,9 @@ class _HeatmapGrid extends StatelessWidget {
     final colors = _palette(
       seed: primary,
       isDark: isDark,
-      emptyColor: Theme.of(context).dividerColor.withValues(
-        alpha: isDark ? 0.18 : 0.12,
-      ),
+      emptyColor: Theme.of(
+        context,
+      ).dividerColor.withValues(alpha: isDark ? 0.18 : 0.12),
     );
 
     final yearStart = DateTime(year, 1, 1);
@@ -175,7 +170,9 @@ class _HeatmapGrid extends StatelessWidget {
         children: List<Widget>.generate(weekCount, (weekIndex) {
           final weekStart = start.add(Duration(days: weekIndex * 7));
           return Padding(
-            padding: EdgeInsets.only(right: weekIndex == weekCount - 1 ? 0 : _gap),
+            padding: EdgeInsets.only(
+              right: weekIndex == weekCount - 1 ? 0 : _gap,
+            ),
             child: Column(
               children: List<Widget>.generate(7, (dayIndex) {
                 final day = weekStart.add(Duration(days: dayIndex));

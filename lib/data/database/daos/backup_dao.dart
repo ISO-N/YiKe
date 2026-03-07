@@ -49,7 +49,8 @@ class BackupDao {
   }
 
   /// 读取可导出的学习子任务（默认排除 Mock 数据），并将外键转为 uuid（learningItemUuid）。
-  Future<List<BackupLearningSubtaskEntity>> getLearningSubtasksForBackup() async {
+  Future<List<BackupLearningSubtaskEntity>>
+  getLearningSubtasksForBackup() async {
     final query = db.select(db.learningSubtasks).join([
       innerJoin(
         db.learningItems,

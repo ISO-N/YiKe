@@ -18,12 +18,10 @@ class LearningTopics extends Table {
   /// 说明：
   /// - 用于备份/恢复的合并去重（避免 id 冲突）
   /// - 迁移时会通过 SQL 为历史库补齐该列并回填为真实 UUID，再建立唯一索引
-  TextColumn get uuid =>
-      text()
-          .withLength(min: 1, max: 36)
-          // 关键逻辑：插入时自动生成 uuid，避免默认空字符串触发唯一索引冲突。
-          .clientDefault(() => const Uuid().v4())
-          ();
+  TextColumn get uuid => text()
+      .withLength(min: 1, max: 36)
+      // 关键逻辑：插入时自动生成 uuid，避免默认空字符串触发唯一索引冲突。
+      .clientDefault(() => const Uuid().v4())();
 
   /// 主题名称（必填，≤50）。
   TextColumn get name => text().withLength(min: 1, max: 50)();

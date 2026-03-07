@@ -342,8 +342,9 @@ class _DonutProgressRing extends StatelessWidget {
 
     // 关键逻辑：内圆底色与 GlassCard 保持一致，但略微提高不透明度，
     // 用于提升文字可读性，并形成明确的“内圆”视觉层次。
-    final innerFillColor = (isDark ? AppColors.darkGlassSurface : AppColors.glassSurface)
-        .withValues(alpha: isDark ? 0.90 : 0.92);
+    final innerFillColor =
+        (isDark ? AppColors.darkGlassSurface : AppColors.glassSurface)
+            .withValues(alpha: isDark ? 0.90 : 0.92);
 
     // 关键逻辑：使用自绘（CustomPainter）替代 CircularProgressIndicator + Stack。
     // 原因：在 Android “粗体文本”/字体度量变化时，Stack 的中心文字即便不 overflow，
@@ -434,7 +435,10 @@ class _DonutProgressRingPainter extends CustomPainter {
     // 3) 内圆：严格小于圆环内侧边缘，避免覆盖进度环导致“变淡/变薄”。
     // 圆环内侧半径约为 ringRadius - strokeWidth / 2；
     // 再减去 1.5px 作为抗锯齿缓冲，保证边缘干净。
-    final innerRadius = (ringRadius - strokeWidth / 2 - 1.5).clamp(0.0, ringRadius);
+    final innerRadius = (ringRadius - strokeWidth / 2 - 1.5).clamp(
+      0.0,
+      ringRadius,
+    );
     final innerPaint = Paint()
       ..style = PaintingStyle.fill
       ..color = innerFillColor
@@ -444,7 +448,10 @@ class _DonutProgressRingPainter extends CustomPainter {
     // 4) 文字：测量真实尺寸后按需缩放，确保始终落在内圆安全区内。
     // 关键逻辑：在“粗体文本”场景下，字形外扩更明显，因此安全边距取稍大值。
     final textSafePadding = 6.0;
-    final maxTextDiameter = (innerRadius * 2 - textSafePadding * 2).clamp(0.0, size.shortestSide);
+    final maxTextDiameter = (innerRadius * 2 - textSafePadding * 2).clamp(
+      0.0,
+      size.shortestSide,
+    );
 
     if (maxTextDiameter <= 0) return;
 
@@ -468,7 +475,9 @@ class _DonutProgressRingPainter extends CustomPainter {
     final textMaxSide = math.max(textWidth, textHeight);
 
     // 关键逻辑：仅在需要时缩小，避免小数字看起来过小。
-    final scale = textMaxSide <= 0 ? 1.0 : math.min(1.0, maxTextDiameter / textMaxSide);
+    final scale = textMaxSide <= 0
+        ? 1.0
+        : math.min(1.0, maxTextDiameter / textMaxSide);
 
     canvas.save();
     canvas.translate(center.dx, center.dy);

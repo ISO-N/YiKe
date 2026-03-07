@@ -40,10 +40,7 @@ class ReviewTaskTimelineItemEntity {
 /// 任务时间线分页结果。
 class TaskTimelinePageEntity {
   /// 构造函数。
-  const TaskTimelinePageEntity({
-    required this.items,
-    required this.nextCursor,
-  });
+  const TaskTimelinePageEntity({required this.items, required this.nextCursor});
 
   /// 当前页条目（已按发生时间正序排列）。
   final List<ReviewTaskTimelineItemEntity> items;
