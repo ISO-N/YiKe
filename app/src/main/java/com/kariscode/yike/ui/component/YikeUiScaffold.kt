@@ -703,9 +703,9 @@ private fun YikeBottomNavigation(
 ) {
     val navigationShape = RoundedCornerShape(22.dp)
     Surface(
-        tonalElevation = 0.dp,
-        shadowElevation = 0.dp,
-        color = Color.Transparent,
+        tonalElevation = 2.dp,
+        shadowElevation = 4.dp,
+        color = MaterialTheme.colorScheme.surface,
         modifier = modifier
             .fillMaxWidth()
             .border(
@@ -715,33 +715,24 @@ private fun YikeBottomNavigation(
             ),
         shape = navigationShape
     ) {
-        Box(modifier = Modifier.fillMaxWidth()) {
-            Box(
-                modifier = Modifier
-                    .matchParentSize()
-                    .clip(navigationShape)
-                    .yikeGlassBlur(radius = 18f)
-                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.48f))
-            )
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 8.dp, vertical = 4.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                YikePrimaryDestination.entries.forEach { destination ->
-                    val selected = destination == currentDestination
-                    TextButton(
-                        onClick = { onNavigate(destination) },
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(18.dp),
-                        colors = ButtonDefaults.textButtonColors(
-                            containerColor = if (selected) YikeSurfaceTint.copy(alpha = 0.28f) else Color.Transparent,
-                            contentColor = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    ) {
-                        Text(text = destination.label, fontWeight = FontWeight.SemiBold)
-                    }
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp, vertical = 4.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            YikePrimaryDestination.entries.forEach { destination ->
+                val selected = destination == currentDestination
+                TextButton(
+                    onClick = { onNavigate(destination) },
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(18.dp),
+                    colors = ButtonDefaults.textButtonColors(
+                        containerColor = if (selected) YikeSurfaceTint.copy(alpha = 0.28f) else Color.Transparent,
+                        contentColor = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                ) {
+                    Text(text = destination.label, fontWeight = FontWeight.SemiBold)
                 }
             }
         }
