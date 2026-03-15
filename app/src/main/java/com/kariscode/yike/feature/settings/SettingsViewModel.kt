@@ -120,30 +120,14 @@ class SettingsViewModel(
      * 时间修改后立即同步调度，能避免“设置已保存但旧任务仍按旧时间触发”的体验错位。
      */
     fun onReminderTimeConfirmed(hour: Int, minute: Int) {
-        viewModelScope.launch {
-            runCatching {
-                appSettingsRepository.setDailyReminderTime(hour, minute)
-                reminderScheduler.syncReminder(
-                    currentReminderSettings(
-                        hour = hour,
-                        minute = minute
-                    )
+        persistSettingsChange(successMessage = "提醒设置已保存") {
+            appSettingsRepository.setDailyReminderTime(hour, minute)
+            reminderScheduler.syncReminder(
+                currentReminderSettings(
+                    hour = hour,
+                    minute = minute
                 )
-            }.onSuccess {
-                _uiState.update {
-                    it.copy(
-                        message = "提醒设置已保存",
-                        errorMessage = null
-                    )
-                }
-            }.onFailure {
-                _uiState.update {
-                    it.copy(
-                        errorMessage = "设置保存失败，请稍后重试",
-                        message = null
-                    )
-                }
-            }
+            )
         }
     }
 
@@ -165,29 +149,42 @@ class SettingsViewModel(
      * 开关写入与提醒重建封装成一个入口，是为了保证成功与失败反馈都围绕同一条业务路径。
      */
     private fun persistReminderEnabled(enabled: Boolean, showPermissionWarning: Boolean) {
+        val successMessage = if (showPermissionWarning) {
+            "通知权限未开启，提醒可能无法显示"
+        } else {
+            "提醒设置已保存"
+        }
+        persistSettingsChange(successMessage = successMessage) {
+            appSettingsRepository.setDailyReminderEnabled(enabled)
+            reminderScheduler.syncReminder(currentReminderSettings(enabled = enabled))
+        }
+    }
+
+    /**
+     * 提醒写操作共享同一套反馈模板，是为了避免开关与时间修改的成功/失败提示逐渐漂移。
+     */
+    private fun persistSettingsChange(
+        successMessage: String,
+        action: suspend () -> Unit
+    ) {
         viewModelScope.launch {
-            runCatching {
-                appSettingsRepository.setDailyReminderEnabled(enabled)
-                reminderScheduler.syncReminder(currentReminderSettings(enabled = enabled))
-            }.onSuccess {
-                _uiState.update {
-                    it.copy(
-                        message = if (showPermissionWarning) {
-                            "通知权限未开启，提醒可能无法显示"
-                        } else {
-                            "提醒设置已保存"
-                        },
-                        errorMessage = null
-                    )
+            runCatching { action() }
+                .onSuccess {
+                    _uiState.update {
+                        it.copy(
+                            message = successMessage,
+                            errorMessage = null
+                        )
+                    }
                 }
-            }.onFailure {
-                _uiState.update {
-                    it.copy(
-                        message = null,
-                        errorMessage = "设置保存失败，请稍后重试"
-                    )
+                .onFailure {
+                    _uiState.update {
+                        it.copy(
+                            message = null,
+                            errorMessage = "设置保存失败，请稍后重试"
+                        )
+                    }
                 }
-            }
         }
     }
 

@@ -14,6 +14,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 
 /**
@@ -60,10 +62,12 @@ class HomeViewModel(
         _uiState.update { it.copy(isLoading = true, errorMessage = null) }
         viewModelScope.launch {
             runCatching {
-                val now = timeProvider.nowEpochMillis()
-                val summary = questionRepository.getTodayReviewSummary(now)
-                val recentDecks = deckRepository.observeActiveDeckSummaries(now).first().take(3)
-                summary to recentDecks
+                coroutineScope {
+                    val now = timeProvider.nowEpochMillis()
+                    val summary = async { questionRepository.getTodayReviewSummary(now) }
+                    val recentDecks = async { deckRepository.observeActiveDeckSummaries(now).first().take(3) }
+                    summary.await() to recentDecks.await()
+                }
             }.onSuccess { (summary, recentDecks) ->
                 _uiState.update {
                     it.copy(
