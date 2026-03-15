@@ -190,7 +190,7 @@ class CardListViewModel(
      * 归档用于默认列表过滤，以降低误删风险并保持内容可恢复。
      */
     fun onArchiveCardClick(item: CardSummary) {
-        viewModelScope.launch {
+        executeMutation(errorMessage = "卡片状态更新失败，请稍后重试") {
             val now = timeProvider.nowEpochMillis()
             cardRepository.setArchived(cardId = item.card.id, archived = !item.card.archived, updatedAt = now)
         }
@@ -215,7 +215,7 @@ class CardListViewModel(
      */
     fun onConfirmDelete() {
         val pending = _uiState.value.pendingDelete ?: return
-        viewModelScope.launch {
+        executeMutation(errorMessage = "卡片删除失败，请稍后重试") {
             cardRepository.delete(pending.card.id)
             _uiState.update { it.copy(pendingDelete = null, message = "卡片已删除", errorMessage = null) }
         }
@@ -241,6 +241,21 @@ class CardListViewModel(
         _uiState.update { state ->
             val editor = state.editor ?: return@update state
             state.copy(editor = transform(editor))
+        }
+    }
+
+    /**
+     * 列表页写操作统一经由同一失败反馈出口，是为了避免归档、删除等分支再次遗漏异常收口。
+     */
+    private fun executeMutation(
+        errorMessage: String,
+        action: suspend () -> Unit
+    ) {
+        viewModelScope.launch {
+            runCatching { action() }
+                .onFailure {
+                    _uiState.update { it.copy(message = null, errorMessage = errorMessage) }
+                }
         }
     }
 

@@ -81,10 +81,15 @@ class ReviewQueueViewModel(
      */
     private fun selectNextCardId(dueQuestions: List<Question>): String? {
         if (dueQuestions.isEmpty()) return null
-        return dueQuestions
-            .groupBy { it.cardId }
-            .minBy { (_, qs) -> qs.minOf { it.dueAt } }
-            .key
+        var nextCardId: String? = null
+        var earliestDueAt = Long.MAX_VALUE
+        dueQuestions.forEach { question ->
+            if (question.dueAt < earliestDueAt) {
+                earliestDueAt = question.dueAt
+                nextCardId = question.cardId
+            }
+        }
+        return nextCardId
     }
 
     companion object {
