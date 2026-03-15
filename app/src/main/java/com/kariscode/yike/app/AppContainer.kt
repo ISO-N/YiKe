@@ -7,6 +7,9 @@ import com.kariscode.yike.core.dispatchers.DefaultAppDispatchers
 import com.kariscode.yike.core.time.SystemTimeProvider
 import com.kariscode.yike.core.time.TimeProvider
 import com.kariscode.yike.data.local.db.YikeDatabase
+import com.kariscode.yike.data.settings.DataStoreAppSettingsRepository
+import com.kariscode.yike.data.settings.appSettingsDataStore
+import com.kariscode.yike.domain.repository.AppSettingsRepository
 
 /**
  * 首版采用手动装配依赖，目的是把“谁负责创建什么”集中到单一位置，
@@ -37,6 +40,16 @@ class AppContainer(
             YikeDatabase::class.java,
             "yike.db"
         ).build()
+    }
+
+    /**
+     * 设置仓储放在容器层创建，能保证全应用对默认值与读写路径的一致理解，
+     * 并为后续在写入后触发提醒重建提供单点入口。
+     */
+    val appSettingsRepository: AppSettingsRepository by lazy {
+        DataStoreAppSettingsRepository(
+            dataStore = application.appSettingsDataStore
+        )
     }
 
     /**
