@@ -69,9 +69,9 @@ fun YikeNavGraph(
 
             composable(
                 route = YikeDestination.CARD_LIST,
-                arguments = listOf(navArgument("deckId") { type = NavType.StringType })
+                arguments = listOf(navArgument(NavArguments.DECK_ID) { type = NavType.StringType })
             ) { entry ->
-                val deckId = entry.requireStringArg("deckId")
+                val deckId = entry.requireStringArg(NavArguments.DECK_ID)
                 CardListScreen(
                     deckId = deckId,
                     onBack = { navController.popBackStack() },
@@ -84,16 +84,16 @@ fun YikeNavGraph(
             composable(
                 route = YikeDestination.QUESTION_EDITOR,
                 arguments = listOf(
-                    navArgument("cardId") { type = NavType.StringType },
-                    navArgument("deckId") {
+                    navArgument(NavArguments.CARD_ID) { type = NavType.StringType },
+                    navArgument(NavArguments.DECK_ID) {
                         type = NavType.StringType
                         nullable = true
                         defaultValue = null
                     }
                 )
             ) { entry ->
-                val cardId = entry.requireStringArg("cardId")
-                val deckId = entry.optionalStringArg("deckId")
+                val cardId = entry.requireStringArg(NavArguments.CARD_ID)
+                val deckId = entry.optionalStringArg(NavArguments.DECK_ID)
                 QuestionEditorScreen(
                     cardId = cardId,
                     deckId = deckId,
@@ -113,9 +113,9 @@ fun YikeNavGraph(
 
             composable(
                 route = YikeDestination.REVIEW_CARD,
-                arguments = listOf(navArgument("cardId") { type = NavType.StringType })
+                arguments = listOf(navArgument(NavArguments.CARD_ID) { type = NavType.StringType })
             ) { entry ->
-                val cardId = entry.requireStringArg("cardId")
+                val cardId = entry.requireStringArg(NavArguments.CARD_ID)
                 ReviewCardScreen(
                     cardId = cardId,
                     onExit = { navController.popBackStack(route = YikeDestination.HOME, inclusive = false) },
