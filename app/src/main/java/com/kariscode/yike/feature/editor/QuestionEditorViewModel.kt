@@ -39,6 +39,7 @@ class QuestionEditorViewModel(
             title = "",
             description = "",
             questions = emptyList(),
+            hasUnsavedChanges = false,
             isSaving = false,
             message = null,
             errorMessage = null
@@ -62,14 +63,28 @@ class QuestionEditorViewModel(
      * 标题是必填字段，因此变更需要清空错误提示，避免用户修正后仍看到旧错误。
      */
     fun onTitleChange(value: String) {
-        _uiState.update { it.copy(title = value, errorMessage = null, message = null) }
+        _uiState.update {
+            it.copy(
+                title = value,
+                hasUnsavedChanges = true,
+                errorMessage = null,
+                message = null
+            )
+        }
     }
 
     /**
      * 描述不参与必填校验，但仍需要清空错误提示以避免用户误以为保存仍失败。
      */
     fun onDescriptionChange(value: String) {
-        _uiState.update { it.copy(description = value, errorMessage = null, message = null) }
+        _uiState.update {
+            it.copy(
+                description = value,
+                hasUnsavedChanges = true,
+                errorMessage = null,
+                message = null
+            )
+        }
     }
 
     /**
@@ -85,7 +100,10 @@ class QuestionEditorViewModel(
                     answer = "",
                     isNew = true,
                     validationMessage = null
-                )
+                ),
+                hasUnsavedChanges = true,
+                message = null,
+                errorMessage = null
             )
         }
     }
@@ -99,7 +117,10 @@ class QuestionEditorViewModel(
                 questions = state.questions.map { draft ->
                     if (draft.id != questionId) draft
                     else draft.copy(prompt = value, validationMessage = null)
-                }
+                },
+                hasUnsavedChanges = true,
+                message = null,
+                errorMessage = null
             )
         }
     }
@@ -113,7 +134,10 @@ class QuestionEditorViewModel(
                 questions = state.questions.map { draft ->
                     if (draft.id != questionId) draft
                     else draft.copy(answer = value, validationMessage = null)
-                }
+                },
+                hasUnsavedChanges = true,
+                message = null,
+                errorMessage = null
             )
         }
     }
@@ -125,7 +149,14 @@ class QuestionEditorViewModel(
         val current = _uiState.value.questions
         val draft = current.firstOrNull { it.id == questionId } ?: return
         if (!draft.isNew) deletedQuestionIds.add(questionId)
-        _uiState.update { it.copy(questions = current.filterNot { q -> q.id == questionId }) }
+        _uiState.update {
+            it.copy(
+                questions = current.filterNot { q -> q.id == questionId },
+                hasUnsavedChanges = true,
+                message = null,
+                errorMessage = null
+            )
+        }
     }
 
     /**
@@ -223,7 +254,7 @@ class QuestionEditorViewModel(
             deletedQuestionIds.clear()
 
             reloadFromStorage()
-            _uiState.update { it.copy(isSaving = false, message = "已保存") }
+            _uiState.update { it.copy(isSaving = false, hasUnsavedChanges = false, message = "已保存") }
         }
     }
 
@@ -256,7 +287,10 @@ class QuestionEditorViewModel(
                         isNew = false,
                         validationMessage = null
                     )
-                }
+                },
+                hasUnsavedChanges = false,
+                message = null,
+                errorMessage = null
             )
         }
     }

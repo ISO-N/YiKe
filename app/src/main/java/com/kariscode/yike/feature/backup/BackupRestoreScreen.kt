@@ -4,27 +4,33 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kariscode.yike.app.LocalAppContainer
 import com.kariscode.yike.ui.component.NavigationAction
-import com.kariscode.yike.ui.component.YikeTopAppBar
+import com.kariscode.yike.ui.component.YikeBadge
+import com.kariscode.yike.ui.component.YikeDangerButton
+import com.kariscode.yike.ui.component.YikeFlowScaffold
+import com.kariscode.yike.ui.component.YikePrimaryButton
+import com.kariscode.yike.ui.component.YikeSecondaryButton
+import com.kariscode.yike.ui.component.YikeStateBanner
+import com.kariscode.yike.ui.component.YikeSurfaceCard
+import com.kariscode.yike.ui.component.YikeWarningCard
+import com.kariscode.yike.ui.theme.LocalYikeSpacing
 
 /**
- * 备份与恢复属于不可逆高风险操作，首版在页面层先固定“风险提示 + 明确确认”的交互承载位置，
- * 当前实现则把导出、校验、恢复确认与恢复后提醒重建全部收敛进同一页面流程。
+ * 备份恢复页属于高风险流内页面，因此继续使用聚焦式返回路径，并把风险提示固定在页面顶部。
  */
 @Composable
 fun BackupRestoreScreen(
@@ -58,83 +64,116 @@ fun BackupRestoreScreen(
         }
     }
 
-    Scaffold(
-        topBar = {
-            YikeTopAppBar(
-                title = "备份与恢复",
-                navigationAction = NavigationAction(label = "返回", onClick = onBack)
-            )
-        },
-        modifier = modifier
+    YikeFlowScaffold(
+        title = "备份与恢复",
+        subtitle = "导出完整 JSON，或在确认风险后从本地备份恢复全部数据。",
+        navigationAction = NavigationAction(label = "返", onClick = onBack)
     ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            BackupRestoreContent(
-                uiState = uiState,
-                onExport = viewModel::onExportClick,
-                onImport = viewModel::onImportClick
-            )
-        }
+        BackupRestoreContent(
+            uiState = uiState,
+            onExport = viewModel::onExportClick,
+            onImport = viewModel::onImportClick,
+            modifier = modifier.padding(padding)
+        )
     }
 
     if (uiState.pendingRestoreUri != null) {
-        AlertDialog(
-            onDismissRequest = viewModel::onDismissRestoreConfirmation,
-            title = { Text("确认恢复备份？") },
-            text = { Text("恢复后将覆盖当前本地全部数据，且无法撤销。") },
-            confirmButton = {
-                Button(onClick = viewModel::onConfirmRestore) {
-                    Text("继续恢复")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = viewModel::onDismissRestoreConfirmation) {
-                    Text("取消")
-                }
-            }
+        RestoreConfirmationDialog(
+            onDismiss = viewModel::onDismissRestoreConfirmation,
+            onConfirm = viewModel::onConfirmRestore
         )
     }
 }
 
 /**
- * 页面主体拆分为纯展示层，是为了让测试能直接验证高风险文案与按钮状态，不依赖系统文件选择器。
+ * 页面主体拆出来后，可以直接验证最近备份状态、风险提示和导出/恢复按钮反馈。
  */
 @Composable
 fun BackupRestoreContent(
     uiState: BackupRestoreUiState,
     onExport: () -> Unit,
-    onImport: () -> Unit
+    onImport: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
-    Text(uiState.warningMessage)
-    Text("备份文件可能包含全部学习内容，请注意保管。")
-    Text("最近备份：${uiState.lastBackupAt?.let(::formatBackupTime) ?: "暂无记录"}")
-    Button(
-        onClick = onExport,
-        enabled = !uiState.isExporting && !uiState.isImporting
+    val spacing = LocalYikeSpacing.current
+    Column(
+        modifier = modifier.verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(spacing.lg)
     ) {
-        Text(if (uiState.isExporting) "导出中…" else "导出备份")
-    }
-    Button(
-        onClick = onImport,
-        enabled = !uiState.isExporting && !uiState.isImporting
-    ) {
-        Text(if (uiState.isImporting) "恢复中…" else "从备份恢复")
-    }
-    if (uiState.message != null) {
-        Text(uiState.message)
-    }
-    if (uiState.errorMessage != null) {
-        Text(uiState.errorMessage)
+        YikeWarningCard(
+            title = "恢复会覆盖当前本地全部数据",
+            description = uiState.warningMessage
+        )
+
+        YikeStateBanner(
+            title = "最近备份",
+            description = uiState.lastBackupAt?.let(::formatBackupTime) ?: "暂无备份记录，建议先导出一次再进行恢复操作。",
+            trailing = {
+                YikeBadge(text = if (uiState.lastBackupAt != null) "可用" else "暂无")
+            }
+        )
+
+        YikeSurfaceCard {
+            Text(text = "导出完整备份")
+            Text(text = "包含卡组、卡片、问题、设置和复习记录，不会修改当前本地数据。")
+            YikePrimaryButton(
+                text = if (uiState.isExporting) "导出中…" else "导出 JSON",
+                onClick = onExport,
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !uiState.isExporting && !uiState.isImporting
+            )
+        }
+
+        YikeSurfaceCard {
+            Text(text = "从备份恢复")
+            Text(text = "恢复前建议先导出当前数据，避免误操作后无法回滚。")
+            YikeSecondaryButton(
+                text = if (uiState.isImporting) "恢复中…" else "选择备份文件",
+                onClick = onImport,
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !uiState.isExporting && !uiState.isImporting
+            )
+        }
+
+        uiState.message?.let { message ->
+            YikeStateBanner(
+                title = "操作已完成",
+                description = message
+            )
+        }
+
+        uiState.errorMessage?.let { message ->
+            YikeStateBanner(
+                title = "操作失败",
+                description = message
+            )
+        }
     }
 }
 
 /**
- * 最近备份时间仅用于页面展示，采用本地时间格式化可让用户直接理解最近一次导出发生在何时。
+ * 恢复确认对话框强调不可逆后果，是为了让覆盖操作在真正执行前再被用户明确确认一次。
+ */
+@Composable
+private fun RestoreConfirmationDialog(
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("确认恢复备份？") },
+        text = { Text("恢复后将覆盖当前本地全部数据，且无法撤销。") },
+        confirmButton = {
+            YikeDangerButton(text = "继续恢复", onClick = onConfirm)
+        },
+        dismissButton = {
+            YikeSecondaryButton(text = "取消", onClick = onDismiss)
+        }
+    )
+}
+
+/**
+ * 最近备份时间仅用于页面展示，采用本地时间字符串能让用户直观判断数据保护状态。
  */
 private fun formatBackupTime(epochMillis: Long): String =
     java.time.Instant.ofEpochMilli(epochMillis)

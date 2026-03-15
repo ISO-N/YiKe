@@ -64,6 +64,12 @@ debug
 - 首页作为总入口。
 - 内容管理与复习流彼此独立。
 - 设置页只承载全局能力，不承载内容管理。
+- 已落地实现中，`home`、`deck_list`、`settings` 共享一级导航壳；
+  `card_list`、`question_editor`、`review_queue`、`review_card`、`backup_restore` 保持流内导航，不展示底部导航。
+- 一级导航壳采用紧凑页头 + 悬浮底部胶囊导航，避免顶部说明和底部底板过度挤占内容首屏。
+- 一级导航切换统一使用 `launchSingleTop + restoreState + popUpTo(saveState)`，并补充桌面式左右滑动转场；共享底部导航壳层固定在外层，只让内容区发生位移。
+- 一级页内容需要为悬浮导航预留底部安全区，但不再依赖 `Scaffold.bottomBar` 预留固定布局区域。
+- 一级页底部会从导航顶部向下叠加 80% 玻璃模糊层；导航本体改为不透明胶囊，保证一级入口文字与内容区彻底分层。
 
 ---
 
@@ -252,6 +258,7 @@ isLoading: Boolean
 title: String
 description: String
 questions: List<QuestionDraftUiModel>
+hasUnsavedChanges: Boolean
 isSaving: Boolean
 canSave: Boolean
 error: EditorError?
@@ -509,7 +516,7 @@ error: BackupRestoreError?
 
 - 路由参数可恢复
 - 页面可根据 ID 重新加载数据
-- 编辑页的未保存草稿如暂不支持完整恢复，应明确接受该限制
+- 编辑页当前会显式提示 `hasUnsavedChanges`，但仍不保证进程被杀后的草稿完整恢复，应接受这一限制并在交互上提示用户及时保存
 
 复习页建议：
 
