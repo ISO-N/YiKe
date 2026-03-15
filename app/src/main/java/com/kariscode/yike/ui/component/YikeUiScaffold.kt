@@ -715,24 +715,33 @@ private fun YikeBottomNavigation(
             ),
         shape = navigationShape
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 4.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            YikePrimaryDestination.entries.forEach { destination ->
-                val selected = destination == currentDestination
-                TextButton(
-                    onClick = { onNavigate(destination) },
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(18.dp),
-                    colors = ButtonDefaults.textButtonColors(
-                        containerColor = if (selected) YikeSurfaceTint.copy(alpha = 0.28f) else Color.Transparent,
-                        contentColor = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                ) {
-                    Text(text = destination.label, fontWeight = FontWeight.SemiBold)
+        Box(modifier = Modifier.fillMaxWidth()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(navigationShape)
+                    .yikeGlassBlur(radius = 18f)
+                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.48f))
+            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                YikePrimaryDestination.entries.forEach { destination ->
+                    val selected = destination == currentDestination
+                    TextButton(
+                        onClick = { onNavigate(destination) },
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(18.dp),
+                        colors = ButtonDefaults.textButtonColors(
+                            containerColor = if (selected) YikeSurfaceTint.copy(alpha = 0.28f) else Color.Transparent,
+                            contentColor = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    ) {
+                        Text(text = destination.label, fontWeight = FontWeight.SemiBold)
+                    }
                 }
             }
         }
