@@ -1,5 +1,6 @@
 package com.kariscode.yike.app
 
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.navigation.compose.rememberNavController
@@ -15,10 +16,10 @@ fun YikeApp(
     modifier: Modifier = Modifier
 ) {
     val navController = rememberNavController()
-    YikeNavGraph(
-        navController = navController,
-        container = container,
-        modifier = modifier
-    )
+    CompositionLocalProvider(LocalAppContainer provides container) {
+        YikeNavGraph(
+            navController = navController,
+            modifier = modifier
+        )
+    }
 }
-

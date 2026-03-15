@@ -7,7 +7,6 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
-import com.kariscode.yike.app.AppContainer
 import com.kariscode.yike.feature.backup.BackupRestoreScreen
 import com.kariscode.yike.feature.card.CardListScreen
 import com.kariscode.yike.feature.deck.DeckListScreen
@@ -24,7 +23,6 @@ import com.kariscode.yike.feature.settings.SettingsScreen
 @Composable
 fun YikeNavGraph(
     navController: NavHostController,
-    container: AppContainer,
     modifier: Modifier = Modifier
 ) {
     NavHost(
@@ -117,4 +115,3 @@ fun YikeNavGraph(
         }
     }
 }
-
