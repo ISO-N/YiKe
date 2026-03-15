@@ -216,9 +216,9 @@ class QuestionEditorViewModel(
                     }
                 }
 
-                questionRepository.upsertAll(toUpsert)
-                deletedQuestionIds.forEach { id -> questionRepository.delete(id) }
-                deletedQuestionIds.clear()
+            questionRepository.upsertAll(toUpsert)
+            questionRepository.deleteAll(deletedQuestionIds)
+            deletedQuestionIds.clear()
                 reloadFromStorage()
             }.onSuccess {
                 _uiState.update { it.copy(isSaving = false, hasUnsavedChanges = false, message = "已保存") }

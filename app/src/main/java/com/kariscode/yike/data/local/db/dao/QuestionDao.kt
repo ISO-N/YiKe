@@ -108,6 +108,12 @@ interface QuestionDao {
     suspend fun deleteById(questionId: String): Int
 
     /**
+     * 多选删除由数据库直接处理 id 集合，可以避免编辑页为同一次保存反复进出 DAO。
+     */
+    @Query("DELETE FROM question WHERE id IN (:questionIds)")
+    suspend fun deleteByIds(questionIds: Collection<String>): Int
+
+    /**
      * 清空问题表是恢复流程的必要步骤，
      * 否则旧问题可能继续参与 due 查询，破坏恢复后的结果一致性。
      */

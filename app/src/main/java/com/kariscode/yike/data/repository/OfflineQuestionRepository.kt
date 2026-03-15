@@ -79,4 +79,13 @@ class OfflineQuestionRepository(
         questionDao.deleteById(questionId)
         Unit
     }
+
+    /**
+     * 批量删除在仓储层收口后，编辑页保存就不必手写循环删除模板，且数据库往返次数更可控。
+     */
+    override suspend fun deleteAll(questionIds: Collection<String>) = withContext(dispatchers.io) {
+        if (questionIds.isEmpty()) return@withContext
+        questionDao.deleteByIds(questionIds)
+        Unit
+    }
 }

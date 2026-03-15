@@ -44,4 +44,9 @@ interface QuestionRepository {
      * 删除问题应同时级联清理复习记录；仓储提供以 ID 删除的语义接口以减少上层对实体的依赖。
      */
     suspend fun delete(questionId: String)
+
+    /**
+     * 编辑页批量保存时提供集合删除能力，可以把多次往返压缩成一次写操作并缩短保存窗口。
+     */
+    suspend fun deleteAll(questionIds: Collection<String>)
 }
