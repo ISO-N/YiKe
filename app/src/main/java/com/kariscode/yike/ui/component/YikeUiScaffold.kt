@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -103,38 +104,50 @@ fun YikePrimaryScaffold(
     floatingActionButton: @Composable (() -> Unit)? = null,
     content: @Composable (PaddingValues) -> Unit
 ) {
-    Scaffold(
-        containerColor = Color.Transparent,
-        bottomBar = {
-            YikeBottomNavigation(
-                currentDestination = currentDestination,
-                onNavigate = onNavigate
-            )
-        },
-        floatingActionButton = {
-            floatingActionButton?.invoke()
-        }
-    ) { padding ->
-        YikeScreenBackground {
+    val navigationBarPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+    val contentBottomPadding = navigationBarPadding + 104.dp
+    val fabBottomPadding = navigationBarPadding + 92.dp
+
+    YikeScreenBackground {
+        Box(modifier = Modifier.fillMaxSize()) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .windowInsetsPadding(WindowInsets.statusBars.only(WindowInsetsSides.Top))
                     .padding(horizontal = 16.dp)
-                    .padding(top = 6.dp)
+                    .padding(top = 2.dp)
             ) {
                 YikeHeaderBlock(
                     eyebrow = currentDestination.label,
                     title = title,
                     subtitle = subtitle
                 )
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(10.dp))
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(bottom = padding.calculateBottomPadding() + 20.dp)
+                        .padding(bottom = contentBottomPadding)
                 ) {
                     content(PaddingValues(bottom = 0.dp))
+                }
+            }
+
+            YikeBottomNavigation(
+                currentDestination = currentDestination,
+                onNavigate = onNavigate,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(horizontal = 16.dp)
+                    .padding(bottom = navigationBarPadding + 6.dp)
+            )
+
+            if (floatingActionButton != null) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(end = 16.dp, bottom = fabBottomPadding)
+                ) {
+                    floatingActionButton()
                 }
             }
         }
@@ -614,42 +627,34 @@ fun YikeProgressBar(
 @Composable
 private fun YikeBottomNavigation(
     currentDestination: YikePrimaryDestination,
-    onNavigate: (YikePrimaryDestination) -> Unit
+    onNavigate: (YikePrimaryDestination) -> Unit,
+    modifier: Modifier = Modifier
 ) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.92f))
-            .windowInsetsPadding(WindowInsets.navigationBars.only(WindowInsetsSides.Bottom))
-            .padding(horizontal = 16.dp)
-            .padding(top = 6.dp, bottom = 1.dp)
+    Surface(
+        tonalElevation = 5.dp,
+        shadowElevation = 10.dp,
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.97f),
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(24.dp)
     ) {
-        Surface(
-            tonalElevation = 4.dp,
-            shadowElevation = 6.dp,
-            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.96f),
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(24.dp)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 8.dp, vertical = 6.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                YikePrimaryDestination.entries.forEach { destination ->
-                    val selected = destination == currentDestination
-                    TextButton(
-                        onClick = { onNavigate(destination) },
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(18.dp),
-                        colors = ButtonDefaults.textButtonColors(
-                            containerColor = if (selected) YikeSurfaceTint else Color.Transparent,
-                            contentColor = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    ) {
-                        Text(text = destination.label, fontWeight = FontWeight.SemiBold)
-                    }
+            YikePrimaryDestination.entries.forEach { destination ->
+                val selected = destination == currentDestination
+                TextButton(
+                    onClick = { onNavigate(destination) },
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(18.dp),
+                    colors = ButtonDefaults.textButtonColors(
+                        containerColor = if (selected) YikeSurfaceTint else Color.Transparent,
+                        contentColor = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                ) {
+                    Text(text = destination.label, fontWeight = FontWeight.SemiBold)
                 }
             }
         }
