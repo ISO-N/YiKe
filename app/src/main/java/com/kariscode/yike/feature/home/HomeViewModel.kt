@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.kariscode.yike.core.time.TimeProvider
+import com.kariscode.yike.core.viewmodel.typedViewModelFactory
 import com.kariscode.yike.domain.model.DeckSummary
 import com.kariscode.yike.domain.model.TodayReviewSummary
 import com.kariscode.yike.domain.repository.DeckRepository
@@ -11,8 +12,9 @@ import com.kariscode.yike.domain.repository.QuestionRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 
 /**
@@ -59,10 +61,17 @@ class HomeViewModel(
         _uiState.update { it.copy(isLoading = true, errorMessage = null) }
         viewModelScope.launch {
             runCatching {
-                val now = timeProvider.nowEpochMillis()
-                val summary = questionRepository.getTodayReviewSummary(now)
-                val recentDecks = deckRepository.observeActiveDeckSummaries(now).first().take(3)
-                summary to recentDecks
+                coroutineScope {
+                    val now = timeProvider.nowEpochMillis()
+                    val summary = async { questionRepository.getTodayReviewSummary(now) }
+                    val recentDecks = async {
+                        deckRepository.listRecentActiveDeckSummaries(
+                            nowEpochMillis = now,
+                            limit = 3
+                        )
+                    }
+                    summary.await() to recentDecks.await()
+                }
             }.onSuccess { (summary, recentDecks) ->
                 _uiState.update {
                     it.copy(
@@ -93,11 +102,8 @@ class HomeViewModel(
             questionRepository: QuestionRepository,
             deckRepository: DeckRepository,
             timeProvider: TimeProvider
-        ): ViewModelProvider.Factory = object : ViewModelProvider.Factory {
-            override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                @Suppress("UNCHECKED_CAST")
-                return HomeViewModel(questionRepository, deckRepository, timeProvider) as T
-            }
+        ): ViewModelProvider.Factory = typedViewModelFactory {
+            HomeViewModel(questionRepository, deckRepository, timeProvider)
         }
     }
 }

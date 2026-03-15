@@ -152,7 +152,9 @@
 2. 数据库版本与文档一致。
 3. 备份文件版本与文档一致。
 4. 提醒、备份、恢复已完成手动验证。
-5. README 与文档索引已更新。
+5. `keystore.properties` 已在本地配置，且 release keystore 不在仓库内。
+6. 已执行一次已签名的 `assembleRelease` 验证 APK 可安装。
+7. README 与文档索引已更新。
 
 ---
 

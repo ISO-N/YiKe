@@ -1,7 +1,6 @@
 package com.kariscode.yike.data.local.db.dao
 
 import androidx.room.Dao
-import androidx.room.Delete
 import androidx.room.Query
 import androidx.room.Upsert
 import com.kariscode.yike.data.local.db.entity.DeckEntity
@@ -76,6 +75,37 @@ interface DeckDao {
     )
     fun observeActiveDeckSummaries(activeStatus: String, nowEpochMillis: Long): Flow<List<DeckSummaryRow>>
 
+    /**
+     * 首页最近卡组只需要一小段快照，数据库侧限量可以避免先构造完整列表再让上层截断。
+     */
+    @Query(
+        """
+        SELECT
+            d.id AS id,
+            d.name AS name,
+            d.description AS description,
+            d.archived AS archived,
+            d.sortOrder AS sortOrder,
+            d.createdAt AS createdAt,
+            d.updatedAt AS updatedAt,
+            COUNT(DISTINCT c.id) AS cardCount,
+            COUNT(DISTINCT q.id) AS questionCount,
+            COUNT(DISTINCT CASE WHEN q.dueAt <= :nowEpochMillis THEN q.id END) AS dueQuestionCount
+        FROM deck d
+        LEFT JOIN card c ON c.deckId = d.id AND c.archived = 0
+        LEFT JOIN question q ON q.cardId = c.id AND q.status = :activeStatus
+        WHERE d.archived = 0
+        GROUP BY d.id
+        ORDER BY d.sortOrder ASC, d.createdAt ASC
+        LIMIT :limit
+        """
+    )
+    suspend fun listRecentActiveDeckSummaries(
+        activeStatus: String,
+        nowEpochMillis: Long,
+        limit: Int
+    ): List<DeckSummaryRow>
+
     @Query("SELECT * FROM deck WHERE id = :deckId LIMIT 1")
     suspend fun findById(deckId: String): DeckEntity?
 
@@ -90,11 +120,11 @@ interface DeckDao {
     suspend fun setArchived(deckId: String, archived: Boolean, updatedAt: Long): Int
 
     /**
-     * 物理删除只用于用户明确确认的高风险操作；
-     * 这里保留接口是为了后续在“删除卡组”确认后一次性触发级联清理。
+     * 按 id 直接删除可避免 Repository 先额外读取一次实体，
+     * 同时仍然保留“找不到记录时静默无操作”的数据库语义。
      */
-    @Delete
-    suspend fun delete(deck: DeckEntity): Int
+    @Query("DELETE FROM deck WHERE id = :deckId")
+    suspend fun deleteById(deckId: String): Int
 
     /**
      * 全量覆盖恢复前必须先清空旧数据，

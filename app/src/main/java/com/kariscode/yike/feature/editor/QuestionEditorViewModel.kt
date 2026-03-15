@@ -3,6 +3,7 @@ package com.kariscode.yike.feature.editor
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.kariscode.yike.core.viewmodel.typedViewModelFactory
 import com.kariscode.yike.core.time.TimeProvider
 import com.kariscode.yike.domain.model.Card
 import com.kariscode.yike.domain.model.Question
@@ -12,6 +13,8 @@ import com.kariscode.yike.domain.repository.CardRepository
 import com.kariscode.yike.domain.repository.QuestionRepository
 import com.kariscode.yike.domain.scheduler.InitialDueAtCalculator
 import java.util.UUID
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -63,13 +66,8 @@ class QuestionEditorViewModel(
      * 标题是必填字段，因此变更需要清空错误提示，避免用户修正后仍看到旧错误。
      */
     fun onTitleChange(value: String) {
-        _uiState.update {
-            it.copy(
-                title = value,
-                hasUnsavedChanges = true,
-                errorMessage = null,
-                message = null
-            )
+        updateDirtyState { state ->
+            state.copy(title = value)
         }
     }
 
@@ -77,13 +75,8 @@ class QuestionEditorViewModel(
      * 描述不参与必填校验，但仍需要清空错误提示以避免用户误以为保存仍失败。
      */
     fun onDescriptionChange(value: String) {
-        _uiState.update {
-            it.copy(
-                description = value,
-                hasUnsavedChanges = true,
-                errorMessage = null,
-                message = null
-            )
+        updateDirtyState { state ->
+            state.copy(description = value)
         }
     }
 
@@ -92,18 +85,14 @@ class QuestionEditorViewModel(
      */
     fun onAddQuestionClick() {
         val tempId = "temp_${UUID.randomUUID()}"
-        _uiState.update { state ->
+        updateDirtyState { state ->
             state.copy(
                 questions = state.questions + QuestionDraft(
                     id = tempId,
                     prompt = "",
                     answer = "",
-                    isNew = true,
-                    validationMessage = null
-                ),
-                hasUnsavedChanges = true,
-                message = null,
-                errorMessage = null
+                    isNew = true
+                )
             )
         }
     }
@@ -112,16 +101,8 @@ class QuestionEditorViewModel(
      * 题面是必填字段，因此变更需要清除题面校验提示以便用户逐步修正。
      */
     fun onQuestionPromptChange(questionId: String, value: String) {
-        _uiState.update { state ->
-            state.copy(
-                questions = state.questions.map { draft ->
-                    if (draft.id != questionId) draft
-                    else draft.copy(prompt = value, validationMessage = null)
-                },
-                hasUnsavedChanges = true,
-                message = null,
-                errorMessage = null
-            )
+        updateQuestionDraft(questionId) { draft ->
+            draft.copy(prompt = value, validationMessage = null)
         }
     }
 
@@ -129,16 +110,8 @@ class QuestionEditorViewModel(
      * 答案允许为空，但仍作为可编辑字段进入草稿，以确保保存行为可预测。
      */
     fun onQuestionAnswerChange(questionId: String, value: String) {
-        _uiState.update { state ->
-            state.copy(
-                questions = state.questions.map { draft ->
-                    if (draft.id != questionId) draft
-                    else draft.copy(answer = value, validationMessage = null)
-                },
-                hasUnsavedChanges = true,
-                message = null,
-                errorMessage = null
-            )
+        updateQuestionDraft(questionId) { draft ->
+            draft.copy(answer = value, validationMessage = null)
         }
     }
 
@@ -149,13 +122,8 @@ class QuestionEditorViewModel(
         val current = _uiState.value.questions
         val draft = current.firstOrNull { it.id == questionId } ?: return
         if (!draft.isNew) deletedQuestionIds.add(questionId)
-        _uiState.update {
-            it.copy(
-                questions = current.filterNot { q -> q.id == questionId },
-                hasUnsavedChanges = true,
-                message = null,
-                errorMessage = null
-            )
+        updateDirtyState { state ->
+            state.copy(questions = current.filterNot { q -> q.id == questionId })
         }
     }
 
@@ -189,72 +157,46 @@ class QuestionEditorViewModel(
 
             _uiState.update { it.copy(isSaving = true, errorMessage = null, message = null) }
 
-            val now = timeProvider.nowEpochMillis()
-            val settings = appSettingsRepository.observeSettings().first()
-            val initialDueAt = InitialDueAtCalculator.compute(
-                nowEpochMillis = now,
-                reminderHour = settings.dailyReminderHour,
-                reminderMinute = settings.dailyReminderMinute
-            )
+            runCatching {
+                val now = timeProvider.nowEpochMillis()
+                val settings = appSettingsRepository.observeSettings().first()
+                val initialDueAt = InitialDueAtCalculator.compute(
+                    nowEpochMillis = now,
+                    reminderHour = settings.dailyReminderHour,
+                    reminderMinute = settings.dailyReminderMinute
+                )
 
-            val updatedCard = card.copy(
-                title = trimmedTitle,
-                description = state.description,
-                updatedAt = now
-            )
-            cardRepository.upsert(updatedCard)
+                val updatedCard = card.copy(
+                    title = trimmedTitle,
+                    description = state.description,
+                    updatedAt = now
+                )
+                cardRepository.upsert(updatedCard)
 
-            val toUpsert = state.questions.map { draft ->
-                if (draft.isNew) {
-                    Question(
-                        id = "q_${UUID.randomUUID()}",
+                val toUpsert = state.questions.map { draft ->
+                    draft.toQuestion(
                         cardId = cardId,
-                        prompt = draft.prompt.trim(),
-                        answer = draft.answer,
-                        tags = emptyList(),
-                        status = QuestionStatus.ACTIVE,
-                        stageIndex = 0,
-                        dueAt = initialDueAt,
-                        lastReviewedAt = null,
-                        reviewCount = 0,
-                        lapseCount = 0,
-                        createdAt = now,
-                        updatedAt = now
+                        nowEpochMillis = now,
+                        initialDueAt = initialDueAt,
+                        original = loadedQuestionsById[draft.id]
                     )
-                } else {
-                    val original = loadedQuestionsById[draft.id]
-                    if (original == null) {
-                        Question(
-                            id = draft.id,
-                            cardId = cardId,
-                            prompt = draft.prompt.trim(),
-                            answer = draft.answer,
-                            tags = emptyList(),
-                            status = QuestionStatus.ACTIVE,
-                            stageIndex = 0,
-                            dueAt = initialDueAt,
-                            lastReviewedAt = null,
-                            reviewCount = 0,
-                            lapseCount = 0,
-                            createdAt = now,
-                            updatedAt = now
-                        )
-                    } else {
-                        original.copy(
-                            prompt = draft.prompt.trim(),
-                            answer = draft.answer,
-                            updatedAt = now
-                        )
-                    }
                 }
-            }
 
             questionRepository.upsertAll(toUpsert)
-            deletedQuestionIds.forEach { id -> questionRepository.delete(id) }
+            questionRepository.deleteAll(deletedQuestionIds)
             deletedQuestionIds.clear()
-
-            reloadFromStorage()
-            _uiState.update { it.copy(isSaving = false, hasUnsavedChanges = false, message = "已保存") }
+                reloadFromStorage()
+            }.onSuccess {
+                _uiState.update { it.copy(isSaving = false, hasUnsavedChanges = false, message = "已保存") }
+            }.onFailure {
+                _uiState.update {
+                    it.copy(
+                        isSaving = false,
+                        message = null,
+                        errorMessage = "保存失败，请稍后重试"
+                    )
+                }
+            }
         }
     }
 
@@ -264,14 +206,17 @@ class QuestionEditorViewModel(
     private suspend fun reloadFromStorage() {
         _uiState.update { it.copy(isLoading = true) }
 
-        val card = cardRepository.findById(cardId)
+        val (card, questions) = coroutineScope {
+            val cardDeferred = async { cardRepository.findById(cardId) }
+            val questionsDeferred = async { questionRepository.listByCard(cardId) }
+            cardDeferred.await() to questionsDeferred.await()
+        }
         if (card == null) {
             _uiState.update { it.copy(isLoading = false, errorMessage = "卡片不存在") }
             return
         }
         loadedCard = card
 
-        val questions = questionRepository.observeQuestionsByCard(cardId).first()
         loadedQuestionsById = questions.associateBy { it.id }
 
         _uiState.update {
@@ -279,20 +224,86 @@ class QuestionEditorViewModel(
                 isLoading = false,
                 title = card.title,
                 description = card.description,
-                questions = questions.map { q ->
-                    QuestionDraft(
-                        id = q.id,
-                        prompt = q.prompt,
-                        answer = q.answer,
-                        isNew = false,
-                        validationMessage = null
-                    )
-                },
+                questions = questions.map { question -> question.toDraft() },
                 hasUnsavedChanges = false,
                 message = null,
                 errorMessage = null
             )
         }
+    }
+
+    /**
+     * 输入后统一标记脏状态并清空旧反馈，是为了让各字段编辑遵循同一套“可继续修正”的交互规则。
+     */
+    private fun updateDirtyState(transform: (QuestionEditorUiState) -> QuestionEditorUiState) {
+        _uiState.update { state ->
+            transform(state).copy(
+                hasUnsavedChanges = true,
+                message = null,
+                errorMessage = null
+            )
+        }
+    }
+
+    /**
+     * 问题草稿更新集中到单点，是为了把按 id 定位并重建 `questions` 列表的模板从各个输入入口里移除。
+     */
+    private fun updateQuestionDraft(
+        questionId: String,
+        transform: (QuestionDraft) -> QuestionDraft
+    ) {
+        updateDirtyState { state ->
+            state.copy(
+                questions = state.questions.map { draft ->
+                    if (draft.id != questionId) draft else transform(draft)
+                }
+            )
+        }
+    }
+
+    /**
+     * 从持久化问题回填草稿时统一走单点映射，可避免 reload 路径和后续局部刷新路径各自维护字段拷贝。
+     */
+    private fun Question.toDraft(): QuestionDraft = QuestionDraft(
+        id = id,
+        prompt = prompt,
+        answer = answer,
+        isNew = false,
+        validationMessage = null
+    )
+
+    /**
+     * 保存时统一由草稿生成领域模型，可把“新增/旧数据缺失/普通编辑”三种分支的默认字段收敛到一处。
+     */
+    private fun QuestionDraft.toQuestion(
+        cardId: String,
+        nowEpochMillis: Long,
+        initialDueAt: Long,
+        original: Question?
+    ): Question {
+        val trimmedPrompt = prompt.trim()
+        if (!isNew && original != null) {
+            return original.copy(
+                prompt = trimmedPrompt,
+                answer = answer,
+                updatedAt = nowEpochMillis
+            )
+        }
+        return Question(
+            id = if (isNew) "q_${UUID.randomUUID()}" else id,
+            cardId = cardId,
+            prompt = trimmedPrompt,
+            answer = answer,
+            tags = emptyList(),
+            status = QuestionStatus.ACTIVE,
+            stageIndex = 0,
+            dueAt = initialDueAt,
+            lastReviewedAt = null,
+            reviewCount = 0,
+            lapseCount = 0,
+            createdAt = original?.createdAt ?: nowEpochMillis,
+            updatedAt = nowEpochMillis
+        )
     }
 
     companion object {
@@ -307,18 +318,15 @@ class QuestionEditorViewModel(
             questionRepository: QuestionRepository,
             appSettingsRepository: AppSettingsRepository,
             timeProvider: TimeProvider
-        ): ViewModelProvider.Factory = object : ViewModelProvider.Factory {
-            override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                @Suppress("UNCHECKED_CAST")
-                return QuestionEditorViewModel(
-                    cardId = cardId,
-                    deckId = deckId,
-                    cardRepository = cardRepository,
-                    questionRepository = questionRepository,
-                    appSettingsRepository = appSettingsRepository,
-                    timeProvider = timeProvider
-                ) as T
-            }
+        ): ViewModelProvider.Factory = typedViewModelFactory {
+            QuestionEditorViewModel(
+                cardId = cardId,
+                deckId = deckId,
+                cardRepository = cardRepository,
+                questionRepository = questionRepository,
+                appSettingsRepository = appSettingsRepository,
+                timeProvider = timeProvider
+            )
         }
     }
 }

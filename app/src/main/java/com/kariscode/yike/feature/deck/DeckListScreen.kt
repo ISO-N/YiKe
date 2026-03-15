@@ -14,9 +14,9 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kariscode.yike.app.LocalAppContainer
 import com.kariscode.yike.domain.model.DeckSummary
@@ -39,8 +39,6 @@ import com.kariscode.yike.ui.theme.LocalYikeSpacing
  */
 @Composable
 fun DeckListScreen(
-    onOpenHome: () -> Unit,
-    onOpenSettings: () -> Unit,
     onOpenDeck: (deckId: String) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -51,13 +49,12 @@ fun DeckListScreen(
             timeProvider = container.timeProvider
         )
     )
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     YikePrimaryScaffold(
         currentDestination = YikePrimaryDestination.DECKS,
         title = "卡组",
         subtitle = "优先把主题拆成卡组，复习和录入都会更容易维护。",
-        showNavigationChrome = false,
         floatingActionButton = {
             YikeFab(
                 text = "+ 新建",

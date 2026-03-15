@@ -24,7 +24,9 @@ class OfflineDeckRepository(
      * 直接映射 Flow 能让 UI 不触碰 Entity，从而保持 Room 细节不外泄。
      */
     override fun observeActiveDecks(): Flow<List<Deck>> =
-        deckDao.observeActiveDecks().map { list -> list.map { entity -> RoomMappers.run { entity.toDomain() } } }
+        deckDao.observeActiveDecks().map { list ->
+            list.mapModels { entity -> RoomMappers.run { entity.toDomain() } }
+        }
 
     /**
      * 通过数据库聚合流提供统计信息，能让列表页在数据变更时稳定刷新且避免 N+1 查询。
@@ -37,10 +39,26 @@ class OfflineDeckRepository(
             .map { list -> list.map(::toDeckSummary) }
 
     /**
+     * 首页走限量快照查询可把“只展示少量入口”的意图下推到数据层，减少无意义的聚合结果构建。
+     */
+    override suspend fun listRecentActiveDeckSummaries(
+        nowEpochMillis: Long,
+        limit: Int
+    ): List<DeckSummary> = withContext(dispatchers.io) {
+        deckDao.listRecentActiveDeckSummaries(
+            activeStatus = QuestionEntity.STATUS_ACTIVE,
+            nowEpochMillis = nowEpochMillis,
+            limit = limit
+        ).map(::toDeckSummary)
+    }
+
+    /**
      * IO 查询放在 dispatchers.io 上执行，避免在主线程触发磁盘读写导致卡顿。
      */
     override suspend fun findById(deckId: String): Deck? = withContext(dispatchers.io) {
-        deckDao.findById(deckId)?.let { entity -> RoomMappers.run { entity.toDomain() } }
+        deckDao.findById(deckId).mapModel { entity ->
+            RoomMappers.run { entity.toDomain() }
+        }
     }
 
     /**
@@ -61,11 +79,11 @@ class OfflineDeckRepository(
         }
 
     /**
-     * 删除前先读取实体是为了让 DAO 维持简单签名，同时保留“对象不存在时静默返回”的语义。
+     * 直接按 id 删除可减少一次无意义读取，
+     * 同时仍保留“记录不存在时静默无操作”的容错语义。
      */
     override suspend fun delete(deckId: String) = withContext(dispatchers.io) {
-        val entity = deckDao.findById(deckId) ?: return@withContext
-        deckDao.delete(entity)
+        deckDao.deleteById(deckId)
         Unit
     }
 

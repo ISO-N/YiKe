@@ -13,12 +13,13 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kariscode.yike.app.LocalAppContainer
-import com.kariscode.yike.ui.component.NavigationAction
+import com.kariscode.yike.ui.format.formatLocalDateTime
+import com.kariscode.yike.ui.component.backNavigationAction
 import com.kariscode.yike.ui.component.YikeBadge
 import com.kariscode.yike.ui.component.YikeDangerButton
 import com.kariscode.yike.ui.component.YikeFlowScaffold
@@ -45,7 +46,7 @@ fun BackupRestoreScreen(
             reminderScheduler = container.reminderScheduler
         )
     )
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val exportLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("application/json"),
         onResult = viewModel::onExportUriSelected
@@ -67,7 +68,7 @@ fun BackupRestoreScreen(
     YikeFlowScaffold(
         title = "备份与恢复",
         subtitle = "导出完整 JSON，或在确认风险后从本地备份恢复全部数据。",
-        navigationAction = NavigationAction(label = "返", onClick = onBack)
+        navigationAction = backNavigationAction(onBack)
     ) { padding ->
         BackupRestoreContent(
             uiState = uiState,
@@ -176,7 +177,4 @@ private fun RestoreConfirmationDialog(
  * 最近备份时间仅用于页面展示，采用本地时间字符串能让用户直观判断数据保护状态。
  */
 private fun formatBackupTime(epochMillis: Long): String =
-    java.time.Instant.ofEpochMilli(epochMillis)
-        .atZone(java.time.ZoneId.systemDefault())
-        .toLocalDateTime()
-        .toString()
+    formatLocalDateTime(epochMillis)

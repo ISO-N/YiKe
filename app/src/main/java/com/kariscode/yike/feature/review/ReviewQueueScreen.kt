@@ -6,12 +6,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kariscode.yike.app.LocalAppContainer
-import com.kariscode.yike.ui.component.NavigationAction
+import com.kariscode.yike.ui.component.backNavigationAction
 import com.kariscode.yike.ui.component.YikeFlowScaffold
 import com.kariscode.yike.ui.component.YikePrimaryButton
 import com.kariscode.yike.ui.component.YikeSecondaryButton
@@ -35,7 +35,7 @@ fun ReviewQueueScreen(
             timeProvider = container.timeProvider
         )
     )
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     LaunchedEffect(Unit) {
         viewModel.effects.collect { effect ->
@@ -49,7 +49,7 @@ fun ReviewQueueScreen(
     YikeFlowScaffold(
         title = "准备开始复习",
         subtitle = "我们会先为你选择今天最该处理的那张卡片。",
-        navigationAction = NavigationAction(label = "返", onClick = onBack)
+        navigationAction = backNavigationAction(onBack)
     ) { padding ->
         ReviewQueueContent(
             uiState = uiState,

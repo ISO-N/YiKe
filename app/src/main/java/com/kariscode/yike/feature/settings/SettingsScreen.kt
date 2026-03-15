@@ -19,14 +19,15 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kariscode.yike.BuildConfig
 import com.kariscode.yike.app.LocalAppContainer
+import com.kariscode.yike.ui.format.formatLocalDateTime
 import com.kariscode.yike.ui.component.YikeBadge
 import com.kariscode.yike.ui.component.YikeListItemCard
 import com.kariscode.yike.ui.component.YikePrimaryDestination
@@ -40,8 +41,6 @@ import com.kariscode.yike.ui.theme.LocalYikeSpacing
  */
 @Composable
 fun SettingsScreen(
-    onOpenHome: () -> Unit,
-    onOpenDeckList: () -> Unit,
     onOpenBackupRestore: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -54,7 +53,7 @@ fun SettingsScreen(
             appVersionName = BuildConfig.VERSION_NAME
         )
     )
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission(),
         onResult = viewModel::onNotificationPermissionResult
@@ -77,8 +76,7 @@ fun SettingsScreen(
     YikePrimaryScaffold(
         currentDestination = YikePrimaryDestination.SETTINGS,
         title = "设置",
-        subtitle = "在这里管理提醒、备份以及应用的全局状态。",
-        showNavigationChrome = false
+        subtitle = "在这里管理提醒、备份以及应用的全局状态。"
     ) { padding ->
         SettingsContent(
             uiState = uiState,
@@ -214,7 +212,7 @@ private fun ReminderSettingsSection(
                 onCheckedChange = onReminderEnabledChange
             )
         }
-    ) {}
+    )
 
     YikeListItemCard(
         title = "提醒时间",
@@ -263,7 +261,4 @@ private fun formatReminderTime(hour: Int, minute: Int): String = "%02d:%02d".for
  * 最近备份时间只用于设置页展示，因此采用本地时间字符串即可满足理解成本最低的目标。
  */
 private fun formatBackupAt(epochMillis: Long): String =
-    java.time.Instant.ofEpochMilli(epochMillis)
-        .atZone(java.time.ZoneId.systemDefault())
-        .toLocalDateTime()
-        .toString()
+    formatLocalDateTime(epochMillis)

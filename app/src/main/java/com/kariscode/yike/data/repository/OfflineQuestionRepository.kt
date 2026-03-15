@@ -24,13 +24,25 @@ class OfflineQuestionRepository(
      * 观察式查询让编辑页在新增/删除后自然更新，避免草稿状态与数据库脱节。
      */
     override fun observeQuestionsByCard(cardId: String): Flow<List<Question>> =
-        questionDao.observeQuestionsByCard(cardId).map { list -> list.map { entity -> RoomMappers.run { entity.toDomain() } } }
+        questionDao.observeQuestionsByCard(cardId).map { list ->
+            list.mapModels { entity -> RoomMappers.run { entity.toDomain() } }
+        }
 
     /**
      * 单对象查询用于评分提交事务等需要精确定位的场景。
      */
     override suspend fun findById(questionId: String): Question? = withContext(dispatchers.io) {
-        questionDao.findById(questionId)?.let { entity -> RoomMappers.run { entity.toDomain() } }
+        questionDao.findById(questionId).mapModel { entity ->
+            RoomMappers.run { entity.toDomain() }
+        }
+    }
+
+    /**
+     * 一次性读取编辑页所需问题快照时直接走同步查询，可以减少不必要的 Flow 建立与首次收集成本。
+     */
+    override suspend fun listByCard(cardId: String): List<Question> = withContext(dispatchers.io) {
+        questionDao.listByCard(cardId)
+            .map { entity -> RoomMappers.run { entity.toDomain() } }
     }
 
     /**
@@ -50,6 +62,16 @@ class OfflineQuestionRepository(
     }
 
     /**
+     * 队列页只要下一张卡片 id，因此复用数据库聚合结果能减少无意义的问题对象构建与集合分组。
+     */
+    override suspend fun findNextDueCardId(nowEpochMillis: Long): String? = withContext(dispatchers.io) {
+        questionDao.findNextDueCardId(
+            activeStatus = QuestionEntity.STATUS_ACTIVE,
+            nowEpochMillis = nowEpochMillis
+        )
+    }
+
+    /**
      * 统计查询委托给数据库聚合实现，以保证卡片/问题去重与过滤规则一致。
      */
     override suspend fun getTodayReviewSummary(nowEpochMillis: Long): TodayReviewSummary = withContext(dispatchers.io) {
@@ -64,11 +86,20 @@ class OfflineQuestionRepository(
     }
 
     /**
-     * 以 ID 删除能让上层不依赖 Entity 类型，同时保持“找不到则无操作”的容错语义。
+     * 以 ID 直接删除能让上层不依赖 Entity 类型，
+     * 也能避免为了同一条删除路径先执行一次多余查询。
      */
     override suspend fun delete(questionId: String) = withContext(dispatchers.io) {
-        val entity = questionDao.findById(questionId) ?: return@withContext
-        questionDao.delete(entity)
+        questionDao.deleteById(questionId)
+        Unit
+    }
+
+    /**
+     * 批量删除在仓储层收口后，编辑页保存就不必手写循环删除模板，且数据库往返次数更可控。
+     */
+    override suspend fun deleteAll(questionIds: Collection<String>) = withContext(dispatchers.io) {
+        if (questionIds.isEmpty()) return@withContext
+        questionDao.deleteByIds(questionIds)
         Unit
     }
 }

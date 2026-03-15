@@ -30,6 +30,12 @@ import com.kariscode.yike.feature.settings.SettingsScreen
 import com.kariscode.yike.ui.component.YikePrimaryDestination
 import com.kariscode.yike.ui.component.YikePrimaryNavigationChrome
 
+private val primaryDestinationMetadata = listOf(
+    YikeDestination.HOME to YikePrimaryDestination.HOME,
+    YikeDestination.DECK_LIST to YikePrimaryDestination.DECKS,
+    YikeDestination.SETTINGS to YikePrimaryDestination.SETTINGS
+)
+
 /**
  * 将导航图独立出来，能避免在 Activity 或某个页面中堆叠路由逻辑，
  * 同时也让后续为导航加测试或深链路支持更容易。
@@ -63,17 +69,15 @@ fun YikeNavGraph(
 
             composable(route = YikeDestination.DECK_LIST) {
                 DeckListScreen(
-                    onOpenHome = { navController.navigatePrimaryDestination(YikeDestination.HOME) },
-                    onOpenSettings = { navController.navigatePrimaryDestination(YikeDestination.SETTINGS) },
                     onOpenDeck = { deckId -> navController.navigate(YikeDestination.cardList(deckId)) }
                 )
             }
 
             composable(
                 route = YikeDestination.CARD_LIST,
-                arguments = listOf(navArgument("deckId") { type = NavType.StringType })
+                arguments = listOf(navArgument(NavArguments.DECK_ID) { type = NavType.StringType })
             ) { entry ->
-                val deckId = entry.arguments?.getString("deckId").orEmpty()
+                val deckId = entry.requireStringArg(NavArguments.DECK_ID)
                 CardListScreen(
                     deckId = deckId,
                     onBack = { navController.popBackStack() },
@@ -86,16 +90,16 @@ fun YikeNavGraph(
             composable(
                 route = YikeDestination.QUESTION_EDITOR,
                 arguments = listOf(
-                    navArgument("cardId") { type = NavType.StringType },
-                    navArgument("deckId") {
+                    navArgument(NavArguments.CARD_ID) { type = NavType.StringType },
+                    navArgument(NavArguments.DECK_ID) {
                         type = NavType.StringType
                         nullable = true
                         defaultValue = null
                     }
                 )
             ) { entry ->
-                val cardId = entry.arguments?.getString("cardId").orEmpty()
-                val deckId = entry.arguments?.getString("deckId")
+                val cardId = entry.requireStringArg(NavArguments.CARD_ID)
+                val deckId = entry.optionalStringArg(NavArguments.DECK_ID)
                 QuestionEditorScreen(
                     cardId = cardId,
                     deckId = deckId,
@@ -115,9 +119,9 @@ fun YikeNavGraph(
 
             composable(
                 route = YikeDestination.REVIEW_CARD,
-                arguments = listOf(navArgument("cardId") { type = NavType.StringType })
+                arguments = listOf(navArgument(NavArguments.CARD_ID) { type = NavType.StringType })
             ) { entry ->
-                val cardId = entry.arguments?.getString("cardId").orEmpty()
+                val cardId = entry.requireStringArg(NavArguments.CARD_ID)
                 ReviewCardScreen(
                     cardId = cardId,
                     onExit = { navController.popBackStack(route = YikeDestination.HOME, inclusive = false) },
@@ -127,8 +131,6 @@ fun YikeNavGraph(
 
             composable(route = YikeDestination.SETTINGS) {
                 SettingsScreen(
-                    onOpenHome = { navController.navigatePrimaryDestination(YikeDestination.HOME) },
-                    onOpenDeckList = { navController.navigatePrimaryDestination(YikeDestination.DECK_LIST) },
                     onOpenBackupRestore = { navController.navigate(YikeDestination.BACKUP_RESTORE) }
                 )
             }
@@ -178,12 +180,8 @@ private fun NavHostController.navigatePrimaryDestination(
  */
 private fun primaryDestinationOrder(
     route: String?
-): Int? = when (route) {
-    YikeDestination.HOME -> 0
-    YikeDestination.DECK_LIST -> 1
-    YikeDestination.SETTINGS -> 2
-    else -> null
-}
+): Int? = primaryDestinationMetadata.indexOfFirst { (candidateRoute, _) -> candidateRoute == route }
+    .takeIf { index -> index >= 0 }
 
 /**
  * 一级目标映射单独集中，是为了让共享导航壳层能够只根据当前 route 判断自身状态，
@@ -191,12 +189,9 @@ private fun primaryDestinationOrder(
  */
 private fun primaryDestinationForRoute(
     route: String?
-): YikePrimaryDestination? = when (route) {
-    YikeDestination.HOME -> YikePrimaryDestination.HOME
-    YikeDestination.DECK_LIST -> YikePrimaryDestination.DECKS
-    YikeDestination.SETTINGS -> YikePrimaryDestination.SETTINGS
-    else -> null
-}
+): YikePrimaryDestination? = primaryDestinationMetadata
+    .firstOrNull { (candidateRoute, _) -> candidateRoute == route }
+    ?.second
 
 /**
  * 进入动画只在一级入口之间启用，是为了让主导航保持桌面式滑动反馈，

@@ -24,7 +24,9 @@ class OfflineCardRepository(
      * 观察式查询能让卡片列表在新增/归档后自动刷新，避免页面状态手动同步。
      */
     override fun observeActiveCards(deckId: String): Flow<List<Card>> =
-        cardDao.observeActiveCards(deckId).map { list -> list.map { entity -> RoomMappers.run { entity.toDomain() } } }
+        cardDao.observeActiveCards(deckId).map { list ->
+            list.mapModels { entity -> RoomMappers.run { entity.toDomain() } }
+        }
 
     /**
      * 通过聚合查询提供列表统计，避免 UI 层逐项查询带来的性能与口径风险。
@@ -41,7 +43,9 @@ class OfflineCardRepository(
      * cardId 查询用于编辑页/复习页基于路由参数重建内容。
      */
     override suspend fun findById(cardId: String): Card? = withContext(dispatchers.io) {
-        cardDao.findById(cardId)?.let { entity -> RoomMappers.run { entity.toDomain() } }
+        cardDao.findById(cardId).mapModel { entity ->
+            RoomMappers.run { entity.toDomain() }
+        }
     }
 
     /**
@@ -62,11 +66,11 @@ class OfflineCardRepository(
         }
 
     /**
-     * 删除依赖级联约束清理下层数据，因此必须通过 DAO 触发而不是手写多表删除。
+     * 删除依赖级联约束清理下层数据，因此直接按 id 触发 DAO 删除就足够，
+     * 不需要为了同一条删除语义先额外读取实体。
      */
     override suspend fun delete(cardId: String) = withContext(dispatchers.io) {
-        val entity = cardDao.findById(cardId) ?: return@withContext
-        cardDao.delete(entity)
+        cardDao.deleteById(cardId)
         Unit
     }
 

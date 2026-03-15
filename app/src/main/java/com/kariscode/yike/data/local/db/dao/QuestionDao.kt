@@ -1,7 +1,6 @@
 package com.kariscode.yike.data.local.db.dao
 
 import androidx.room.Dao
-import androidx.room.Delete
 import androidx.room.Query
 import androidx.room.Upsert
 import com.kariscode.yike.data.local.db.entity.QuestionEntity
@@ -26,6 +25,12 @@ interface QuestionDao {
 
     @Query("SELECT * FROM question WHERE cardId = :cardId ORDER BY createdAt ASC")
     fun observeQuestionsByCard(cardId: String): Flow<List<QuestionEntity>>
+
+    /**
+     * 编辑页在进入和保存后只需要一个即时快照，直接查询可避免为单次读取走完整观察链路。
+     */
+    @Query("SELECT * FROM question WHERE cardId = :cardId ORDER BY createdAt ASC")
+    suspend fun listByCard(cardId: String): List<QuestionEntity>
 
     @Query("SELECT * FROM question WHERE id = :questionId LIMIT 1")
     suspend fun findById(questionId: String): QuestionEntity?
@@ -70,6 +75,26 @@ interface QuestionDao {
     suspend fun listDueQuestions(activeStatus: String, nowEpochMillis: Long): List<QuestionEntity>
 
     /**
+     * 队列页把“下一张卡片”判断下推到数据库，可以避免把全部到期问题加载到内存后再做分组筛选。
+     */
+    @Query(
+        """
+        SELECT c.id
+        FROM question q
+        JOIN card c ON c.id = q.cardId
+        JOIN deck d ON d.id = c.deckId
+        WHERE d.archived = 0
+          AND c.archived = 0
+          AND q.status = :activeStatus
+          AND q.dueAt <= :nowEpochMillis
+        GROUP BY c.id
+        ORDER BY MIN(q.dueAt) ASC, MIN(q.createdAt) ASC
+        LIMIT 1
+        """
+    )
+    suspend fun findNextDueCardId(activeStatus: String, nowEpochMillis: Long): String?
+
+    /**
      * 首页概览统计一次性返回卡片数与问题数，避免上层通过“拉全量 due 列表再 distinct 计数”的低效做法。
      */
     @Query(
@@ -95,8 +120,18 @@ interface QuestionDao {
     @Query("SELECT * FROM question ORDER BY createdAt ASC")
     suspend fun listAll(): List<QuestionEntity>
 
-    @Delete
-    suspend fun delete(question: QuestionEntity): Int
+    /**
+     * 直接按 id 删除可以把“对象不存在时无操作”的判定留给数据库，
+     * 从而避免 Repository 为了删除再做一次额外读取。
+     */
+    @Query("DELETE FROM question WHERE id = :questionId")
+    suspend fun deleteById(questionId: String): Int
+
+    /**
+     * 多选删除由数据库直接处理 id 集合，可以避免编辑页为同一次保存反复进出 DAO。
+     */
+    @Query("DELETE FROM question WHERE id IN (:questionIds)")
+    suspend fun deleteByIds(questionIds: Collection<String>): Int
 
     /**
      * 清空问题表是恢复流程的必要步骤，

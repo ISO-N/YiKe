@@ -10,9 +10,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kariscode.yike.app.LocalAppContainer
 import com.kariscode.yike.domain.model.DeckSummary
@@ -49,13 +49,12 @@ fun HomeScreen(
             timeProvider = container.timeProvider
         )
     )
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     YikePrimaryScaffold(
         currentDestination = YikePrimaryDestination.HOME,
         title = buildHomeTitle(uiState),
-        subtitle = buildHomeSubtitle(uiState),
-        showNavigationChrome = false
+        subtitle = buildHomeSubtitle(uiState)
     ) { padding ->
         HomeContent(
             uiState = uiState,
@@ -160,6 +159,8 @@ private fun HomeHeroSection(
 ) {
     val spacing = LocalYikeSpacing.current
     val hasDueItems = dueQuestions > 0
+    val primaryActionText = if (hasDueItems) "开始复习" else "进入卡组"
+    val primaryAction = if (hasDueItems) onStartReview else onOpenDeckList
     YikeHeroCard(
         eyebrow = "Today Review",
         title = if (hasDueItems) "$dueQuestions 个问题待复习" else "今日暂无待复习",
@@ -182,19 +183,11 @@ private fun HomeHeroSection(
             )
         }
         Row(horizontalArrangement = Arrangement.spacedBy(spacing.sm)) {
-            if (hasDueItems) {
-                YikePrimaryButton(
-                    text = "开始复习",
-                    onClick = onStartReview,
-                    modifier = Modifier.weight(1f)
-                )
-            } else {
-                YikePrimaryButton(
-                    text = "进入卡组",
-                    onClick = onOpenDeckList,
-                    modifier = Modifier.weight(1f)
-                )
-            }
+            YikePrimaryButton(
+                text = primaryActionText,
+                onClick = primaryAction,
+                modifier = Modifier.weight(1f)
+            )
             YikeSecondaryButton(
                 text = "浏览内容",
                 onClick = onOpenDeckList,

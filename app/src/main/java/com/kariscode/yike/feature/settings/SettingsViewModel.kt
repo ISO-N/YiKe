@@ -4,7 +4,9 @@ import android.os.Build
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.kariscode.yike.core.viewmodel.typedViewModelFactory
 import com.kariscode.yike.data.reminder.ReminderScheduler
+import com.kariscode.yike.domain.model.AppSettings
 import com.kariscode.yike.domain.repository.AppSettingsRepository
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -48,6 +50,14 @@ class SettingsViewModel(
     private val reminderScheduler: ReminderScheduler,
     private val appVersionName: String
 ) : ViewModel() {
+    private var latestSettings = AppSettings(
+        dailyReminderEnabled = false,
+        dailyReminderHour = 20,
+        dailyReminderMinute = 0,
+        schemaVersion = 1,
+        backupLastAt = null
+    )
+
     private val _uiState = MutableStateFlow(
         SettingsUiState(
             isLoading = true,
@@ -71,6 +81,7 @@ class SettingsViewModel(
          */
         viewModelScope.launch {
             appSettingsRepository.observeSettings().collect { settings ->
+                latestSettings = settings
                 _uiState.update {
                     it.copy(
                         isLoading = false,
@@ -109,25 +120,14 @@ class SettingsViewModel(
      * 时间修改后立即同步调度，能避免“设置已保存但旧任务仍按旧时间触发”的体验错位。
      */
     fun onReminderTimeConfirmed(hour: Int, minute: Int) {
-        viewModelScope.launch {
-            runCatching {
-                appSettingsRepository.setDailyReminderTime(hour, minute)
-                reminderScheduler.syncReminderFromRepository()
-            }.onSuccess {
-                _uiState.update {
-                    it.copy(
-                        message = "提醒设置已保存",
-                        errorMessage = null
-                    )
-                }
-            }.onFailure {
-                _uiState.update {
-                    it.copy(
-                        errorMessage = "设置保存失败，请稍后重试",
-                        message = null
-                    )
-                }
-            }
+        persistSettingsChange(successMessage = "提醒设置已保存") {
+            appSettingsRepository.setDailyReminderTime(hour, minute)
+            reminderScheduler.syncReminder(
+                currentReminderSettings(
+                    hour = hour,
+                    minute = minute
+                )
+            )
         }
     }
 
@@ -149,31 +149,58 @@ class SettingsViewModel(
      * 开关写入与提醒重建封装成一个入口，是为了保证成功与失败反馈都围绕同一条业务路径。
      */
     private fun persistReminderEnabled(enabled: Boolean, showPermissionWarning: Boolean) {
-        viewModelScope.launch {
-            runCatching {
-                appSettingsRepository.setDailyReminderEnabled(enabled)
-                reminderScheduler.syncReminderFromRepository()
-            }.onSuccess {
-                _uiState.update {
-                    it.copy(
-                        message = if (showPermissionWarning) {
-                            "通知权限未开启，提醒可能无法显示"
-                        } else {
-                            "提醒设置已保存"
-                        },
-                        errorMessage = null
-                    )
-                }
-            }.onFailure {
-                _uiState.update {
-                    it.copy(
-                        message = null,
-                        errorMessage = "设置保存失败，请稍后重试"
-                    )
-                }
-            }
+        val successMessage = if (showPermissionWarning) {
+            "通知权限未开启，提醒可能无法显示"
+        } else {
+            "提醒设置已保存"
+        }
+        persistSettingsChange(successMessage = successMessage) {
+            appSettingsRepository.setDailyReminderEnabled(enabled)
+            reminderScheduler.syncReminder(currentReminderSettings(enabled = enabled))
         }
     }
+
+    /**
+     * 提醒写操作共享同一套反馈模板，是为了避免开关与时间修改的成功/失败提示逐渐漂移。
+     */
+    private fun persistSettingsChange(
+        successMessage: String,
+        action: suspend () -> Unit
+    ) {
+        viewModelScope.launch {
+            runCatching { action() }
+                .onSuccess {
+                    _uiState.update {
+                        it.copy(
+                            message = successMessage,
+                            errorMessage = null
+                        )
+                    }
+                }
+                .onFailure {
+                    _uiState.update {
+                        it.copy(
+                            message = null,
+                            errorMessage = "设置保存失败，请稍后重试"
+                        )
+                    }
+                }
+        }
+    }
+
+    /**
+     * 设置页本身已经持有最新提醒状态，因此直接复用当前快照可以减少写入后的二次读盘，
+     * 同时保持调度口径仍由 `ReminderScheduler` 统一收敛。
+     */
+    private fun currentReminderSettings(
+        enabled: Boolean = _uiState.value.dailyReminderEnabled,
+        hour: Int = _uiState.value.reminderHour,
+        minute: Int = _uiState.value.reminderMinute
+    ): AppSettings = latestSettings.copy(
+        dailyReminderEnabled = enabled,
+        dailyReminderHour = hour,
+        dailyReminderMinute = minute
+    )
 
     companion object {
         /**
@@ -183,15 +210,12 @@ class SettingsViewModel(
             appSettingsRepository: AppSettingsRepository,
             reminderScheduler: ReminderScheduler,
             appVersionName: String
-        ): ViewModelProvider.Factory = object : ViewModelProvider.Factory {
-            override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                @Suppress("UNCHECKED_CAST")
-                return SettingsViewModel(
-                    appSettingsRepository = appSettingsRepository,
-                    reminderScheduler = reminderScheduler,
-                    appVersionName = appVersionName
-                ) as T
-            }
+        ): ViewModelProvider.Factory = typedViewModelFactory {
+            SettingsViewModel(
+                appSettingsRepository = appSettingsRepository,
+                reminderScheduler = reminderScheduler,
+                appVersionName = appVersionName
+            )
         }
     }
 }

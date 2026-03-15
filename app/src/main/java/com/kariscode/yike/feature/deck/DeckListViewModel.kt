@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.kariscode.yike.core.time.TimeProvider
+import com.kariscode.yike.core.viewmodel.typedViewModelFactory
 import com.kariscode.yike.domain.model.Deck
 import com.kariscode.yike.domain.model.DeckSummary
 import com.kariscode.yike.domain.repository.DeckRepository
@@ -23,7 +24,7 @@ data class DeckEditorDraft(
     val deckId: String?,
     val name: String,
     val description: String,
-    val validationMessage: String?
+    val validationMessage: String? = null
 )
 
 /**
@@ -92,51 +93,34 @@ class DeckListViewModel(
      * 新建入口打开空草稿，可让保存逻辑统一复用同一套校验与时间戳策略。
      */
     fun onCreateDeckClick() {
-        _uiState.update {
-            it.copy(
-                editor = DeckEditorDraft(deckId = null, name = "", description = "", validationMessage = null),
-                message = null,
-                errorMessage = null
-            )
-        }
+        openEditor(DeckEditorDraft(deckId = null, name = "", description = ""))
     }
 
     /**
      * 编辑入口把现有值写入草稿，避免 UI 自己维护一份表单副本导致与数据源不一致。
      */
     fun onEditDeckClick(item: DeckSummary) {
-        _uiState.update {
-            it.copy(
-                editor = DeckEditorDraft(
-                    deckId = item.deck.id,
-                    name = item.deck.name,
-                    description = item.deck.description,
-                    validationMessage = null
-                ),
-                message = null,
-                errorMessage = null
+        openEditor(
+            DeckEditorDraft(
+                deckId = item.deck.id,
+                name = item.deck.name,
+                description = item.deck.description
             )
-        }
+        )
     }
 
     /**
      * 输入变更统一写入草稿状态，便于后续做就地校验与按钮可用性控制。
      */
     fun onDraftNameChange(value: String) {
-        _uiState.update { state ->
-            val editor = state.editor ?: return@update state
-            state.copy(editor = editor.copy(name = value, validationMessage = null))
-        }
+        updateEditor { it.copy(name = value, validationMessage = null) }
     }
 
     /**
      * 描述变更和名称变更同样进入草稿，以确保保存时读取到的是同一份表单状态。
      */
     fun onDraftDescriptionChange(value: String) {
-        _uiState.update { state ->
-            val editor = state.editor ?: return@update state
-            state.copy(editor = editor.copy(description = value, validationMessage = null))
-        }
+        updateEditor { it.copy(description = value, validationMessage = null) }
     }
 
     /**
@@ -159,28 +143,33 @@ class DeckListViewModel(
         }
 
         viewModelScope.launch {
-            val now = timeProvider.nowEpochMillis()
-            val existing = editor.deckId?.let { deckRepository.findById(it) }
-            val deck = if (existing == null) {
-                Deck(
-                    id = "deck_${UUID.randomUUID()}",
-                    name = trimmedName,
-                    description = editor.description,
-                    archived = false,
-                    sortOrder = 0,
-                    createdAt = now,
-                    updatedAt = now
-                )
-            } else {
-                existing.copy(
-                    name = trimmedName,
-                    description = editor.description,
-                    updatedAt = now
-                )
-            }
+            runCatching {
+                val now = timeProvider.nowEpochMillis()
+                val existing = editor.deckId?.let { deckRepository.findById(it) }
+                val deck = if (existing == null) {
+                    Deck(
+                        id = "deck_${UUID.randomUUID()}",
+                        name = trimmedName,
+                        description = editor.description,
+                        archived = false,
+                        sortOrder = 0,
+                        createdAt = now,
+                        updatedAt = now
+                    )
+                } else {
+                    existing.copy(
+                        name = trimmedName,
+                        description = editor.description,
+                        updatedAt = now
+                    )
+                }
 
-            deckRepository.upsert(deck)
-            _uiState.update { it.copy(editor = null, message = "卡组已保存", errorMessage = null) }
+                deckRepository.upsert(deck)
+            }.onSuccess {
+                _uiState.update { it.copy(editor = null, message = "卡组已保存", errorMessage = null) }
+            }.onFailure {
+                _uiState.update { it.copy(message = null, errorMessage = "卡组保存失败，请稍后重试") }
+            }
         }
     }
 
@@ -188,7 +177,7 @@ class DeckListViewModel(
      * 归档与反归档通过同一入口切换，便于未来把“归档后不进入待复习”作为统一规则拓展。
      */
     fun onToggleArchiveClick(item: DeckSummary) {
-        viewModelScope.launch {
+        executeMutation(errorMessage = "卡组状态更新失败，请稍后重试") {
             val now = timeProvider.nowEpochMillis()
             deckRepository.setArchived(deckId = item.deck.id, archived = !item.deck.archived, updatedAt = now)
         }
@@ -213,9 +202,47 @@ class DeckListViewModel(
      */
     fun onConfirmDelete() {
         val pending = _uiState.value.pendingDelete ?: return
-        viewModelScope.launch {
+        executeMutation(errorMessage = "卡组删除失败，请稍后重试") {
             deckRepository.delete(pending.deck.id)
             _uiState.update { it.copy(pendingDelete = null, message = "卡组已删除", errorMessage = null) }
+        }
+    }
+
+    /**
+     * 打开编辑器时统一清空旧反馈，是为了避免新一轮编辑仍残留上一次保存或失败提示。
+     */
+    private fun openEditor(editor: DeckEditorDraft) {
+        _uiState.update {
+            it.copy(
+                editor = editor,
+                message = null,
+                errorMessage = null
+            )
+        }
+    }
+
+    /**
+     * 草稿更新集中到单点后，标题和描述输入就能共享同一套“无草稿则忽略”的保护逻辑。
+     */
+    private fun updateEditor(transform: (DeckEditorDraft) -> DeckEditorDraft) {
+        _uiState.update { state ->
+            val editor = state.editor ?: return@update state
+            state.copy(editor = transform(editor))
+        }
+    }
+
+    /**
+     * 列表页的写操作统一走同一层失败反馈，是为了避免归档、删除等入口各自遗漏异常收口。
+     */
+    private fun executeMutation(
+        errorMessage: String,
+        action: suspend () -> Unit
+    ) {
+        viewModelScope.launch {
+            runCatching { action() }
+                .onFailure {
+                    _uiState.update { it.copy(message = null, errorMessage = errorMessage) }
+                }
         }
     }
 
@@ -227,11 +254,8 @@ class DeckListViewModel(
         fun factory(
             deckRepository: DeckRepository,
             timeProvider: TimeProvider
-        ): ViewModelProvider.Factory = object : ViewModelProvider.Factory {
-            override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                @Suppress("UNCHECKED_CAST")
-                return DeckListViewModel(deckRepository, timeProvider) as T
-            }
+        ): ViewModelProvider.Factory = typedViewModelFactory {
+            DeckListViewModel(deckRepository, timeProvider)
         }
     }
 }

@@ -14,3 +14,7 @@
 .cxx
 local.properties
 openspec/
+keystore.properties
+*.jks
+*.keystore
+release/

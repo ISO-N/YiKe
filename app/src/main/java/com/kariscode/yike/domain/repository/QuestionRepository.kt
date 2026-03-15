@@ -20,6 +20,11 @@ interface QuestionRepository {
     suspend fun findById(questionId: String): Question?
 
     /**
+     * 编辑页重新载入只需要一个稳定快照，提供直接查询可避免为一次性读取建立额外 Flow 订阅。
+     */
+    suspend fun listByCard(cardId: String): List<Question>
+
+    /**
      * 批量 upsert 能让编辑页一次性保存多问题，避免逐条写入造成中途失败的半成功状态。
      */
     suspend fun upsertAll(questions: List<Question>)
@@ -28,6 +33,11 @@ interface QuestionRepository {
      * due 查询集中在仓储接口，能保证首页统计、提醒 Worker 与复习队列使用一致口径。
      */
     suspend fun listDueQuestions(nowEpochMillis: Long): List<Question>
+
+    /**
+     * 复习队列只需要下一张卡片的路由目标，直接返回卡片 id 可以避免先拉全量问题再在内存分组。
+     */
+    suspend fun findNextDueCardId(nowEpochMillis: Long): String?
 
     /**
      * 首页与提醒需要“卡片数 + 问题数”的概览统计；
@@ -39,4 +49,9 @@ interface QuestionRepository {
      * 删除问题应同时级联清理复习记录；仓储提供以 ID 删除的语义接口以减少上层对实体的依赖。
      */
     suspend fun delete(questionId: String)
+
+    /**
+     * 编辑页批量保存时提供集合删除能力，可以把多次往返压缩成一次写操作并缩短保存窗口。
+     */
+    suspend fun deleteAll(questionIds: Collection<String>)
 }

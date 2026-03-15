@@ -1,8 +1,24 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ksp)
+}
+
+val releaseSigningPropertiesFile = rootProject.file("keystore.properties")
+val releaseSigningProperties = Properties()
+val isReleaseTaskRequested = gradle.startParameter.taskNames.any { taskName ->
+    taskName.contains("Release", ignoreCase = true)
+}
+
+if (releaseSigningPropertiesFile.exists()) {
+    releaseSigningPropertiesFile.inputStream().use(releaseSigningProperties::load)
+} else if (isReleaseTaskRequested) {
+    throw GradleException(
+        "缺少 keystore.properties，无法生成已签名的 release APK。请先复制 keystore.properties.example 并填写签名信息。"
+    )
 }
 
 android {
@@ -23,9 +39,39 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        if (releaseSigningPropertiesFile.exists()) {
+            create("release") {
+                val releaseStoreFilePath = releaseSigningProperties.getProperty("storeFile")
+                    ?: throw GradleException("keystore.properties 缺少 storeFile 配置。")
+                val releaseStorePassword = releaseSigningProperties.getProperty("storePassword")
+                    ?: throw GradleException("keystore.properties 缺少 storePassword 配置。")
+                val releaseKeyAlias = releaseSigningProperties.getProperty("keyAlias")
+                    ?: throw GradleException("keystore.properties 缺少 keyAlias 配置。")
+                val releaseKeyPassword = releaseSigningProperties.getProperty("keyPassword")
+                    ?: throw GradleException("keystore.properties 缺少 keyPassword 配置。")
+                val releaseStoreFile = rootProject.file(releaseStoreFilePath)
+
+                if (!releaseStoreFile.exists()) {
+                    throw GradleException(
+                        "keystore.properties 指向的签名文件不存在：${releaseStoreFile.absolutePath}"
+                    )
+                }
+
+                storeFile = releaseStoreFile
+                storePassword = releaseStorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
+                enableV1Signing = true
+                enableV2Signing = true
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
+            signingConfig = signingConfigs.findByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -60,6 +106,7 @@ ksp {
 dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.navigation.compose)
