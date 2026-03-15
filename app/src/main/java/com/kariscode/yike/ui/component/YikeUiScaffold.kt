@@ -718,7 +718,7 @@ private fun YikeBottomNavigation(
         Box(modifier = Modifier.fillMaxWidth()) {
             Box(
                 modifier = Modifier
-                    .fillMaxSize()
+                    .matchParentSize()
                     .clip(navigationShape)
                     .yikeGlassBlur(radius = 18f)
                     .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.48f))
