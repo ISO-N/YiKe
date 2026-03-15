@@ -38,12 +38,37 @@ class FeatureContentTest {
                 onRetry = {},
                 onStartReview = {},
                 onOpenDeckList = {},
-                onOpenSettings = {}
+                onOpenSettings = {},
+                onOpenDebug = {}
             )
         }
 
         composeRule.onNodeWithText("今日暂无待复习").assertIsDisplayed()
         composeRule.onNodeWithText("进入卡组").assertIsDisplayed()
+    }
+
+    /**
+     * debug 构建首页必须显式暴露调试入口，
+     * 否则这次新增的造数能力虽然存在，但开发者仍然无法从主路径触达。
+     */
+    @Test
+    fun homeContent_debugBuildShowsDebugEntry() {
+        composeRule.setContent {
+            HomeContent(
+                uiState = HomeUiState(
+                    isLoading = false,
+                    summary = TodayReviewSummary(dueCardCount = 0, dueQuestionCount = 0),
+                    errorMessage = null
+                ),
+                onRetry = {},
+                onStartReview = {},
+                onOpenDeckList = {},
+                onOpenSettings = {},
+                onOpenDebug = {}
+            )
+        }
+
+        composeRule.onNodeWithText("调试工具").assertIsDisplayed()
     }
 
     /**

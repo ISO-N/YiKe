@@ -52,7 +52,15 @@
 
 ---
 
-## 6. 回归建议
+## 6. Debug 构建专用验收
+
+- [ ] debug 构建首页底部显示“调试工具”按钮
+- [ ] 点击“生成随机数据”后，首页待复习统计与卡组列表可看到新增测试数据
+- [ ] release 构建首页不显示“调试工具”，且无法进入 `debug` 路由
+
+---
+
+## 7. 回归建议
 
 - [ ] 运行 `./gradlew.bat testDebugUnitTest`
 - [ ] 运行 `./gradlew.bat assembleDebugAndroidTest`
