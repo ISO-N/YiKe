@@ -135,7 +135,7 @@ class YikeDatabaseIntegrationTest {
         database.questionDao().upsertAll(listOf(question))
         database.reviewRecordDao().insert(record)
 
-        database.deckDao().delete(deck)
+        database.deckDao().deleteById(deck.id)
 
         assertNull(database.cardDao().findById(card.id))
         assertNull(database.questionDao().findById(question.id))
