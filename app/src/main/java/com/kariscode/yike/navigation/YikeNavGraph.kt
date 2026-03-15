@@ -41,7 +41,10 @@ fun YikeNavGraph(
 
         composable(route = YikeDestination.DECK_LIST) {
             DeckListScreen(
-                onBack = { navController.popBackStack() },
+                onOpenHome = {
+                    navController.popBackStack(route = YikeDestination.HOME, inclusive = false)
+                },
+                onOpenSettings = { navController.navigate(YikeDestination.SETTINGS) },
                 onOpenDeck = { deckId -> navController.navigate(YikeDestination.cardList(deckId)) }
             )
         }
@@ -104,7 +107,10 @@ fun YikeNavGraph(
 
         composable(route = YikeDestination.SETTINGS) {
             SettingsScreen(
-                onBack = { navController.popBackStack() },
+                onOpenHome = {
+                    navController.popBackStack(route = YikeDestination.HOME, inclusive = false)
+                },
+                onOpenDeckList = { navController.navigate(YikeDestination.DECK_LIST) },
                 onOpenBackupRestore = { navController.navigate(YikeDestination.BACKUP_RESTORE) }
             )
         }

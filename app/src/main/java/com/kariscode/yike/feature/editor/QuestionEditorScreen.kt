@@ -3,28 +3,30 @@ package com.kariscode.yike.feature.editor
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Button
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kariscode.yike.app.LocalAppContainer
 import com.kariscode.yike.ui.component.NavigationAction
-import com.kariscode.yike.ui.component.YikeTopAppBar
+import com.kariscode.yike.ui.component.YikeBadge
+import com.kariscode.yike.ui.component.YikeFlowScaffold
+import com.kariscode.yike.ui.component.YikeHeaderBlock
+import com.kariscode.yike.ui.component.YikePrimaryButton
+import com.kariscode.yike.ui.component.YikeSecondaryButton
+import com.kariscode.yike.ui.component.YikeStateBanner
+import com.kariscode.yike.ui.component.YikeSurfaceCard
+import com.kariscode.yike.ui.theme.LocalYikeSpacing
 
 /**
- * 编辑页将来会承载“卡片信息 + 多问题编辑”的复杂表单状态；
- * 先建立页面壳可以让后续的表单状态机与保存用例有固定承载点，避免把校验规则散落到 Composable。
+ * 问题编辑页属于流内页面，因此保持聚焦式顶部返回与保存动作，不接入一级底部导航。
  */
 @Composable
 fun QuestionEditorScreen(
@@ -46,64 +48,85 @@ fun QuestionEditorScreen(
     )
     val uiState by viewModel.uiState.collectAsState()
 
-    Scaffold(
-        topBar = {
-            YikeTopAppBar(
-                title = "问题编辑",
-                navigationAction = NavigationAction(label = "返回", onClick = onBack)
-            )
-        },
-        modifier = modifier
+    YikeFlowScaffold(
+        title = "编辑卡片",
+        subtitle = "先把卡片信息写清楚，再逐条维护问题和答案。",
+        navigationAction = NavigationAction(label = "返", onClick = onBack),
+        actionText = if (uiState.isSaving) "保存中" else "保存",
+        onActionClick = if (uiState.isSaving) null else viewModel::onSaveClick
     ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            if (uiState.isLoading) {
-                Text("加载中…")
-                return@Column
+        QuestionEditorContent(
+            uiState = uiState,
+            onTitleChange = viewModel::onTitleChange,
+            onDescriptionChange = viewModel::onDescriptionChange,
+            onAddQuestion = viewModel::onAddQuestionClick,
+            onSave = viewModel::onSaveClick,
+            onPromptChange = viewModel::onQuestionPromptChange,
+            onAnswerChange = viewModel::onQuestionAnswerChange,
+            onDeleteQuestion = viewModel::onDeleteQuestionClick,
+            modifier = modifier.padding(padding)
+        )
+    }
+}
+
+/**
+ * 编辑页主体独立出来后，可以直接验证未保存、校验失败和保存成功等关键反馈状态。
+ */
+@Composable
+private fun QuestionEditorContent(
+    uiState: QuestionEditorUiState,
+    onTitleChange: (String) -> Unit,
+    onDescriptionChange: (String) -> Unit,
+    onAddQuestion: () -> Unit,
+    onSave: () -> Unit,
+    onPromptChange: (String, String) -> Unit,
+    onAnswerChange: (String, String) -> Unit,
+    onDeleteQuestion: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val spacing = LocalYikeSpacing.current
+    Column(
+        modifier = modifier.verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(spacing.lg)
+    ) {
+        when {
+            uiState.isLoading -> {
+                YikeStateBanner(
+                    title = "正在加载卡片内容",
+                    description = "稍等一下，我们会把当前卡片和问题草稿载入到编辑器。"
+                )
             }
 
-            OutlinedTextField(
-                value = uiState.title,
-                onValueChange = viewModel::onTitleChange,
-                label = { Text("卡片标题") },
-                singleLine = true
-            )
-
-            OutlinedTextField(
-                value = uiState.description,
-                onValueChange = viewModel::onDescriptionChange,
-                label = { Text("卡片描述") }
-            )
-
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Button(onClick = viewModel::onAddQuestionClick) {
-                    Text("新增问题")
-                }
-                Button(onClick = viewModel::onSaveClick, enabled = !uiState.isSaving) {
-                    Text(if (uiState.isSaving) "保存中…" else "保存")
-                }
-            }
-
-            uiState.errorMessage?.let { Text(it) }
-                ?: uiState.message?.let { Text(it) }
-
-            if (uiState.questions.isEmpty()) {
-                Text("暂无问题。点击“新增问题”开始录入。")
-            } else {
-                LazyColumn(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    items(items = uiState.questions, key = { it.id }) { q ->
-                        QuestionDraftItem(
-                            draft = q,
-                            onPromptChange = { value -> viewModel.onQuestionPromptChange(q.id, value) },
-                            onAnswerChange = { value -> viewModel.onQuestionAnswerChange(q.id, value) },
-                            onDelete = { viewModel.onDeleteQuestionClick(q.id) }
-                        )
-                    }
+            else -> {
+                QuestionEditorFeedback(uiState = uiState)
+                CardInfoSection(
+                    title = uiState.title,
+                    description = uiState.description,
+                    onTitleChange = onTitleChange,
+                    onDescriptionChange = onDescriptionChange
+                )
+                QuestionDraftSection(
+                    drafts = uiState.questions,
+                    onAddQuestion = onAddQuestion,
+                    onPromptChange = onPromptChange,
+                    onAnswerChange = onAnswerChange,
+                    onDeleteQuestion = onDeleteQuestion
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(spacing.sm)
+                ) {
+                    YikeSecondaryButton(
+                        text = "添加问题",
+                        onClick = onAddQuestion,
+                        modifier = Modifier.weight(1f)
+                    )
+                    YikePrimaryButton(
+                        text = if (uiState.isSaving) "保存中…" else "保存修改",
+                        onClick = onSave,
+                        modifier = Modifier.weight(1f),
+                        enabled = !uiState.isSaving
+                    )
                 }
             }
         }
@@ -111,31 +134,166 @@ fun QuestionEditorScreen(
 }
 
 /**
- * 单个问题草稿组件保持轻量，避免在列表中引入复杂状态导致编辑交互难以维护。
+ * 反馈区把未保存、校验失败和保存结果压到同一层级，
+ * 这样用户不需要在页面不同角落猜测当前编辑状态。
  */
 @Composable
-private fun QuestionDraftItem(
+private fun QuestionEditorFeedback(
+    uiState: QuestionEditorUiState
+) {
+    when {
+        uiState.errorMessage != null -> {
+            YikeStateBanner(
+                title = "保存前还需要修正",
+                description = uiState.errorMessage
+            )
+        }
+
+        uiState.message != null -> {
+            YikeStateBanner(
+                title = "保存成功",
+                description = uiState.message
+            )
+        }
+
+        uiState.hasUnsavedChanges -> {
+            YikeStateBanner(
+                title = "有未保存修改",
+                description = "你刚刚更新了卡片信息或问题草稿，记得保存后再离开。"
+            )
+        }
+    }
+}
+
+/**
+ * 卡片信息区与问题草稿区拆开后，用户能更快区分“这是卡片元信息”还是“这是具体复习问题”。
+ */
+@Composable
+private fun CardInfoSection(
+    title: String,
+    description: String,
+    onTitleChange: (String) -> Unit,
+    onDescriptionChange: (String) -> Unit
+) {
+    val spacing = LocalYikeSpacing.current
+    YikeSurfaceCard {
+        YikeHeaderBlock(
+            eyebrow = "Card Info",
+            title = if (title.isBlank()) "先给卡片起个标题" else title,
+            subtitle = "卡片标题和说明越明确，复习时越容易快速进入语境。"
+        )
+        Column(verticalArrangement = Arrangement.spacedBy(spacing.md)) {
+            OutlinedTextField(
+                value = title,
+                onValueChange = onTitleChange,
+                label = { Text("卡片标题") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+            OutlinedTextField(
+                value = description,
+                onValueChange = onDescriptionChange,
+                label = { Text("简短说明") },
+                modifier = Modifier.fillMaxWidth(),
+                minLines = 3
+            )
+        }
+    }
+}
+
+/**
+ * 问题草稿区独立承载新增、删除和逐题校验，是为了让多问题编辑保持明确的局部反馈。
+ */
+@Composable
+private fun QuestionDraftSection(
+    drafts: List<QuestionDraft>,
+    onAddQuestion: () -> Unit,
+    onPromptChange: (String, String) -> Unit,
+    onAnswerChange: (String, String) -> Unit,
+    onDeleteQuestion: (String) -> Unit
+) {
+    val spacing = LocalYikeSpacing.current
+    Column(verticalArrangement = Arrangement.spacedBy(spacing.md)) {
+        YikeHeaderBlock(
+            eyebrow = "Question Drafts",
+            title = "问题草稿",
+            subtitle = "题面不能为空，答案允许先留空，后续复习会显示“无答案”。"
+        )
+        if (drafts.isEmpty()) {
+            YikeStateBanner(
+                title = "还没有问题草稿",
+                description = "先添加第一条问题，把卡片真正变成可复习的内容。"
+            ) {
+                YikePrimaryButton(
+                    text = "添加问题",
+                    onClick = onAddQuestion,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        } else {
+            drafts.forEachIndexed { index, draft ->
+                QuestionDraftCard(
+                    index = index + 1,
+                    draft = draft,
+                    onPromptChange = { value -> onPromptChange(draft.id, value) },
+                    onAnswerChange = { value -> onAnswerChange(draft.id, value) },
+                    onDelete = { onDeleteQuestion(draft.id) }
+                )
+            }
+        }
+    }
+}
+
+/**
+ * 单条问题草稿卡片承载题面、答案和删除动作，是为了让每条输入都拥有就近反馈而不是堆成一长页。
+ */
+@Composable
+private fun QuestionDraftCard(
+    index: Int,
     draft: QuestionDraft,
     onPromptChange: (String) -> Unit,
     onAnswerChange: (String) -> Unit,
     onDelete: () -> Unit
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    val spacing = LocalYikeSpacing.current
+    YikeSurfaceCard {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            YikeHeaderBlock(
+                eyebrow = "Question $index",
+                title = "问题 $index",
+                subtitle = "先保证题面明确，再补答案。"
+            )
+            YikeBadge(text = if (draft.isNew) "未保存" else "已存在")
+        }
         OutlinedTextField(
             value = draft.prompt,
             onValueChange = onPromptChange,
-            label = { Text("题面") }
+            label = { Text("题面") },
+            modifier = Modifier.fillMaxWidth(),
+            minLines = 3
         )
         OutlinedTextField(
             value = draft.answer,
             onValueChange = onAnswerChange,
-            label = { Text("答案（可空）") }
+            label = { Text("答案（可空）") },
+            modifier = Modifier.fillMaxWidth(),
+            minLines = 3
         )
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            TextButton(onClick = onDelete) { Text("删除") }
-            if (draft.validationMessage != null) {
-                Text(draft.validationMessage)
-            }
+        draft.validationMessage?.let { message ->
+            Text(text = message)
+        }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(spacing.sm)
+        ) {
+            YikeSecondaryButton(
+                text = "删除问题",
+                onClick = onDelete,
+                modifier = Modifier.fillMaxWidth()
+            )
         }
     }
 }

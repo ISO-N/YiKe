@@ -24,6 +24,7 @@ data class QuestionEditorUiState(
     val title: String,
     val description: String,
     val questions: List<QuestionDraft>,
+    val hasUnsavedChanges: Boolean,
     val isSaving: Boolean,
     val message: String?,
     val errorMessage: String?
