@@ -10,10 +10,15 @@ import com.kariscode.yike.data.local.db.dao.CardDao
 import com.kariscode.yike.data.local.db.dao.DeckDao
 import com.kariscode.yike.data.local.db.dao.QuestionDao
 import com.kariscode.yike.data.local.db.dao.ReviewRecordDao
+import com.kariscode.yike.data.local.db.entity.CardEntity
+import com.kariscode.yike.data.local.db.entity.DeckEntity
 import com.kariscode.yike.data.local.db.entity.QuestionEntity
+import com.kariscode.yike.data.local.db.entity.ReviewRecordEntity
 import com.kariscode.yike.data.mapper.RoomMappers
 import com.kariscode.yike.domain.model.AppSettings
+import com.kariscode.yike.domain.model.Question
 import com.kariscode.yike.domain.model.QuestionStatus
+import com.kariscode.yike.domain.model.ReviewRecord
 import com.kariscode.yike.domain.repository.AppSettingsRepository
 import java.io.FileNotFoundException
 import kotlinx.coroutines.flow.first
@@ -97,65 +102,10 @@ class BackupService(
                 schemaVersion = settings.schemaVersion,
                 backupLastAt = settings.backupLastAt?.let(BackupJson::formatEpochMillis)
             ),
-            decks = decks.map { deck ->
-                BackupDeck(
-                    id = deck.id,
-                    name = deck.name,
-                    description = deck.description,
-                    archived = deck.archived,
-                    sortOrder = deck.sortOrder,
-                    createdAt = BackupJson.formatEpochMillis(deck.createdAt),
-                    updatedAt = BackupJson.formatEpochMillis(deck.updatedAt)
-                )
-            },
-            cards = cards.map { card ->
-                BackupCard(
-                    id = card.id,
-                    deckId = card.deckId,
-                    title = card.title,
-                    description = card.description,
-                    archived = card.archived,
-                    sortOrder = card.sortOrder,
-                    createdAt = BackupJson.formatEpochMillis(card.createdAt),
-                    updatedAt = BackupJson.formatEpochMillis(card.updatedAt)
-                )
-            },
-            questions = questions.map { question ->
-                val domainQuestion = RoomMappers.run { question.toDomain() }
-                BackupQuestion(
-                    id = domainQuestion.id,
-                    cardId = domainQuestion.cardId,
-                    prompt = domainQuestion.prompt,
-                    answer = domainQuestion.answer,
-                    tags = domainQuestion.tags,
-                    status = when (domainQuestion.status) {
-                        QuestionStatus.ACTIVE -> QuestionEntity.STATUS_ACTIVE
-                        QuestionStatus.ARCHIVED -> QuestionEntity.STATUS_ARCHIVED
-                    },
-                    stageIndex = domainQuestion.stageIndex,
-                    dueAt = BackupJson.formatEpochMillis(domainQuestion.dueAt),
-                    lastReviewedAt = domainQuestion.lastReviewedAt?.let(BackupJson::formatEpochMillis),
-                    reviewCount = domainQuestion.reviewCount,
-                    lapseCount = domainQuestion.lapseCount,
-                    createdAt = BackupJson.formatEpochMillis(domainQuestion.createdAt),
-                    updatedAt = BackupJson.formatEpochMillis(domainQuestion.updatedAt)
-                )
-            },
-            reviewRecords = reviewRecords.map { reviewRecord ->
-                val domainRecord = RoomMappers.run { reviewRecord.toDomain() }
-                BackupReviewRecord(
-                    id = domainRecord.id,
-                    questionId = domainRecord.questionId,
-                    rating = domainRecord.rating.name,
-                    oldStageIndex = domainRecord.oldStageIndex,
-                    newStageIndex = domainRecord.newStageIndex,
-                    oldDueAt = BackupJson.formatEpochMillis(domainRecord.oldDueAt),
-                    newDueAt = BackupJson.formatEpochMillis(domainRecord.newDueAt),
-                    reviewedAt = BackupJson.formatEpochMillis(domainRecord.reviewedAt),
-                    responseTimeMs = domainRecord.responseTimeMs,
-                    note = domainRecord.note
-                )
-            }
+            decks = decks.map { deck -> deck.toBackup() },
+            cards = cards.map { card -> card.toBackup() },
+            questions = questions.map { question -> question.toBackup() },
+            reviewRecords = reviewRecords.map { reviewRecord -> reviewRecord.toBackup() }
         )
     }
 
@@ -176,68 +126,10 @@ class BackupService(
                 cardDao.clearAll()
                 deckDao.clearAll()
 
-                deckDao.upsertAll(document.decks.map { deck ->
-                    com.kariscode.yike.data.local.db.entity.DeckEntity(
-                        id = deck.id,
-                        name = deck.name,
-                        description = deck.description,
-                        archived = deck.archived,
-                        sortOrder = deck.sortOrder,
-                        createdAt = BackupJson.parseEpochMillis(deck.createdAt),
-                        updatedAt = BackupJson.parseEpochMillis(deck.updatedAt)
-                    )
-                })
-                cardDao.upsertAll(document.cards.map { card ->
-                    com.kariscode.yike.data.local.db.entity.CardEntity(
-                        id = card.id,
-                        deckId = card.deckId,
-                        title = card.title,
-                        description = card.description,
-                        archived = card.archived,
-                        sortOrder = card.sortOrder,
-                        createdAt = BackupJson.parseEpochMillis(card.createdAt),
-                        updatedAt = BackupJson.parseEpochMillis(card.updatedAt)
-                    )
-                })
-                questionDao.upsertAll(document.questions.map { question ->
-                    RoomMappers.run {
-                        com.kariscode.yike.domain.model.Question(
-                            id = question.id,
-                            cardId = question.cardId,
-                            prompt = question.prompt,
-                            answer = question.answer,
-                            tags = question.tags,
-                            status = if (question.status == QuestionEntity.STATUS_ARCHIVED) {
-                                QuestionStatus.ARCHIVED
-                            } else {
-                                QuestionStatus.ACTIVE
-                            },
-                            stageIndex = question.stageIndex,
-                            dueAt = BackupJson.parseEpochMillis(question.dueAt),
-                            lastReviewedAt = question.lastReviewedAt?.let(BackupJson::parseEpochMillis),
-                            reviewCount = question.reviewCount,
-                            lapseCount = question.lapseCount,
-                            createdAt = BackupJson.parseEpochMillis(question.createdAt),
-                            updatedAt = BackupJson.parseEpochMillis(question.updatedAt)
-                        ).toEntity()
-                    }
-                })
-                reviewRecordDao.insertAll(document.reviewRecords.map { record ->
-                    RoomMappers.run {
-                        com.kariscode.yike.domain.model.ReviewRecord(
-                            id = record.id,
-                            questionId = record.questionId,
-                            rating = enumValueOf(record.rating),
-                            oldStageIndex = record.oldStageIndex,
-                            newStageIndex = record.newStageIndex,
-                            oldDueAt = BackupJson.parseEpochMillis(record.oldDueAt),
-                            newDueAt = BackupJson.parseEpochMillis(record.newDueAt),
-                            reviewedAt = BackupJson.parseEpochMillis(record.reviewedAt),
-                            responseTimeMs = record.responseTimeMs,
-                            note = record.note
-                        ).toEntity()
-                    }
-                })
+                deckDao.upsertAll(document.decks.map { deck -> deck.toEntity() })
+                cardDao.upsertAll(document.cards.map { card -> card.toEntity() })
+                questionDao.upsertAll(document.questions.map { question -> question.toEntity() })
+                reviewRecordDao.insertAll(document.reviewRecords.map { record -> record.toEntity() })
             }
 
             writeSettingsFromBackup(document.settings)
@@ -285,4 +177,158 @@ class BackupService(
      */
     private fun AppSettings.toBackupReminderTime(): String =
         "%02d:%02d".format(dailyReminderHour, dailyReminderMinute)
+
+    /**
+     * Deck 到备份模型的映射收敛到单点后，字段调整时就不必同时追踪导出主流程里的长内联表达式。
+     */
+    private fun DeckEntity.toBackup(): BackupDeck = BackupDeck(
+        id = id,
+        name = name,
+        description = description,
+        archived = archived,
+        sortOrder = sortOrder,
+        createdAt = BackupJson.formatEpochMillis(createdAt),
+        updatedAt = BackupJson.formatEpochMillis(updatedAt)
+    )
+
+    /**
+     * Card 的备份映射独立出来，是为了让层级字段与时间字段的导出规则保持易读且可复用。
+     */
+    private fun CardEntity.toBackup(): BackupCard = BackupCard(
+        id = id,
+        deckId = deckId,
+        title = title,
+        description = description,
+        archived = archived,
+        sortOrder = sortOrder,
+        createdAt = BackupJson.formatEpochMillis(createdAt),
+        updatedAt = BackupJson.formatEpochMillis(updatedAt)
+    )
+
+    /**
+     * Question 映射集中在单点后，可以把状态与时间字段的转换规则固定住，
+     * 避免导出路径未来增删字段时遗漏调度相关数据。
+     */
+    private fun QuestionEntity.toBackup(): BackupQuestion {
+        val domainQuestion = RoomMappers.run { toDomain() }
+        return domainQuestion.toBackup()
+    }
+
+    /**
+     * ReviewRecord 的备份映射抽出来后，导出主流程只保留“读哪些表”的骨架，更容易检查事务语义。
+     */
+    private fun ReviewRecordEntity.toBackup(): BackupReviewRecord {
+        val domainRecord = RoomMappers.run { toDomain() }
+        return domainRecord.toBackup()
+    }
+
+    /**
+     * 领域问题转换成备份模型，是为了让状态枚举与字符串字段的边界集中在一处维护。
+     */
+    private fun Question.toBackup(): BackupQuestion = BackupQuestion(
+        id = id,
+        cardId = cardId,
+        prompt = prompt,
+        answer = answer,
+        tags = tags,
+        status = when (status) {
+            QuestionStatus.ACTIVE -> QuestionEntity.STATUS_ACTIVE
+            QuestionStatus.ARCHIVED -> QuestionEntity.STATUS_ARCHIVED
+        },
+        stageIndex = stageIndex,
+        dueAt = BackupJson.formatEpochMillis(dueAt),
+        lastReviewedAt = lastReviewedAt?.let(BackupJson::formatEpochMillis),
+        reviewCount = reviewCount,
+        lapseCount = lapseCount,
+        createdAt = BackupJson.formatEpochMillis(createdAt),
+        updatedAt = BackupJson.formatEpochMillis(updatedAt)
+    )
+
+    /**
+     * 领域复习记录转换为备份模型时保留原始评分链路，
+     * 这样恢复后仍能重建用户真实的复习历史。
+     */
+    private fun ReviewRecord.toBackup(): BackupReviewRecord = BackupReviewRecord(
+        id = id,
+        questionId = questionId,
+        rating = rating.name,
+        oldStageIndex = oldStageIndex,
+        newStageIndex = newStageIndex,
+        oldDueAt = BackupJson.formatEpochMillis(oldDueAt),
+        newDueAt = BackupJson.formatEpochMillis(newDueAt),
+        reviewedAt = BackupJson.formatEpochMillis(reviewedAt),
+        responseTimeMs = responseTimeMs,
+        note = note
+    )
+
+    /**
+     * 备份模型恢复成 DeckEntity 的规则集中后，导入主流程就能更清楚地表达层级恢复顺序。
+     */
+    private fun BackupDeck.toEntity(): DeckEntity = DeckEntity(
+        id = id,
+        name = name,
+        description = description,
+        archived = archived,
+        sortOrder = sortOrder,
+        createdAt = BackupJson.parseEpochMillis(createdAt),
+        updatedAt = BackupJson.parseEpochMillis(updatedAt)
+    )
+
+    /**
+     * Card 备份恢复映射抽成扩展，是为了把时间解析与层级字段恢复放在一起维护。
+     */
+    private fun BackupCard.toEntity(): CardEntity = CardEntity(
+        id = id,
+        deckId = deckId,
+        title = title,
+        description = description,
+        archived = archived,
+        sortOrder = sortOrder,
+        createdAt = BackupJson.parseEpochMillis(createdAt),
+        updatedAt = BackupJson.parseEpochMillis(updatedAt)
+    )
+
+    /**
+     * Question 恢复映射集中到单点后，状态字符串与领域模型之间的边界就不会散落在事务主流程里。
+     */
+    private fun BackupQuestion.toEntity(): QuestionEntity = RoomMappers.run {
+        Question(
+            id = this@toEntity.id,
+            cardId = this@toEntity.cardId,
+            prompt = this@toEntity.prompt,
+            answer = this@toEntity.answer,
+            tags = this@toEntity.tags,
+            status = if (this@toEntity.status == QuestionEntity.STATUS_ARCHIVED) {
+                QuestionStatus.ARCHIVED
+            } else {
+                QuestionStatus.ACTIVE
+            },
+            stageIndex = this@toEntity.stageIndex,
+            dueAt = BackupJson.parseEpochMillis(this@toEntity.dueAt),
+            lastReviewedAt = this@toEntity.lastReviewedAt?.let(BackupJson::parseEpochMillis),
+            reviewCount = this@toEntity.reviewCount,
+            lapseCount = this@toEntity.lapseCount,
+            createdAt = BackupJson.parseEpochMillis(this@toEntity.createdAt),
+            updatedAt = BackupJson.parseEpochMillis(this@toEntity.updatedAt)
+        ).toEntity()
+    }
+
+    /**
+     * ReviewRecord 恢复映射独立出来，是为了让枚举解析与时间解析的风险点更容易被单独检查。
+     */
+    private fun BackupReviewRecord.toEntity(): ReviewRecordEntity = RoomMappers.run {
+        ReviewRecord(
+            id = this@toEntity.id,
+            questionId = this@toEntity.questionId,
+            rating = enumValueOf(this@toEntity.rating),
+            oldStageIndex = this@toEntity.oldStageIndex,
+            newStageIndex = this@toEntity.newStageIndex,
+            oldDueAt = BackupJson.parseEpochMillis(this@toEntity.oldDueAt),
+            newDueAt = BackupJson.parseEpochMillis(this@toEntity.newDueAt),
+            reviewedAt = BackupJson.parseEpochMillis(this@toEntity.reviewedAt),
+            responseTimeMs = this@toEntity.responseTimeMs,
+            note = this@toEntity.note
+        ).toEntity()
+    }
+
 }
