@@ -24,7 +24,9 @@ class OfflineCardRepository(
      * 观察式查询能让卡片列表在新增/归档后自动刷新，避免页面状态手动同步。
      */
     override fun observeActiveCards(deckId: String): Flow<List<Card>> =
-        cardDao.observeActiveCards(deckId).map { list -> list.map { entity -> RoomMappers.run { entity.toDomain() } } }
+        cardDao.observeActiveCards(deckId).map { list ->
+            list.mapModels { entity -> RoomMappers.run { entity.toDomain() } }
+        }
 
     /**
      * 通过聚合查询提供列表统计，避免 UI 层逐项查询带来的性能与口径风险。
@@ -41,7 +43,9 @@ class OfflineCardRepository(
      * cardId 查询用于编辑页/复习页基于路由参数重建内容。
      */
     override suspend fun findById(cardId: String): Card? = withContext(dispatchers.io) {
-        cardDao.findById(cardId)?.let { entity -> RoomMappers.run { entity.toDomain() } }
+        cardDao.findById(cardId).mapModel { entity ->
+            RoomMappers.run { entity.toDomain() }
+        }
     }
 
     /**
