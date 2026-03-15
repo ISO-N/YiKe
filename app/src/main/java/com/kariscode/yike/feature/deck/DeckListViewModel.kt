@@ -24,7 +24,7 @@ data class DeckEditorDraft(
     val deckId: String?,
     val name: String,
     val description: String,
-    val validationMessage: String?
+    val validationMessage: String? = null
 )
 
 /**
@@ -93,51 +93,34 @@ class DeckListViewModel(
      * 新建入口打开空草稿，可让保存逻辑统一复用同一套校验与时间戳策略。
      */
     fun onCreateDeckClick() {
-        _uiState.update {
-            it.copy(
-                editor = DeckEditorDraft(deckId = null, name = "", description = "", validationMessage = null),
-                message = null,
-                errorMessage = null
-            )
-        }
+        openEditor(DeckEditorDraft(deckId = null, name = "", description = ""))
     }
 
     /**
      * 编辑入口把现有值写入草稿，避免 UI 自己维护一份表单副本导致与数据源不一致。
      */
     fun onEditDeckClick(item: DeckSummary) {
-        _uiState.update {
-            it.copy(
-                editor = DeckEditorDraft(
-                    deckId = item.deck.id,
-                    name = item.deck.name,
-                    description = item.deck.description,
-                    validationMessage = null
-                ),
-                message = null,
-                errorMessage = null
+        openEditor(
+            DeckEditorDraft(
+                deckId = item.deck.id,
+                name = item.deck.name,
+                description = item.deck.description
             )
-        }
+        )
     }
 
     /**
      * 输入变更统一写入草稿状态，便于后续做就地校验与按钮可用性控制。
      */
     fun onDraftNameChange(value: String) {
-        _uiState.update { state ->
-            val editor = state.editor ?: return@update state
-            state.copy(editor = editor.copy(name = value, validationMessage = null))
-        }
+        updateEditor { it.copy(name = value, validationMessage = null) }
     }
 
     /**
      * 描述变更和名称变更同样进入草稿，以确保保存时读取到的是同一份表单状态。
      */
     fun onDraftDescriptionChange(value: String) {
-        _uiState.update { state ->
-            val editor = state.editor ?: return@update state
-            state.copy(editor = editor.copy(description = value, validationMessage = null))
-        }
+        updateEditor { it.copy(description = value, validationMessage = null) }
     }
 
     /**
@@ -217,6 +200,29 @@ class DeckListViewModel(
         viewModelScope.launch {
             deckRepository.delete(pending.deck.id)
             _uiState.update { it.copy(pendingDelete = null, message = "卡组已删除", errorMessage = null) }
+        }
+    }
+
+    /**
+     * 打开编辑器时统一清空旧反馈，是为了避免新一轮编辑仍残留上一次保存或失败提示。
+     */
+    private fun openEditor(editor: DeckEditorDraft) {
+        _uiState.update {
+            it.copy(
+                editor = editor,
+                message = null,
+                errorMessage = null
+            )
+        }
+    }
+
+    /**
+     * 草稿更新集中到单点后，标题和描述输入就能共享同一套“无草稿则忽略”的保护逻辑。
+     */
+    private fun updateEditor(transform: (DeckEditorDraft) -> DeckEditorDraft) {
+        _uiState.update { state ->
+            val editor = state.editor ?: return@update state
+            state.copy(editor = transform(editor))
         }
     }
 

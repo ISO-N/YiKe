@@ -64,13 +64,8 @@ class QuestionEditorViewModel(
      * 标题是必填字段，因此变更需要清空错误提示，避免用户修正后仍看到旧错误。
      */
     fun onTitleChange(value: String) {
-        _uiState.update {
-            it.copy(
-                title = value,
-                hasUnsavedChanges = true,
-                errorMessage = null,
-                message = null
-            )
+        updateDirtyState { state ->
+            state.copy(title = value)
         }
     }
 
@@ -78,13 +73,8 @@ class QuestionEditorViewModel(
      * 描述不参与必填校验，但仍需要清空错误提示以避免用户误以为保存仍失败。
      */
     fun onDescriptionChange(value: String) {
-        _uiState.update {
-            it.copy(
-                description = value,
-                hasUnsavedChanges = true,
-                errorMessage = null,
-                message = null
-            )
+        updateDirtyState { state ->
+            state.copy(description = value)
         }
     }
 
@@ -93,18 +83,14 @@ class QuestionEditorViewModel(
      */
     fun onAddQuestionClick() {
         val tempId = "temp_${UUID.randomUUID()}"
-        _uiState.update { state ->
+        updateDirtyState { state ->
             state.copy(
                 questions = state.questions + QuestionDraft(
                     id = tempId,
                     prompt = "",
                     answer = "",
-                    isNew = true,
-                    validationMessage = null
-                ),
-                hasUnsavedChanges = true,
-                message = null,
-                errorMessage = null
+                    isNew = true
+                )
             )
         }
     }
@@ -113,16 +99,8 @@ class QuestionEditorViewModel(
      * 题面是必填字段，因此变更需要清除题面校验提示以便用户逐步修正。
      */
     fun onQuestionPromptChange(questionId: String, value: String) {
-        _uiState.update { state ->
-            state.copy(
-                questions = state.questions.map { draft ->
-                    if (draft.id != questionId) draft
-                    else draft.copy(prompt = value, validationMessage = null)
-                },
-                hasUnsavedChanges = true,
-                message = null,
-                errorMessage = null
-            )
+        updateQuestionDraft(questionId) { draft ->
+            draft.copy(prompt = value, validationMessage = null)
         }
     }
 
@@ -130,16 +108,8 @@ class QuestionEditorViewModel(
      * 答案允许为空，但仍作为可编辑字段进入草稿，以确保保存行为可预测。
      */
     fun onQuestionAnswerChange(questionId: String, value: String) {
-        _uiState.update { state ->
-            state.copy(
-                questions = state.questions.map { draft ->
-                    if (draft.id != questionId) draft
-                    else draft.copy(answer = value, validationMessage = null)
-                },
-                hasUnsavedChanges = true,
-                message = null,
-                errorMessage = null
-            )
+        updateQuestionDraft(questionId) { draft ->
+            draft.copy(answer = value, validationMessage = null)
         }
     }
 
@@ -150,13 +120,8 @@ class QuestionEditorViewModel(
         val current = _uiState.value.questions
         val draft = current.firstOrNull { it.id == questionId } ?: return
         if (!draft.isNew) deletedQuestionIds.add(questionId)
-        _uiState.update {
-            it.copy(
-                questions = current.filterNot { q -> q.id == questionId },
-                hasUnsavedChanges = true,
-                message = null,
-                errorMessage = null
-            )
+        updateDirtyState { state ->
+            state.copy(questions = current.filterNot { q -> q.id == questionId })
         }
     }
 
@@ -292,6 +257,35 @@ class QuestionEditorViewModel(
                 hasUnsavedChanges = false,
                 message = null,
                 errorMessage = null
+            )
+        }
+    }
+
+    /**
+     * 输入后统一标记脏状态并清空旧反馈，是为了让各字段编辑遵循同一套“可继续修正”的交互规则。
+     */
+    private fun updateDirtyState(transform: (QuestionEditorUiState) -> QuestionEditorUiState) {
+        _uiState.update { state ->
+            transform(state).copy(
+                hasUnsavedChanges = true,
+                message = null,
+                errorMessage = null
+            )
+        }
+    }
+
+    /**
+     * 问题草稿更新集中到单点，是为了把按 id 定位并重建 `questions` 列表的模板从各个输入入口里移除。
+     */
+    private fun updateQuestionDraft(
+        questionId: String,
+        transform: (QuestionDraft) -> QuestionDraft
+    ) {
+        updateDirtyState { state ->
+            state.copy(
+                questions = state.questions.map { draft ->
+                    if (draft.id != questionId) draft else transform(draft)
+                }
             )
         }
     }

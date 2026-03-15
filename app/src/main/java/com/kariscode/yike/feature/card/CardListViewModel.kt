@@ -25,7 +25,7 @@ data class CardEditorDraft(
     val cardId: String?,
     val title: String,
     val description: String,
-    val validationMessage: String?
+    val validationMessage: String? = null
 )
 
 /**
@@ -107,51 +107,34 @@ class CardListViewModel(
      * 新建卡片先打开空草稿，便于复用同一套保存校验逻辑。
      */
     fun onCreateCardClick() {
-        _uiState.update {
-            it.copy(
-                editor = CardEditorDraft(cardId = null, title = "", description = "", validationMessage = null),
-                message = null,
-                errorMessage = null
-            )
-        }
+        openEditor(CardEditorDraft(cardId = null, title = "", description = ""))
     }
 
     /**
      * 编辑卡片时把现有字段写入草稿，避免 UI 自己维护副本导致更新错位。
      */
     fun onEditCardClick(item: CardSummary) {
-        _uiState.update {
-            it.copy(
-                editor = CardEditorDraft(
-                    cardId = item.card.id,
-                    title = item.card.title,
-                    description = item.card.description,
-                    validationMessage = null
-                ),
-                message = null,
-                errorMessage = null
+        openEditor(
+            CardEditorDraft(
+                cardId = item.card.id,
+                title = item.card.title,
+                description = item.card.description
             )
-        }
+        )
     }
 
     /**
      * 标题属于必填字段，因此每次输入变更都需要清理上次校验提示以避免误导。
      */
     fun onDraftTitleChange(value: String) {
-        _uiState.update { state ->
-            val editor = state.editor ?: return@update state
-            state.copy(editor = editor.copy(title = value, validationMessage = null))
-        }
+        updateEditor { it.copy(title = value, validationMessage = null) }
     }
 
     /**
      * 描述不参与必填校验，但仍需进入草稿以确保保存读取到一致状态。
      */
     fun onDraftDescriptionChange(value: String) {
-        _uiState.update { state ->
-            val editor = state.editor ?: return@update state
-            state.copy(editor = editor.copy(description = value, validationMessage = null))
-        }
+        updateEditor { it.copy(description = value, validationMessage = null) }
     }
 
     /**
@@ -230,6 +213,29 @@ class CardListViewModel(
         viewModelScope.launch {
             cardRepository.delete(pending.card.id)
             _uiState.update { it.copy(pendingDelete = null, message = "卡片已删除", errorMessage = null) }
+        }
+    }
+
+    /**
+     * 打开编辑器时统一清空旧反馈，是为了让创建和编辑都从同一个干净状态开始。
+     */
+    private fun openEditor(editor: CardEditorDraft) {
+        _uiState.update {
+            it.copy(
+                editor = editor,
+                message = null,
+                errorMessage = null
+            )
+        }
+    }
+
+    /**
+     * 草稿更新收口后，标题与描述的输入路径就不需要各自重复 editor 判空模板。
+     */
+    private fun updateEditor(transform: (CardEditorDraft) -> CardEditorDraft) {
+        _uiState.update { state ->
+            val editor = state.editor ?: return@update state
+            state.copy(editor = transform(editor))
         }
     }
 

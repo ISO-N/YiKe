@@ -9,7 +9,7 @@ data class QuestionDraft(
     val prompt: String,
     val answer: String,
     val isNew: Boolean,
-    val validationMessage: String?
+    val validationMessage: String? = null
 )
 
 /**
