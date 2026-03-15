@@ -9,8 +9,12 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.kariscode.yike.app.LocalAppContainer
 import com.kariscode.yike.ui.component.YikeTopAppBar
 
 /**
@@ -24,6 +28,15 @@ fun HomeScreen(
     onOpenSettings: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val container = LocalAppContainer.current
+    val viewModel = viewModel<HomeViewModel>(
+        factory = HomeViewModel.factory(
+            questionRepository = container.questionRepository,
+            timeProvider = container.timeProvider
+        )
+    )
+    val uiState by viewModel.uiState.collectAsState()
+
     Scaffold(
         topBar = { YikeTopAppBar(title = "忆刻") },
         modifier = modifier
@@ -35,12 +48,34 @@ fun HomeScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Text("首页（占位）：后续接入今日待复习概览/空状态/错误状态。")
-            Button(
-                onClick = onStartReview,
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp)
-            ) {
-                Text("开始复习")
+            when {
+                uiState.isLoading -> Text("加载中…")
+                uiState.errorMessage != null -> {
+                    Text(uiState.errorMessage ?: "加载失败")
+                    Button(onClick = viewModel::refresh) { Text("重试") }
+                }
+                else -> {
+                    val summary = uiState.summary
+                    val dueQuestions = summary?.dueQuestionCount ?: 0
+                    val dueCards = summary?.dueCardCount ?: 0
+                    if (dueQuestions <= 0) {
+                        Text("今日暂无待复习。")
+                        Button(
+                            onClick = onOpenDeckList,
+                            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp)
+                        ) {
+                            Text("去创建内容")
+                        }
+                    } else {
+                        Text("今日待复习：$dueCards 张卡片 / $dueQuestions 个问题")
+                        Button(
+                            onClick = onStartReview,
+                            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp)
+                        ) {
+                            Text("开始复习")
+                        }
+                    }
+                }
             }
             Button(
                 onClick = onOpenDeckList,
