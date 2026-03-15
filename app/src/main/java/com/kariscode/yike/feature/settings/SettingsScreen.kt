@@ -8,9 +8,11 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Switch
@@ -103,7 +105,8 @@ fun SettingsScreen(
                 ).show()
             },
             onOpenBackupRestore = viewModel::onBackupRestoreClick,
-            modifier = modifier.padding(padding)
+            modifier = modifier,
+            contentPadding = padding
         )
     }
 }
@@ -118,7 +121,8 @@ private fun SettingsContent(
     onReminderEnabledChange: (Boolean) -> Unit,
     onChangeTime: () -> Unit,
     onOpenBackupRestore: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    contentPadding: PaddingValues = PaddingValues()
 ) {
     val spacing = LocalYikeSpacing.current
     Column(
@@ -158,6 +162,7 @@ private fun SettingsContent(
             onChangeTime = onChangeTime,
             onOpenBackupRestore = onOpenBackupRestore
         )
+        Spacer(modifier = Modifier.height(contentPadding.calculateBottomPadding()))
     }
 }
 
