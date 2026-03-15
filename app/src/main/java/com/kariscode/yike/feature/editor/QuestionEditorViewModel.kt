@@ -155,43 +155,26 @@ class QuestionEditorViewModel(
 
             _uiState.update { it.copy(isSaving = true, errorMessage = null, message = null) }
 
-            val now = timeProvider.nowEpochMillis()
-            val settings = appSettingsRepository.observeSettings().first()
-            val initialDueAt = InitialDueAtCalculator.compute(
-                nowEpochMillis = now,
-                reminderHour = settings.dailyReminderHour,
-                reminderMinute = settings.dailyReminderMinute
-            )
+            runCatching {
+                val now = timeProvider.nowEpochMillis()
+                val settings = appSettingsRepository.observeSettings().first()
+                val initialDueAt = InitialDueAtCalculator.compute(
+                    nowEpochMillis = now,
+                    reminderHour = settings.dailyReminderHour,
+                    reminderMinute = settings.dailyReminderMinute
+                )
 
-            val updatedCard = card.copy(
-                title = trimmedTitle,
-                description = state.description,
-                updatedAt = now
-            )
-            cardRepository.upsert(updatedCard)
+                val updatedCard = card.copy(
+                    title = trimmedTitle,
+                    description = state.description,
+                    updatedAt = now
+                )
+                cardRepository.upsert(updatedCard)
 
-            val toUpsert = state.questions.map { draft ->
-                if (draft.isNew) {
-                    Question(
-                        id = "q_${UUID.randomUUID()}",
-                        cardId = cardId,
-                        prompt = draft.prompt.trim(),
-                        answer = draft.answer,
-                        tags = emptyList(),
-                        status = QuestionStatus.ACTIVE,
-                        stageIndex = 0,
-                        dueAt = initialDueAt,
-                        lastReviewedAt = null,
-                        reviewCount = 0,
-                        lapseCount = 0,
-                        createdAt = now,
-                        updatedAt = now
-                    )
-                } else {
-                    val original = loadedQuestionsById[draft.id]
-                    if (original == null) {
+                val toUpsert = state.questions.map { draft ->
+                    if (draft.isNew) {
                         Question(
-                            id = draft.id,
+                            id = "q_${UUID.randomUUID()}",
                             cardId = cardId,
                             prompt = draft.prompt.trim(),
                             answer = draft.answer,
@@ -206,21 +189,48 @@ class QuestionEditorViewModel(
                             updatedAt = now
                         )
                     } else {
-                        original.copy(
-                            prompt = draft.prompt.trim(),
-                            answer = draft.answer,
-                            updatedAt = now
-                        )
+                        val original = loadedQuestionsById[draft.id]
+                        if (original == null) {
+                            Question(
+                                id = draft.id,
+                                cardId = cardId,
+                                prompt = draft.prompt.trim(),
+                                answer = draft.answer,
+                                tags = emptyList(),
+                                status = QuestionStatus.ACTIVE,
+                                stageIndex = 0,
+                                dueAt = initialDueAt,
+                                lastReviewedAt = null,
+                                reviewCount = 0,
+                                lapseCount = 0,
+                                createdAt = now,
+                                updatedAt = now
+                            )
+                        } else {
+                            original.copy(
+                                prompt = draft.prompt.trim(),
+                                answer = draft.answer,
+                                updatedAt = now
+                            )
+                        }
                     }
                 }
+
+                questionRepository.upsertAll(toUpsert)
+                deletedQuestionIds.forEach { id -> questionRepository.delete(id) }
+                deletedQuestionIds.clear()
+                reloadFromStorage()
+            }.onSuccess {
+                _uiState.update { it.copy(isSaving = false, hasUnsavedChanges = false, message = "已保存") }
+            }.onFailure {
+                _uiState.update {
+                    it.copy(
+                        isSaving = false,
+                        message = null,
+                        errorMessage = "保存失败，请稍后重试"
+                    )
+                }
             }
-
-            questionRepository.upsertAll(toUpsert)
-            deletedQuestionIds.forEach { id -> questionRepository.delete(id) }
-            deletedQuestionIds.clear()
-
-            reloadFromStorage()
-            _uiState.update { it.copy(isSaving = false, hasUnsavedChanges = false, message = "已保存") }
         }
     }
 

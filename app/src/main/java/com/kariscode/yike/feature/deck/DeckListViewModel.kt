@@ -143,28 +143,33 @@ class DeckListViewModel(
         }
 
         viewModelScope.launch {
-            val now = timeProvider.nowEpochMillis()
-            val existing = editor.deckId?.let { deckRepository.findById(it) }
-            val deck = if (existing == null) {
-                Deck(
-                    id = "deck_${UUID.randomUUID()}",
-                    name = trimmedName,
-                    description = editor.description,
-                    archived = false,
-                    sortOrder = 0,
-                    createdAt = now,
-                    updatedAt = now
-                )
-            } else {
-                existing.copy(
-                    name = trimmedName,
-                    description = editor.description,
-                    updatedAt = now
-                )
-            }
+            runCatching {
+                val now = timeProvider.nowEpochMillis()
+                val existing = editor.deckId?.let { deckRepository.findById(it) }
+                val deck = if (existing == null) {
+                    Deck(
+                        id = "deck_${UUID.randomUUID()}",
+                        name = trimmedName,
+                        description = editor.description,
+                        archived = false,
+                        sortOrder = 0,
+                        createdAt = now,
+                        updatedAt = now
+                    )
+                } else {
+                    existing.copy(
+                        name = trimmedName,
+                        description = editor.description,
+                        updatedAt = now
+                    )
+                }
 
-            deckRepository.upsert(deck)
-            _uiState.update { it.copy(editor = null, message = "卡组已保存", errorMessage = null) }
+                deckRepository.upsert(deck)
+            }.onSuccess {
+                _uiState.update { it.copy(editor = null, message = "卡组已保存", errorMessage = null) }
+            }.onFailure {
+                _uiState.update { it.copy(message = null, errorMessage = "卡组保存失败，请稍后重试") }
+            }
         }
     }
 
