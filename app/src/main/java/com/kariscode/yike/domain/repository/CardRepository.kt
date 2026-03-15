@@ -1,6 +1,7 @@
 package com.kariscode.yike.domain.repository
 
 import com.kariscode.yike.domain.model.Card
+import com.kariscode.yike.domain.model.CardSummary
 import kotlinx.coroutines.flow.Flow
 
 /**
@@ -13,6 +14,12 @@ interface CardRepository {
      * 同时保持“按路由参数加载”的原则，便于进程重建恢复。
      */
     fun observeActiveCards(deckId: String): Flow<List<Card>>
+
+    /**
+     * 卡片列表需要的聚合信息（例如题目数量）通过专门的流提供，
+     * 以避免页面层逐条查询造成性能问题。
+     */
+    fun observeActiveCardSummaries(deckId: String): Flow<List<CardSummary>>
 
     /**
      * 单对象读取用于编辑页根据 cardId 重建表单状态，避免跨页面传对象。

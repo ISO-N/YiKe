@@ -1,6 +1,7 @@
 package com.kariscode.yike.domain.repository
 
 import com.kariscode.yike.domain.model.Deck
+import com.kariscode.yike.domain.model.DeckSummary
 import kotlinx.coroutines.flow.Flow
 
 /**
@@ -12,6 +13,12 @@ interface DeckRepository {
      * 使用 Flow 能让列表在本地数据变更时自动更新，减少 UI 端手动刷新导致的状态错位。
      */
     fun observeActiveDecks(): Flow<List<Deck>>
+
+    /**
+     * 为列表提供带统计的聚合流，可以把统计口径集中在 data 层实现，
+     * 并避免上层用例/页面引入 N+1 查询。
+     */
+    fun observeActiveDeckSummaries(): Flow<List<DeckSummary>>
 
     /**
      * 以 ID 获取单个对象是为了配合导航参数与进程重建，
@@ -34,4 +41,3 @@ interface DeckRepository {
      */
     suspend fun delete(deckId: String)
 }
-

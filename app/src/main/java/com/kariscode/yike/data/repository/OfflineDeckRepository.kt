@@ -2,8 +2,11 @@ package com.kariscode.yike.data.repository
 
 import com.kariscode.yike.core.dispatchers.AppDispatchers
 import com.kariscode.yike.data.local.db.dao.DeckDao
+import com.kariscode.yike.data.local.db.dao.DeckSummaryRow
+import com.kariscode.yike.data.local.db.entity.QuestionEntity
 import com.kariscode.yike.data.mapper.RoomMappers
 import com.kariscode.yike.domain.model.Deck
+import com.kariscode.yike.domain.model.DeckSummary
 import com.kariscode.yike.domain.repository.DeckRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -22,6 +25,13 @@ class OfflineDeckRepository(
      */
     override fun observeActiveDecks(): Flow<List<Deck>> =
         deckDao.observeActiveDecks().map { list -> list.map { entity -> RoomMappers.run { entity.toDomain() } } }
+
+    /**
+     * 通过数据库聚合流提供统计信息，能让列表页在数据变更时稳定刷新且避免 N+1 查询。
+     */
+    override fun observeActiveDeckSummaries(): Flow<List<DeckSummary>> =
+        deckDao.observeActiveDeckSummaries(activeStatus = QuestionEntity.STATUS_ACTIVE)
+            .map { list -> list.map(::toDeckSummary) }
 
     /**
      * IO 查询放在 dispatchers.io 上执行，避免在主线程触发磁盘读写导致卡顿。
@@ -55,4 +65,22 @@ class OfflineDeckRepository(
         deckDao.delete(entity)
         Unit
     }
+
+    /**
+     * 将聚合行转换为 domain 模型是为了让上层完全不依赖 SQL 别名与聚合字段命名，
+     * 从而保持统计口径变更时的影响面可控。
+     */
+    private fun toDeckSummary(row: DeckSummaryRow): DeckSummary = DeckSummary(
+        deck = Deck(
+            id = row.id,
+            name = row.name,
+            description = row.description,
+            archived = row.archived,
+            sortOrder = row.sortOrder,
+            createdAt = row.createdAt,
+            updatedAt = row.updatedAt
+        ),
+        cardCount = row.cardCount,
+        questionCount = row.questionCount
+    )
 }

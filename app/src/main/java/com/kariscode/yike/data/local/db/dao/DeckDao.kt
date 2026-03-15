@@ -8,6 +8,21 @@ import com.kariscode.yike.data.local.db.entity.DeckEntity
 import kotlinx.coroutines.flow.Flow
 
 /**
+ * 列表聚合查询的返回类型，用于减少 N+1 查询并保持统计口径集中在数据库侧。
+ */
+data class DeckSummaryRow(
+    val id: String,
+    val name: String,
+    val description: String,
+    val archived: Boolean,
+    val sortOrder: Int,
+    val createdAt: Long,
+    val updatedAt: Long,
+    val cardCount: Int,
+    val questionCount: Int
+)
+
+/**
  * DAO 是 data 层对数据库的最小抽象边界；把查询集中在 DAO 中，
  * 能避免 Repository 或 UseCase 里手写 SQL 片段导致统计口径不一致。
  */
@@ -26,6 +41,31 @@ interface DeckDao {
      */
     @Query("SELECT * FROM deck WHERE archived = 0 ORDER BY sortOrder ASC, createdAt ASC")
     fun observeActiveDecks(): Flow<List<DeckEntity>>
+
+    /**
+     * 通过一次聚合查询返回列表所需的基础统计，避免在 UI 层逐条查询导致性能与口径问题。
+     */
+    @Query(
+        """
+        SELECT
+            d.id AS id,
+            d.name AS name,
+            d.description AS description,
+            d.archived AS archived,
+            d.sortOrder AS sortOrder,
+            d.createdAt AS createdAt,
+            d.updatedAt AS updatedAt,
+            COUNT(DISTINCT c.id) AS cardCount,
+            COUNT(DISTINCT q.id) AS questionCount
+        FROM deck d
+        LEFT JOIN card c ON c.deckId = d.id AND c.archived = 0
+        LEFT JOIN question q ON q.cardId = c.id AND q.status = :activeStatus
+        WHERE d.archived = 0
+        GROUP BY d.id
+        ORDER BY d.sortOrder ASC, d.createdAt ASC
+        """
+    )
+    fun observeActiveDeckSummaries(activeStatus: String): Flow<List<DeckSummaryRow>>
 
     @Query("SELECT * FROM deck WHERE id = :deckId LIMIT 1")
     suspend fun findById(deckId: String): DeckEntity?
