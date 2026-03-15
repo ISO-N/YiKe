@@ -491,29 +491,46 @@ button {
 }
 
 .preview-grid {
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  grid-template-columns: 1fr;
+  gap: var(--spacing-5);
 }
 
 .preview-card {
-  padding: var(--spacing-4);
+  padding: var(--spacing-5);
+  display: grid;
+  grid-template-columns: minmax(260px, 360px) minmax(0, 1fr);
+  gap: 28px;
+  align-items: center;
 }
 
 .preview-shell {
   justify-content: center;
-  min-height: 720px;
-  padding: 16px;
+  min-height: 860px;
+  padding: 28px;
   border-radius: 32px;
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.56), rgba(223, 229, 227, 0.7)),
     #dbe8e4;
 }
 
+.preview-copy {
+  display: grid;
+  gap: var(--spacing-3);
+  align-content: center;
+}
+
+.preview-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-3);
+  margin-top: var(--spacing-2);
+}
+
 .phone-frame {
-  width: 100%;
-  max-width: 348px;
-  height: 690px;
-  padding: 10px;
-  border-radius: 34px;
+  width: min(100%, 390px);
+  aspect-ratio: 390 / 844;
+  padding: 11px;
+  border-radius: 38px;
   background: #15201f;
   box-shadow: 0 30px 60px rgba(21, 32, 31, 0.22);
 }
@@ -564,6 +581,11 @@ button {
     padding: 24px 16px 64px;
   }
 
+  .preview-card {
+    grid-template-columns: 1fr;
+    padding: var(--spacing-4);
+  }
+
   .stats-grid,
   .button-row,
   .rating-grid,
@@ -573,6 +595,7 @@ button {
 
   .preview-shell {
     min-height: auto;
+    padding: 16px;
   }
 }
 
