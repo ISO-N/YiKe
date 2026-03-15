@@ -31,6 +31,9 @@ android {
                 "proguard-rules.pro"
             )
         }
+        debug {
+            applicationIdSuffix = ".debug"
+        }
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
@@ -39,6 +42,12 @@ android {
     buildFeatures {
         compose = true
         buildConfig = true
+    }
+
+    sourceSets {
+        getByName("debug") {
+            manifest.srcFile("src/debug/AndroidManifest.xml")
+        }
     }
 }
 
