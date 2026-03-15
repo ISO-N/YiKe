@@ -8,6 +8,8 @@ import com.kariscode.yike.core.viewmodel.typedViewModelFactory
 import com.kariscode.yike.domain.model.ReviewRating
 import com.kariscode.yike.domain.repository.CardRepository
 import com.kariscode.yike.domain.repository.ReviewRepository
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -108,10 +110,14 @@ class ReviewCardViewModel(
         }
         viewModelScope.launch {
             runCatching {
-                val now = timeProvider.nowEpochMillis()
-                val card = cardRepository.findById(cardId) ?: error("这张卡片不存在")
-                val dueQuestions = reviewRepository.listDueQuestionsByCard(cardId = cardId, nowEpochMillis = now)
-                card.title to dueQuestions
+                coroutineScope {
+                    val now = timeProvider.nowEpochMillis()
+                    val cardDeferred = async { cardRepository.findById(cardId) ?: error("这张卡片不存在") }
+                    val dueQuestionsDeferred = async {
+                        reviewRepository.listDueQuestionsByCard(cardId = cardId, nowEpochMillis = now)
+                    }
+                    cardDeferred.await().title to dueQuestionsDeferred.await()
+                }
             }.onSuccess { (cardTitle, dueQuestions) ->
                 if (dueQuestions.isEmpty()) {
                     _effects.tryEmit(ReviewCardEffect.NavigateToQueue)
