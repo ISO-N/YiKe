@@ -100,6 +100,38 @@ cd yike
 adb install app/build/outputs/apk/debug/app-debug.apk
 ```
 
+### 生成正式 APK
+
+正式 APK 必须先完成签名配置，否则 `release` 构建只会得到无法安装的未签名包。
+
+1. 复制 `keystore.properties.example` 为 `keystore.properties`
+2. 填写你自己的签名信息：
+
+```properties
+storeFile=release.keystore
+storePassword=你的 keystore 密码
+keyAlias=你的别名
+keyPassword=你的 key 密码
+```
+
+3. 准备好本地 keystore 文件后执行：
+
+```bash
+./gradlew assembleRelease
+```
+
+生成结果通常位于：
+
+```text
+app/build/outputs/apk/release/app-release.apk
+```
+
+说明：
+
+- `keystore.properties` 与 keystore 文件已加入忽略规则，不会提交到仓库
+- 若缺少签名配置，`assembleRelease` 会直接失败并提示如何补齐
+- 若只做本地调试，请继续使用 `assembleDebug`
+
 ### 默认复习节奏
 
 采用经典的间隔序列：`1 → 2 → 4 → 7 → 15 → 30 → 90 → 180` 天
