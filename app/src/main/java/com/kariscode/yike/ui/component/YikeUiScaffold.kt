@@ -621,7 +621,8 @@ private fun YikeBottomNavigation(
             .fillMaxWidth()
             .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.92f))
             .windowInsetsPadding(WindowInsets.navigationBars.only(WindowInsetsSides.Bottom))
-            .padding(horizontal = 16.dp, vertical = 6.dp)
+            .padding(horizontal = 16.dp)
+            .padding(top = 6.dp, bottom = 1.dp)
     ) {
         Surface(
             tonalElevation = 4.dp,
@@ -633,7 +634,7 @@ private fun YikeBottomNavigation(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(8.dp),
+                    .padding(horizontal = 8.dp, vertical = 6.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 YikePrimaryDestination.entries.forEach { destination ->
