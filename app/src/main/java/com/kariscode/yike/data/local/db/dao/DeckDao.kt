@@ -1,0 +1,42 @@
+package com.kariscode.yike.data.local.db.dao
+
+import androidx.room.Dao
+import androidx.room.Delete
+import androidx.room.Query
+import androidx.room.Upsert
+import com.kariscode.yike.data.local.db.entity.DeckEntity
+import kotlinx.coroutines.flow.Flow
+
+/**
+ * DAO 是 data 层对数据库的最小抽象边界；把查询集中在 DAO 中，
+ * 能避免 Repository 或 UseCase 里手写 SQL 片段导致统计口径不一致。
+ */
+@Dao
+interface DeckDao {
+    /**
+     * 首版使用 Upsert 以降低“创建/编辑”分支复杂度，
+     * 这样 UI 只需提交最终表单即可，不必先判断是否已存在再分支调用 insert/update。
+     */
+    @Upsert
+    suspend fun upsert(deck: DeckEntity): Long
+
+    /**
+     * 提供 Flow 版本是为了后续首页/列表能在数据变更时自动刷新，
+     * 避免首版在多个页面手动触发 reload 造成状态不一致。
+     */
+    @Query("SELECT * FROM deck WHERE archived = 0 ORDER BY sortOrder ASC, createdAt ASC")
+    fun observeActiveDecks(): Flow<List<DeckEntity>>
+
+    @Query("SELECT * FROM deck WHERE id = :deckId LIMIT 1")
+    suspend fun findById(deckId: String): DeckEntity?
+
+    @Query("UPDATE deck SET archived = :archived, updatedAt = :updatedAt WHERE id = :deckId")
+    suspend fun setArchived(deckId: String, archived: Boolean, updatedAt: Long): Int
+
+    /**
+     * 物理删除只用于用户明确确认的高风险操作；
+     * 这里保留接口是为了后续在“删除卡组”确认后一次性触发级联清理。
+     */
+    @Delete
+    suspend fun delete(deck: DeckEntity): Int
+}
