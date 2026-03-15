@@ -17,3 +17,4 @@ openspec/
 keystore.properties
 *.jks
 *.keystore
+release/
