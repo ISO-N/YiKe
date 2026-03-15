@@ -2,25 +2,24 @@ package com.kariscode.yike.feature.review
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kariscode.yike.app.LocalAppContainer
 import com.kariscode.yike.ui.component.NavigationAction
-import com.kariscode.yike.ui.component.YikeTopAppBar
+import com.kariscode.yike.ui.component.YikeFlowScaffold
+import com.kariscode.yike.ui.component.YikePrimaryButton
+import com.kariscode.yike.ui.component.YikeSecondaryButton
+import com.kariscode.yike.ui.component.YikeStateBanner
+import com.kariscode.yike.ui.theme.LocalYikeSpacing
 
 /**
- * 复习队列路由的存在是为了把“选择下一张待复习卡片”的路由逻辑从具体页面中剥离出来，
- * 这样复习页只需关心本卡内逐题流程，避免单个 ViewModel 同时承担队列与流程的双重复杂度。
+ * 复习队列页只负责决定下一张卡片，因此页面重点应放在当前状态说明，而不是展示无关操作。
  */
 @Composable
 fun ReviewQueueScreen(
@@ -47,26 +46,73 @@ fun ReviewQueueScreen(
         }
     }
 
-    Scaffold(
-        topBar = { YikeTopAppBar(title = "复习队列", navigationAction = NavigationAction(label = "返回", onClick = onBack)) },
-        modifier = modifier
+    YikeFlowScaffold(
+        title = "准备开始复习",
+        subtitle = "我们会先为你选择今天最该处理的那张卡片。",
+        navigationAction = NavigationAction(label = "返", onClick = onBack)
     ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            when {
-                uiState.isLoading -> Text("正在选择下一张卡片…")
-                uiState.errorMessage != null -> {
-                    Text(uiState.errorMessage ?: "加载失败")
-                    Button(onClick = viewModel::loadNext) { Text("重试") }
+        ReviewQueueContent(
+            uiState = uiState,
+            onRetry = viewModel::loadNext,
+            onBackToHome = onBackToHome,
+            modifier = modifier.padding(padding)
+        )
+    }
+}
+
+/**
+ * 队列页主体只表达加载、失败和回退动作，是为了让用户理解“当前还在选卡”而不是卡住了。
+ */
+@Composable
+private fun ReviewQueueContent(
+    uiState: ReviewQueueUiState,
+    onRetry: () -> Unit,
+    onBackToHome: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val spacing = LocalYikeSpacing.current
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(spacing.lg)
+    ) {
+        when {
+            uiState.isLoading -> {
+                YikeStateBanner(
+                    title = "正在选择下一张卡片",
+                    description = "系统会优先挑选最早到期的内容，尽量缩短你的决策时间。"
+                )
+            }
+
+            uiState.errorMessage != null -> {
+                YikeStateBanner(
+                    title = "暂时没能进入复习",
+                    description = uiState.errorMessage
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(spacing.sm)) {
+                        YikePrimaryButton(
+                            text = "重新选择",
+                            onClick = onRetry,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        YikeSecondaryButton(
+                            text = "返回首页",
+                            onClick = onBackToHome,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
                 }
-                else -> {
-                    Text("正在跳转…")
-                    Button(onClick = onBackToHome) { Text("返回首页") }
+            }
+
+            else -> {
+                YikeStateBanner(
+                    title = "即将跳转到复习页",
+                    description = "如果没有待复习内容，系统会自动带你回到首页。"
+                ) {
+                    YikeSecondaryButton(
+                        text = "返回首页",
+                        onClick = onBackToHome,
+                        modifier = Modifier.fillMaxWidth()
+                    )
                 }
             }
         }

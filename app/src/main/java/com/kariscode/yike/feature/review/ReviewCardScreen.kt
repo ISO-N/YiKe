@@ -4,29 +4,36 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kariscode.yike.app.LocalAppContainer
 import com.kariscode.yike.domain.model.ReviewRating
 import com.kariscode.yike.ui.component.NavigationAction
-import com.kariscode.yike.ui.component.YikeTopAppBar
+import com.kariscode.yike.ui.component.YikeBadge
+import com.kariscode.yike.ui.component.YikeDangerButton
+import com.kariscode.yike.ui.component.YikeFlowScaffold
+import com.kariscode.yike.ui.component.YikeHeaderBlock
+import com.kariscode.yike.ui.component.YikePrimaryButton
+import com.kariscode.yike.ui.component.YikeProgressBar
+import com.kariscode.yike.ui.component.YikeRatingButton
+import com.kariscode.yike.ui.component.YikeRatingPalette
+import com.kariscode.yike.ui.component.YikeSecondaryButton
+import com.kariscode.yike.ui.component.YikeStateBanner
+import com.kariscode.yike.ui.component.YikeSurfaceCard
+import com.kariscode.yike.ui.theme.LocalYikeSpacing
 
 /**
- * 复习页将来会承载“问题 -> 显示答案 -> 评分 -> 下一题”的流程状态机；
- * 当前实现直接把状态机落进 ViewModel，是为了保证逐题流程、退出确认和失败重试在同一状态来源下运行。
+ * 复习页需要保持聚焦节奏，因此仍使用流内导航壳，并把退出动作收敛到顶部栏和返回键确认。
  */
 @Composable
 fun ReviewCardScreen(
@@ -57,14 +64,10 @@ fun ReviewCardScreen(
         }
     }
 
-    Scaffold(
-        topBar = {
-            YikeTopAppBar(
-                title = "复习",
-                navigationAction = NavigationAction(label = "退出", onClick = viewModel::onExitAttempt)
-            )
-        },
-        modifier = modifier
+    YikeFlowScaffold(
+        title = uiState.cardTitle.ifBlank { "复习" },
+        subtitle = buildReviewSubtitle(uiState),
+        navigationAction = NavigationAction(label = "退", onClick = viewModel::onExitAttempt)
     ) { padding ->
         ReviewCardContent(
             uiState = uiState,
@@ -73,34 +76,20 @@ fun ReviewCardScreen(
             onRetryLoad = viewModel::loadSession,
             onContinueNextCard = viewModel::onContinueNextCardClick,
             onBackHome = viewModel::onBackHomeClick,
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
+            modifier = modifier.padding(padding)
         )
     }
 
     if (uiState.exitConfirmationVisible) {
-        AlertDialog(
-            onDismissRequest = viewModel::onDismissExitConfirmation,
-            title = { Text("要退出本次复习吗？") },
-            text = { Text("未评分的问题不会计入完成。") },
-            confirmButton = {
-                Button(onClick = viewModel::onConfirmExit) {
-                    Text("退出")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = viewModel::onDismissExitConfirmation) {
-                    Text("继续复习")
-                }
-            }
+        ExitConfirmationDialog(
+            onDismiss = viewModel::onDismissExitConfirmation,
+            onConfirm = viewModel::onConfirmExit
         )
     }
 }
 
 /**
- * 将复习内容拆成独立展示层，是为了让 UI 测试能直接验证关键状态，
- * 同时避免顶层 Screen 被导航与状态渲染两种职责混在一起。
+ * 复习内容拆成独立展示层后，可以直接验证题面、答案、评分和完成态的关键节奏。
  */
 @Composable
 fun ReviewCardContent(
@@ -112,79 +101,67 @@ fun ReviewCardContent(
     onBackHome: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val spacing = LocalYikeSpacing.current
     Column(
-        modifier = modifier.padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        modifier = modifier.verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(spacing.lg)
     ) {
         when {
             uiState.isLoading -> {
-                CircularProgressIndicator()
-                Text("正在加载复习内容…")
+                YikeStateBanner(
+                    title = "正在加载复习内容",
+                    description = "稍等一下，我们会按当前卡片的到期问题顺序为你展开。"
+                )
             }
 
             uiState.errorMessage != null && uiState.currentQuestion == null && !uiState.isCompleted -> {
-                Text(uiState.errorMessage)
-                Button(onClick = onRetryLoad) {
-                    Text("重试")
+                YikeStateBanner(
+                    title = "暂时没能打开这张卡片",
+                    description = uiState.errorMessage
+                ) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(spacing.sm)) {
+                        YikePrimaryButton(
+                            text = "重试",
+                            onClick = onRetryLoad,
+                            modifier = Modifier.weight(1f)
+                        )
+                        YikeSecondaryButton(
+                            text = "返回首页",
+                            onClick = onBackHome,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
                 }
             }
 
             uiState.isCompleted -> {
-                Text("本卡完成")
-                Text("已完成 ${uiState.completedCount} / ${uiState.totalCount} 题")
-                Button(onClick = onContinueNextCard) {
-                    Text("继续下一张")
-                }
-                TextButton(onClick = onBackHome) {
-                    Text("返回首页")
-                }
+                ReviewCompletedSection(
+                    uiState = uiState,
+                    onContinueNextCard = onContinueNextCard,
+                    onBackHome = onBackHome
+                )
             }
 
             else -> {
-                val currentQuestion = uiState.currentQuestion
-                if (currentQuestion != null) {
-                    Text(uiState.cardTitle.ifBlank { "当前卡片" })
-                    Text("第 ${uiState.completedCount + 1} / ${uiState.totalCount} 题")
-                    Text("阶段：${currentQuestion.stageIndex}")
-                    Text(currentQuestion.prompt)
-
-                    if (uiState.answerVisible) {
-                        Text("答案：${currentQuestion.answerText}")
-                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                ReviewActionButton(
-                                    label = "重来",
-                                    enabled = !uiState.isSubmitting,
-                                    onClick = { onRate(ReviewRating.AGAIN) }
-                                )
-                                ReviewActionButton(
-                                    label = "困难",
-                                    enabled = !uiState.isSubmitting,
-                                    onClick = { onRate(ReviewRating.HARD) }
-                                )
-                            }
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                ReviewActionButton(
-                                    label = "良好",
-                                    enabled = !uiState.isSubmitting,
-                                    onClick = { onRate(ReviewRating.GOOD) }
-                                )
-                                ReviewActionButton(
-                                    label = "简单",
-                                    enabled = !uiState.isSubmitting,
-                                    onClick = { onRate(ReviewRating.EASY) }
-                                )
-                            }
-                        }
-                    } else {
-                        Button(onClick = onRevealAnswer) {
-                            Text("显示答案")
-                        }
-                    }
-
-                    if (uiState.errorMessage != null) {
-                        Text(uiState.errorMessage)
-                    }
+                ReviewProgressSection(uiState = uiState)
+                uiState.currentQuestion?.let { currentQuestion ->
+                    QuestionPromptSection(question = currentQuestion)
+                    AnswerSection(
+                        answerVisible = uiState.answerVisible,
+                        answerText = currentQuestion.answerText,
+                        onRevealAnswer = onRevealAnswer
+                    )
+                    RatingSection(
+                        answerVisible = uiState.answerVisible,
+                        isSubmitting = uiState.isSubmitting,
+                        onRate = onRate
+                    )
+                }
+                uiState.errorMessage?.let { message ->
+                    YikeStateBanner(
+                        title = "评分提交失败",
+                        description = message
+                    )
                 }
             }
         }
@@ -192,19 +169,187 @@ fun ReviewCardContent(
 }
 
 /**
- * 四档评分按钮统一封装，是为了保持禁用态和文案风格一致，
- * 避免某个分支漏掉重复点击保护。
+ * 进度区将本卡完成度和当前题号放在同一块，是为了减少用户在复习过程中的位置焦虑。
  */
 @Composable
-private fun ReviewActionButton(
-    label: String,
-    enabled: Boolean,
-    onClick: () -> Unit
+private fun ReviewProgressSection(
+    uiState: ReviewCardUiState
 ) {
-    Button(
-        onClick = onClick,
-        enabled = enabled
+    val totalCount = uiState.totalCount.coerceAtLeast(1)
+    val progress = uiState.completedCount.toFloat() / totalCount.toFloat()
+    YikeStateBanner(
+        title = "本卡完成度",
+        description = "第 ${uiState.completedCount + 1} 题，共 ${uiState.totalCount} 题",
+        trailing = {
+            YikeBadge(text = "${(progress * 100).toInt()}%")
+        }
     ) {
-        Text(label)
+        YikeProgressBar(progress = progress)
     }
+}
+
+/**
+ * 题面区把问题内容单独抬高，是为了保持“先回忆、后看答案”的复习节奏。
+ */
+@Composable
+private fun QuestionPromptSection(
+    question: ReviewQuestionUiModel
+) {
+    YikeSurfaceCard {
+        YikeHeaderBlock(
+            eyebrow = "问题",
+            title = "先在脑中组织答案",
+            subtitle = "阶段 ${question.stageIndex}"
+        )
+        Text(text = question.prompt)
+    }
+}
+
+/**
+ * 答案区在用户主动展开前只保留主动作，是为了遵守规格中“评分前必须先显示答案”的约束。
+ */
+@Composable
+private fun AnswerSection(
+    answerVisible: Boolean,
+    answerText: String,
+    onRevealAnswer: () -> Unit
+) {
+    if (!answerVisible) {
+        YikePrimaryButton(
+            text = "显示答案",
+            onClick = onRevealAnswer,
+            modifier = Modifier.fillMaxWidth()
+        )
+        return
+    }
+
+    YikeSurfaceCard {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            YikeHeaderBlock(
+                eyebrow = "答案",
+                title = "已展开",
+                subtitle = "对照答案后，立即给出这题的掌握度。"
+            )
+            YikeBadge(text = "已展开")
+        }
+        Text(text = answerText)
+    }
+}
+
+/**
+ * 评分区统一承载四档掌握度按钮，并在提交中禁用重复点击，保持复习推进节奏稳定。
+ */
+@Composable
+private fun RatingSection(
+    answerVisible: Boolean,
+    isSubmitting: Boolean,
+    onRate: (ReviewRating) -> Unit
+) {
+    val spacing = LocalYikeSpacing.current
+    if (!answerVisible) return
+    Column(verticalArrangement = Arrangement.spacedBy(spacing.md)) {
+        YikeHeaderBlock(
+            eyebrow = "Rating",
+            title = "这题掌握得怎么样？",
+            subtitle = if (isSubmitting) "正在记录本次评分，请稍等。" else "评分后会自动推进到下一题或本卡完成态。"
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(spacing.sm)) {
+            YikeRatingButton(
+                text = "完全不会",
+                containerColor = YikeRatingPalette.criticalContainer,
+                contentColor = androidx.compose.ui.graphics.Color(0xFF8C1212),
+                onClick = { onRate(ReviewRating.AGAIN) },
+                modifier = Modifier.weight(1f),
+                enabled = !isSubmitting
+            )
+            YikeRatingButton(
+                text = "有印象",
+                containerColor = YikeRatingPalette.warningContainer,
+                contentColor = androidx.compose.ui.graphics.Color(0xFF8C5400),
+                onClick = { onRate(ReviewRating.HARD) },
+                modifier = Modifier.weight(1f),
+                enabled = !isSubmitting
+            )
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(spacing.sm)) {
+            YikeRatingButton(
+                text = "基本会",
+                containerColor = YikeRatingPalette.successContainer,
+                contentColor = androidx.compose.ui.graphics.Color(0xFF1D6620),
+                onClick = { onRate(ReviewRating.GOOD) },
+                modifier = Modifier.weight(1f),
+                enabled = !isSubmitting
+            )
+            YikeRatingButton(
+                text = "很轻松",
+                containerColor = YikeRatingPalette.bestContainer,
+                contentColor = androidx.compose.ui.graphics.Color(0xFF005048),
+                onClick = { onRate(ReviewRating.EASY) },
+                modifier = Modifier.weight(1f),
+                enabled = !isSubmitting
+            )
+        }
+    }
+}
+
+/**
+ * 本卡完成态需要提供“继续下一张”和“返回首页”两个明确出口，避免用户停在流程尾部无所适从。
+ */
+@Composable
+private fun ReviewCompletedSection(
+    uiState: ReviewCardUiState,
+    onContinueNextCard: () -> Unit,
+    onBackHome: () -> Unit
+) {
+    val spacing = LocalYikeSpacing.current
+    YikeStateBanner(
+        title = "本卡完成",
+        description = "已完成 ${uiState.completedCount} / ${uiState.totalCount} 题，现在可以继续下一张或先回首页。"
+    ) {
+        Row(horizontalArrangement = Arrangement.spacedBy(spacing.sm)) {
+            YikePrimaryButton(
+                text = "继续下一张",
+                onClick = onContinueNextCard,
+                modifier = Modifier.weight(1f)
+            )
+            YikeSecondaryButton(
+                text = "返回首页",
+                onClick = onBackHome,
+                modifier = Modifier.weight(1f)
+            )
+        }
+    }
+}
+
+/**
+ * 退出确认明确提示“未评分不会计入完成”，是为了帮助用户理解中断复习的真实后果。
+ */
+@Composable
+private fun ExitConfirmationDialog(
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("要退出本次复习吗？") },
+        text = { Text("当前未评分的问题不会计入完成，稍后需要重新处理。") },
+        confirmButton = {
+            YikeDangerButton(text = "退出复习", onClick = onConfirm)
+        },
+        dismissButton = {
+            YikeSecondaryButton(text = "继续复习", onClick = onDismiss)
+        }
+    )
+}
+
+/**
+ * 副标题跟随当前复习状态切换，是为了让顶部栏也能反映“正在答题 / 已完成”的节奏变化。
+ */
+private fun buildReviewSubtitle(uiState: ReviewCardUiState): String = when {
+    uiState.isCompleted -> "这张卡片已经完成，可以继续下一张。"
+    uiState.currentQuestion != null -> "第 ${uiState.completedCount + 1} 题，共 ${uiState.totalCount} 题"
+    else -> "正在准备当前卡片的复习内容。"
 }
