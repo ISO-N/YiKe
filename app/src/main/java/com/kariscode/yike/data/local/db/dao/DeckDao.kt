@@ -43,6 +43,13 @@ interface DeckDao {
     fun observeActiveDecks(): Flow<List<DeckEntity>>
 
     /**
+     * 备份导出需要完整读取全部卡组（包括已归档项），
+     * 否则恢复后会丢失用户显式保留的历史内容。
+     */
+    @Query("SELECT * FROM deck ORDER BY sortOrder ASC, createdAt ASC")
+    suspend fun listAll(): List<DeckEntity>
+
+    /**
      * 通过一次聚合查询返回列表所需的基础统计，避免在 UI 层逐条查询导致性能与口径问题。
      */
     @Query(
@@ -70,6 +77,13 @@ interface DeckDao {
     @Query("SELECT * FROM deck WHERE id = :deckId LIMIT 1")
     suspend fun findById(deckId: String): DeckEntity?
 
+    /**
+     * 恢复导入需要批量重建卡组层级，因此 DAO 必须提供批量 upsert 入口，
+     * 以避免在事务中逐条写入增加失败窗口。
+     */
+    @Upsert
+    suspend fun upsertAll(decks: List<DeckEntity>): List<Long>
+
     @Query("UPDATE deck SET archived = :archived, updatedAt = :updatedAt WHERE id = :deckId")
     suspend fun setArchived(deckId: String, archived: Boolean, updatedAt: Long): Int
 
@@ -79,4 +93,11 @@ interface DeckDao {
      */
     @Delete
     suspend fun delete(deck: DeckEntity): Int
+
+    /**
+     * 全量覆盖恢复前必须先清空旧数据，
+     * 这样才能保证“恢复后结果完全等于备份内容”的语义成立。
+     */
+    @Query("DELETE FROM deck")
+    suspend fun clearAll(): Int
 }

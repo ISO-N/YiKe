@@ -35,6 +35,13 @@ interface CardDao {
     fun observeActiveCards(deckId: String): Flow<List<CardEntity>>
 
     /**
+     * 备份导出需要保留全部卡片层级，包括已归档项，
+     * 否则恢复后会破坏用户原本的管理状态。
+     */
+    @Query("SELECT * FROM card ORDER BY sortOrder ASC, createdAt ASC")
+    suspend fun listAll(): List<CardEntity>
+
+    /**
      * 聚合查询用于卡片列表的基础统计展示，避免在 UI 层为每张卡片单独查询问题数量造成 N+1 问题。
      */
     @Query(
@@ -61,9 +68,22 @@ interface CardDao {
     @Query("SELECT * FROM card WHERE id = :cardId LIMIT 1")
     suspend fun findById(cardId: String): CardEntity?
 
+    /**
+     * 恢复导入需要一次性重建卡片层级，因此提供批量写入口可缩小事务边界内的复杂度。
+     */
+    @Upsert
+    suspend fun upsertAll(cards: List<CardEntity>): List<Long>
+
     @Query("UPDATE card SET archived = :archived, updatedAt = :updatedAt WHERE id = :cardId")
     suspend fun setArchived(cardId: String, archived: Boolean, updatedAt: Long): Int
 
     @Delete
     suspend fun delete(card: CardEntity): Int
+
+    /**
+     * 清空卡片表是全量覆盖恢复的前置步骤，
+     * 否则旧卡片会与新备份内容混杂，破坏恢复结果可预测性。
+     */
+    @Query("DELETE FROM card")
+    suspend fun clearAll(): Int
 }
