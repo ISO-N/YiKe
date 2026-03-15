@@ -1,10 +1,12 @@
 package com.kariscode.yike.app
 
 import android.app.Application
+import androidx.room.Room
 import com.kariscode.yike.core.dispatchers.AppDispatchers
 import com.kariscode.yike.core.dispatchers.DefaultAppDispatchers
 import com.kariscode.yike.core.time.SystemTimeProvider
 import com.kariscode.yike.core.time.TimeProvider
+import com.kariscode.yike.data.local.db.YikeDatabase
 
 /**
  * 首版采用手动装配依赖，目的是把“谁负责创建什么”集中到单一位置，
@@ -26,8 +28,19 @@ class AppContainer(
     val dispatchers: AppDispatchers = DefaultAppDispatchers()
 
     /**
+     * Room 数据库必须作为单例存在于进程内，
+     * 否则多实例会导致事务与缓存行为不可预测，尤其会影响评分提交与恢复导入的安全性。
+     */
+    val database: YikeDatabase by lazy {
+        Room.databaseBuilder(
+            application,
+            YikeDatabase::class.java,
+            "yike.db"
+        ).build()
+    }
+
+    /**
      * 当前阶段仅保留 Application 引用，为后续 Room/DataStore/WorkManager 初始化提供上下文。
      */
     fun application(): Application = application
 }
-
