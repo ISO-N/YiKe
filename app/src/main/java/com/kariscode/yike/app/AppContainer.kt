@@ -7,9 +7,15 @@ import com.kariscode.yike.core.dispatchers.DefaultAppDispatchers
 import com.kariscode.yike.core.time.SystemTimeProvider
 import com.kariscode.yike.core.time.TimeProvider
 import com.kariscode.yike.data.local.db.YikeDatabase
+import com.kariscode.yike.data.repository.OfflineCardRepository
+import com.kariscode.yike.data.repository.OfflineDeckRepository
+import com.kariscode.yike.data.repository.OfflineQuestionRepository
 import com.kariscode.yike.data.settings.DataStoreAppSettingsRepository
 import com.kariscode.yike.data.settings.appSettingsDataStore
 import com.kariscode.yike.domain.repository.AppSettingsRepository
+import com.kariscode.yike.domain.repository.CardRepository
+import com.kariscode.yike.domain.repository.DeckRepository
+import com.kariscode.yike.domain.repository.QuestionRepository
 
 /**
  * 首版采用手动装配依赖，目的是把“谁负责创建什么”集中到单一位置，
@@ -50,6 +56,22 @@ class AppContainer(
         DataStoreAppSettingsRepository(
             dataStore = application.appSettingsDataStore
         )
+    }
+
+    /**
+     * 内容管理仓储统一在此装配，原因是它们共享同一数据库实例，
+     * 并且后续首页统计、提醒 Worker 与备份导出都会复用同一套查询口径。
+     */
+    val deckRepository: DeckRepository by lazy {
+        OfflineDeckRepository(deckDao = database.deckDao(), dispatchers = dispatchers)
+    }
+
+    val cardRepository: CardRepository by lazy {
+        OfflineCardRepository(cardDao = database.cardDao(), dispatchers = dispatchers)
+    }
+
+    val questionRepository: QuestionRepository by lazy {
+        OfflineQuestionRepository(questionDao = database.questionDao(), dispatchers = dispatchers)
     }
 
     /**
