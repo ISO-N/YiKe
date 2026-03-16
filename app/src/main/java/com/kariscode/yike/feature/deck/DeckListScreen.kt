@@ -55,7 +55,7 @@ fun DeckListScreen(
     YikePrimaryScaffold(
         currentDestination = YikePrimaryDestination.DECKS,
         title = "卡组",
-        subtitle = "优先把主题拆成卡组，复习和录入都会更容易维护。",
+        subtitle = "管理卡组、查找内容和回收站操作。",
         floatingActionButton = {
             YikeFab(
                 text = "+ 新建",
@@ -121,7 +121,7 @@ private fun DeckListContent(
             uiState.isLoading -> {
                 YikeStateBanner(
                     title = "正在加载卡组",
-                    description = "稍等一下，我们会把卡组统计和今天到期的内容一起准备好。"
+                    description = "正在同步卡组和到期统计。"
                 )
             }
 
@@ -135,7 +135,7 @@ private fun DeckListContent(
             uiState.items.isEmpty() -> {
                 YikeStateBanner(
                     title = "还没有卡组",
-                    description = "先创建一个卡组，把知识块拆成更容易维护的复习单元。"
+                    description = "先创建一个卡组开始整理内容。"
                 ) {
                     YikePrimaryButton(
                         text = "创建第一个卡组",
@@ -207,7 +207,7 @@ private fun DeckOverviewSection(items: List<DeckSummary>) {
     YikeHeroCard(
         eyebrow = "Overview",
         title = "${items.size} 个活跃卡组",
-        description = "今天到期的内容会优先显示在每个列表项上，方便你快速决定先维护哪里。"
+        description = "先看数量，再决定今天先维护哪组内容。"
     ) {
         Row(horizontalArrangement = Arrangement.spacedBy(LocalYikeSpacing.current.md)) {
             YikeMetricCard(
@@ -240,9 +240,9 @@ private fun DeckSummaryCard(
         summary = "${item.cardCount} 张卡片 · ${item.questionCount} 个问题",
         supporting = item.deck.description.ifBlank {
             if (item.dueQuestionCount > 0) {
-                "今天还有 ${item.dueQuestionCount} 题到期，适合继续维护和复习。"
+                "今天还有 ${item.dueQuestionCount} 题到期。"
             } else {
-                "今天暂无到期题目，可以继续录入或整理内容。"
+                "今天暂无到期题目。"
             }
         },
         badge = {

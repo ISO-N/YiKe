@@ -282,8 +282,9 @@ private fun YikePrimaryHeaderBlock(
     subtitle: String
 ) {
     val supportingText = when {
-        title.isNotBlank() -> title
+        title.isNotBlank() && title != eyebrow -> title
         subtitle.isNotBlank() -> subtitle
+        title.isNotBlank() -> title
         else -> null
     }
 

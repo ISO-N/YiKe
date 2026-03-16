@@ -76,7 +76,7 @@ fun SettingsScreen(
     YikePrimaryScaffold(
         currentDestination = YikePrimaryDestination.SETTINGS,
         title = "设置",
-        subtitle = "在这里管理提醒、备份以及应用的全局状态。"
+        subtitle = "提醒、回收站和备份都在这里。"
     ) { padding ->
         SettingsContent(
             uiState = uiState,
@@ -122,7 +122,7 @@ private fun SettingsContent(
         if (uiState.isLoading) {
             YikeStateBanner(
                 title = "正在读取设置",
-                description = "稍等一下，我们会把提醒和最近备份状态一起载入。"
+                description = "正在同步提醒和备份状态。"
             )
             return@YikeScrollableColumn
         }
@@ -165,9 +165,9 @@ private fun ReminderStatusSection(
         else -> "提醒等待权限"
     }
     val statusDescription = when {
-        !uiState.dailyReminderEnabled -> "当前不会自动提醒，你仍然可以随时手动打开应用开始复习。"
-        hasNotificationPermission -> "每天 ${formatReminderTime(uiState.reminderHour, uiState.reminderMinute)} 检查是否有待复习内容。"
-        else -> "提醒开关已开，但通知权限未开启，提醒可能无法显示。"
+        !uiState.dailyReminderEnabled -> "当前不会自动提醒。"
+        hasNotificationPermission -> "每天 ${formatReminderTime(uiState.reminderHour, uiState.reminderMinute)} 检查待复习内容。"
+        else -> "提醒已开启，但通知权限未开启。"
     }
     YikeStateBanner(
         title = statusTitle,
@@ -196,9 +196,9 @@ private fun ReminderSettingsSection(
         title = "每日提醒",
         summary = if (uiState.dailyReminderEnabled) "已开启" else "已关闭",
         supporting = if (hasNotificationPermission || Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
-            "保持固定节奏，比临时补课更容易形成复习习惯。"
+            "保持固定节奏更容易坚持。"
         } else {
-            "通知权限未开启，提醒可能无法显示，但不会影响复习和内容管理。"
+            "通知权限未开启，提醒可能无法显示。"
         },
         badge = {
             Switch(
@@ -211,7 +211,7 @@ private fun ReminderSettingsSection(
     YikeListItemCard(
         title = "提醒时间",
         summary = formatReminderTime(uiState.reminderHour, uiState.reminderMinute),
-        supporting = "修改后会立即重新注册下一次提醒任务。"
+        supporting = "修改后会立即重排下一次提醒。"
     ) {
         YikeSecondaryButton(
             text = "修改时间",
@@ -223,7 +223,7 @@ private fun ReminderSettingsSection(
     YikeListItemCard(
         title = "备份与恢复",
         summary = uiState.lastBackupAt?.let { formatLocalDateTime(it) } ?: "暂无备份记录",
-        supporting = "导出 JSON 或从本地文件恢复全部数据。"
+        supporting = "导出 JSON 或恢复本地备份。"
     ) {
         YikeSecondaryButton(
             text = "进入备份页",
@@ -235,7 +235,7 @@ private fun ReminderSettingsSection(
     YikeListItemCard(
         title = "回收站",
         summary = "管理已归档内容",
-        supporting = "已归档的卡组和卡片会集中放在这里，支持恢复或彻底删除。"
+        supporting = "集中恢复或彻底删除已归档内容。"
     ) {
         YikeSecondaryButton(
             text = "进入回收站",
