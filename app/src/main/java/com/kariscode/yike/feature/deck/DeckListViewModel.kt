@@ -171,7 +171,7 @@ class DeckListViewModel(
     }
 
     /**
-     * 删除属于高风险操作，因此必须先进入确认态，而不是直接执行。
+     * 删除入口先进入确认态，是为了把“移入回收站”明确成一次可撤销的管理动作。
      */
     fun onDeleteDeckClick(item: DeckSummary) {
         _uiState.update { it.copy(pendingDelete = item, errorMessage = null) }
@@ -185,13 +185,24 @@ class DeckListViewModel(
     }
 
     /**
-     * 确认删除后执行级联删除，以保证下层数据不会残留失效外键。
+     * 卡组页的删除只把内容移入回收站，
+     * 这样用户仍可在需要时恢复，而彻底删除交给回收站承担。
      */
     fun onConfirmDelete() {
         val pending = _uiState.value.pendingDelete ?: return
-        executeMutation(errorMessage = ErrorMessages.DELETE_FAILED) {
-            deckRepository.delete(pending.deck.id)
-            _uiState.update { it.copy(pendingDelete = null, message = SuccessMessages.DELETED, errorMessage = null) }
+        executeMutation(errorMessage = ErrorMessages.UPDATE_FAILED) {
+            deckRepository.setArchived(
+                deckId = pending.deck.id,
+                archived = true,
+                updatedAt = timeProvider.nowEpochMillis()
+            )
+            _uiState.update {
+                it.copy(
+                    pendingDelete = null,
+                    message = "已移入回收站",
+                    errorMessage = null
+                )
+            }
         }
     }
 

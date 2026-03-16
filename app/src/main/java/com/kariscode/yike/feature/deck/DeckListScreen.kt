@@ -169,9 +169,9 @@ private fun DeckListContent(
 
     uiState.pendingDelete?.let {
         YikeDangerConfirmationDialog(
-            title = "确认删除卡组？",
-            description = "删除会级联清理该卡组下的卡片、问题与复习记录，且无法恢复。",
-            confirmText = "删除",
+            title = "移入回收站？",
+            description = "移入后会从卡组列表隐藏，你仍然可以在回收站里恢复或彻底删除。",
+            confirmText = "移入回收站",
             onDismiss = onDismissDelete,
             onConfirm = onConfirmDelete
         )
@@ -254,7 +254,7 @@ private fun DeckSummaryCard(
                 Text("归档")
             }
             TextButton(onClick = onDelete, modifier = Modifier.weight(1f)) {
-                Text("删除")
+                Text("回收站")
             }
         }
     }
