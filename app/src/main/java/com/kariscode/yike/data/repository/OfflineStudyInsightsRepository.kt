@@ -12,7 +12,6 @@ import com.kariscode.yike.domain.model.QuestionQueryFilters
 import com.kariscode.yike.domain.model.QuestionStatus
 import com.kariscode.yike.domain.model.ReviewAnalyticsSnapshot
 import com.kariscode.yike.domain.repository.StudyInsightsRepository
-import kotlinx.coroutines.withContext
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.Json
@@ -34,7 +33,7 @@ class OfflineStudyInsightsRepository(
      * 这样既能保持查询简单，也能复用同一套熟练度规则。
      */
     override suspend fun searchQuestionContexts(filters: QuestionQueryFilters): List<QuestionContext> =
-        withContext(dispatchers.io) {
+        dispatchers.onIo {
             questionDao.listQuestionContexts(
                 keyword = filters.keyword.trim().ifBlank { null },
                 tagKeyword = filters.tag?.trim()?.ifBlank { null },
@@ -50,7 +49,7 @@ class OfflineStudyInsightsRepository(
      * 今日预览只取已到期的问题，是为了让用户看到的总量与真正进入复习队列时保持一致。
      */
     override suspend fun listDueQuestionContexts(nowEpochMillis: Long): List<QuestionContext> =
-        withContext(dispatchers.io) {
+        dispatchers.onIo {
             questionDao.listQuestionContexts(
                 keyword = null,
                 tagKeyword = null,
@@ -64,7 +63,7 @@ class OfflineStudyInsightsRepository(
     /**
      * 标签建议在仓储层完成解析与去重，是为了让不同页面共享同一套“常用标签”排序方式。
      */
-    override suspend fun listAvailableTags(limit: Int): List<String> = withContext(dispatchers.io) {
+    override suspend fun listAvailableTags(limit: Int): List<String> = dispatchers.onIo {
         questionDao.listTagsJson(activeStatus = QuestionStatus.ACTIVE.storageValue)
             .flatMap(::decodeTags)
             .map(String::trim)
@@ -81,7 +80,7 @@ class OfflineStudyInsightsRepository(
      * 统计摘要在仓储层转换成领域模型后，页面就不需要再理解 SQL 聚合字段的细节语义。
      */
     override suspend fun getReviewAnalytics(startEpochMillis: Long?): ReviewAnalyticsSnapshot =
-        withContext(dispatchers.io) {
+        dispatchers.onIo {
             val summary = reviewRecordDao.getReviewAnalytics(startEpochMillis = startEpochMillis)
             val deckBreakdowns = reviewRecordDao.listDeckReviewAnalytics(startEpochMillis = startEpochMillis)
                 .map { row ->
@@ -109,7 +108,7 @@ class OfflineStudyInsightsRepository(
      * 连续学习天数依赖原始时间戳按本地日期计算，因此直接透传可保留时区判断自由度。
      */
     override suspend fun listReviewTimestamps(startEpochMillis: Long?): List<Long> =
-        withContext(dispatchers.io) {
+        dispatchers.onIo {
             reviewRecordDao.listReviewTimestamps(startEpochMillis = startEpochMillis)
         }
 

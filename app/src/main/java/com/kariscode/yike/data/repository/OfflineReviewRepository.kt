@@ -32,7 +32,7 @@ class OfflineReviewRepository(
      * 从源头固定“按卡片组织、一次处理一轮”的查询口径。
      */
     override suspend fun listDueQuestionsByCard(cardId: String, nowEpochMillis: Long): List<Question> =
-        withContext(dispatchers.io) {
+        dispatchers.onIo {
             questionDao.listDueQuestionsByCard(
                 cardId = cardId,
                 activeStatus = QuestionEntity.STATUS_ACTIVE,
