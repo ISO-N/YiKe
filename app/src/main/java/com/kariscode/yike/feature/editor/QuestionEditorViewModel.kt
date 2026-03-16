@@ -3,6 +3,7 @@ package com.kariscode.yike.feature.editor
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.kariscode.yike.core.constant.EntityIdPrefixes
 import com.kariscode.yike.core.message.ErrorMessages
 import com.kariscode.yike.core.viewmodel.typedViewModelFactory
 import com.kariscode.yike.core.time.TimeProvider
@@ -291,7 +292,7 @@ class QuestionEditorViewModel(
             )
         }
         return Question(
-            id = if (isNew) "q_${UUID.randomUUID()}" else id,
+            id = if (isNew) "${EntityIdPrefixes.QUESTION}${UUID.randomUUID()}" else id,
             cardId = cardId,
             prompt = trimmedPrompt,
             answer = answer,

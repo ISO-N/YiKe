@@ -3,6 +3,7 @@ package com.kariscode.yike.feature.card
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.kariscode.yike.core.constant.EntityIdPrefixes
 import com.kariscode.yike.core.message.ErrorMessages
 import com.kariscode.yike.core.message.SuccessMessages
 import com.kariscode.yike.core.time.TimeProvider
@@ -17,10 +18,13 @@ import com.kariscode.yike.domain.repository.CardRepository
 import com.kariscode.yike.domain.repository.DeckRepository
 import com.kariscode.yike.domain.repository.StudyInsightsRepository
 import java.util.UUID
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -90,38 +94,50 @@ class CardListViewModel(
 
     init {
         /**
-         * deckName 单独加载是为了让页面标题更可读，同时保持数据加载完全基于 deckId 参数。
+         * 初始数据加载使用 coroutineScope 并行执行 deckName 和卡片列表查询，
+         * 避免顺序执行导致的等待时间叠加。
          */
         viewModelScope.launch {
-            val deck = deckRepository.findById(deckId)
-            _uiState.update { it.copy(deckName = deck?.name) }
-        }
-
-        /**
-         * 订阅聚合流以保持列表统计实时更新，避免在新增问题后仍显示旧的 questionCount。
-         */
-        viewModelScope.launch {
-            val now = timeProvider.nowEpochMillis()
-            cardRepository.observeActiveCardSummaries(deckId, now)
-                .catch { throwable ->
-                    _uiState.update {
-                        it.copy(
-                            isLoading = false,
-                            message = null,
-                            errorMessage = throwable.message ?: ErrorMessages.LOAD_FAILED
-                        )
-                    }
+            coroutineScope {
+                val deckDeferred = async { deckRepository.findById(deckId) }
+                val now = timeProvider.nowEpochMillis()
+                val cardsDeferred = async {
+                    cardRepository.observeActiveCardSummaries(deckId, now).catch {}.first()
                 }
-                .collect { items ->
-                    _uiState.update {
-                        it.copy(
-                            isLoading = false,
-                            items = items,
-                            errorMessage = null
-                        )
-                    }
-                    refreshMasterySummary()
+                val deck = deckDeferred.await()
+                val cards = cardsDeferred.await()
+                _uiState.update {
+                    it.copy(
+                        deckName = deck?.name,
+                        items = cards ?: emptyList(),
+                        isLoading = false
+                    )
                 }
+            }
+            // 初始加载完成后，启动 Flow 订阅以保持列表实时更新
+            launch {
+                val now = timeProvider.nowEpochMillis()
+                cardRepository.observeActiveCardSummaries(deckId, now)
+                    .catch { throwable ->
+                        _uiState.update {
+                            it.copy(
+                                isLoading = false,
+                                message = null,
+                                errorMessage = throwable.message ?: ErrorMessages.LOAD_FAILED
+                            )
+                        }
+                    }
+                    .collect { items ->
+                        _uiState.update {
+                            it.copy(
+                                isLoading = false,
+                                items = items,
+                                errorMessage = null
+                            )
+                        }
+                        refreshMasterySummary()
+                    }
+            }
         }
     }
 
@@ -181,36 +197,17 @@ class CardListViewModel(
             runCatching {
                 val now = timeProvider.nowEpochMillis()
                 // Room 的 upsert 会自动处理"不存在则插入，存在则更新"的逻辑
-                // 新建时无需先查询是否存在
-                val card = if (editor.cardId == null) {
-                    Card(
-                        id = "card_${UUID.randomUUID()}",
-                        deckId = deckId,
-                        title = trimmedTitle,
-                        description = editor.description,
-                        archived = false,
-                        sortOrder = 0,
-                        createdAt = now,
-                        updatedAt = now
-                    )
-                } else {
-                    // 编辑模式需要查询现有数据以保留 createdAt 等字段
-                    val existing = cardRepository.findById(editor.cardId)
-                    existing?.copy(
-                        title = trimmedTitle,
-                        description = editor.description,
-                        updatedAt = now
-                    ) ?: Card(
-                        id = "card_${UUID.randomUUID()}",
-                        deckId = deckId,
-                        title = trimmedTitle,
-                        description = editor.description,
-                        archived = false,
-                        sortOrder = 0,
-                        createdAt = now,
-                        updatedAt = now
-                    )
-                }
+                // 直接构建对象并 upsert，无需先查询
+                val card = Card(
+                    id = editor.cardId ?: "${EntityIdPrefixes.CARD}${UUID.randomUUID()}",
+                    deckId = deckId,
+                    title = trimmedTitle,
+                    description = editor.description,
+                    archived = false,
+                    sortOrder = 0,
+                    createdAt = now,
+                    updatedAt = now
+                )
                 cardRepository.upsert(card)
             }.onSuccess {
                 _uiState.update { it.copy(editor = null, message = SuccessMessages.SAVED, errorMessage = null) }

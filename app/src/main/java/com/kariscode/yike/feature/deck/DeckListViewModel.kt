@@ -3,6 +3,7 @@ package com.kariscode.yike.feature.deck
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.kariscode.yike.core.constant.EntityIdPrefixes
 import com.kariscode.yike.core.message.ErrorMessages
 import com.kariscode.yike.core.message.SuccessMessages
 import com.kariscode.yike.core.time.TimeProvider
@@ -148,35 +149,16 @@ class DeckListViewModel(
             runCatching {
                 val now = timeProvider.nowEpochMillis()
                 // Room 的 upsert 会自动处理"不存在则插入，存在则更新"的逻辑
-                // 无需先查询是否存在
-                val deck = if (editor.deckId == null) {
-                    Deck(
-                        id = "deck_${UUID.randomUUID()}",
-                        name = trimmedName,
-                        description = editor.description,
-                        archived = false,
-                        sortOrder = 0,
-                        createdAt = now,
-                        updatedAt = now
-                    )
-                } else {
-                    // 如果是编辑模式，先查询现有数据再更新
-                    val existing = deckRepository.findById(editor.deckId)
-                    existing?.copy(
-                        name = trimmedName,
-                        description = editor.description,
-                        updatedAt = now
-                    ) ?: Deck(
-                        id = "deck_${UUID.randomUUID()}",
-                        name = trimmedName,
-                        description = editor.description,
-                        archived = false,
-                        sortOrder = 0,
-                        createdAt = now,
-                        updatedAt = now
-                    )
-                }
-
+                // 直接构建对象并 upsert，无需先查询
+                val deck = Deck(
+                    id = editor.deckId ?: "${EntityIdPrefixes.DECK}${UUID.randomUUID()}",
+                    name = trimmedName,
+                    description = editor.description,
+                    archived = false,
+                    sortOrder = 0,
+                    createdAt = now,
+                    updatedAt = now
+                )
                 deckRepository.upsert(deck)
             }.onSuccess {
                 _uiState.update { it.copy(editor = null, message = SuccessMessages.SAVED, errorMessage = null) }
