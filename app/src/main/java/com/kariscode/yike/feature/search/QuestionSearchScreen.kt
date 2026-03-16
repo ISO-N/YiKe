@@ -1,9 +1,9 @@
 package com.kariscode.yike.feature.search
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
@@ -14,7 +14,6 @@ import com.kariscode.yike.core.message.ErrorMessages
 import com.kariscode.yike.ui.component.YikeFlowScaffold
 import com.kariscode.yike.ui.component.YikePrimaryButton
 import com.kariscode.yike.ui.component.YikeSecondaryButton
-import com.kariscode.yike.ui.component.YikeScrollableColumn
 import com.kariscode.yike.ui.component.YikeStateBanner
 import com.kariscode.yike.ui.component.backNavigationAction
 import com.kariscode.yike.ui.theme.LocalYikeSpacing
@@ -85,43 +84,54 @@ private fun QuestionSearchContent(
     modifier: Modifier = Modifier
 ) {
     val spacing = LocalYikeSpacing.current
-    YikeScrollableColumn(modifier = modifier) {
+    LazyColumn(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(spacing.lg)
+    ) {
         if (uiState.isLoading && uiState.results.isEmpty() && uiState.errorMessage == null) {
-            YikeStateBanner(
-                title = "正在整理题库结果",
-                description = "稍等一下，我们会把关键字、标签和层级筛选对应的结果一起准备好。"
-            )
+            item {
+                YikeStateBanner(
+                    title = "正在整理题库结果",
+                    description = "稍等一下，我们会把关键字、标签和层级筛选对应的结果一起准备好。"
+                )
+            }
         }
         if (uiState.errorMessage != null) {
-            YikeStateBanner(
-                title = ErrorMessages.SEARCH_LOAD_FAILED,
-                description = uiState.errorMessage
-            ) {
-                Row(horizontalArrangement = Arrangement.spacedBy(spacing.sm)) {
-                    YikePrimaryButton(
-                        text = "重试",
-                        onClick = onRetry,
-                        modifier = Modifier.weight(1f)
-                    )
-                    YikeSecondaryButton(
-                        text = "清空筛选",
-                        onClick = onClearFilters,
-                        modifier = Modifier.weight(1f)
-                    )
+            item {
+                YikeStateBanner(
+                    title = ErrorMessages.SEARCH_LOAD_FAILED,
+                    description = uiState.errorMessage
+                ) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(spacing.sm)) {
+                        YikePrimaryButton(
+                            text = "重试",
+                            onClick = onRetry,
+                            modifier = Modifier.weight(1f)
+                        )
+                        YikeSecondaryButton(
+                            text = "清空筛选",
+                            onClick = onClearFilters,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
                 }
             }
         }
-        QuestionSearchHeroSection(uiState = uiState, onKeywordChange = onKeywordChange)
-        QuestionSearchFilterSection(
-            uiState = uiState,
-            onTagSelected = onTagSelected,
-            onStatusSelected = onStatusSelected,
-            onDeckSelected = onDeckSelected,
-            onCardSelected = onCardSelected,
-            onMasterySelected = onMasterySelected,
-            onClearFilters = onClearFilters
-        )
-        QuestionSearchResultSection(
+        item {
+            QuestionSearchHeroSection(uiState = uiState, onKeywordChange = onKeywordChange)
+        }
+        item {
+            QuestionSearchFilterSection(
+                uiState = uiState,
+                onTagSelected = onTagSelected,
+                onStatusSelected = onStatusSelected,
+                onDeckSelected = onDeckSelected,
+                onCardSelected = onCardSelected,
+                onMasterySelected = onMasterySelected,
+                onClearFilters = onClearFilters
+            )
+        }
+        questionSearchResultItems(
             uiState = uiState,
             onOpenEditor = onOpenEditor,
             onOpenReview = onOpenReview

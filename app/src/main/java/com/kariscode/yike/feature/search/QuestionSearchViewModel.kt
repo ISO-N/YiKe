@@ -2,6 +2,7 @@ package com.kariscode.yike.feature.search
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import com.kariscode.yike.core.coroutine.parallel
 import com.kariscode.yike.core.coroutine.parallel3
 import com.kariscode.yike.core.message.ErrorMessages
 import com.kariscode.yike.core.time.TimeProvider
@@ -75,10 +76,15 @@ class QuestionSearchViewModel(
     fun refresh() {
         _uiState.update { it.copy(isLoading = true, errorMessage = null) }
         launchResult(
-            action = { loadSearchMetadata(_uiState.value.selectedDeckId) },
-            onSuccess = { metadata ->
-                applySearchMetadata(metadata)
-                search()
+            action = {
+                val snapshot = _uiState.value
+                parallel(
+                    first = { loadSearchMetadata(snapshot.selectedDeckId) },
+                    second = { searchQuestions(snapshot) }
+                )
+            },
+            onSuccess = { (metadata, results) ->
+                applyRefreshResult(metadata = metadata, results = results)
             },
             onFailure = { throwable ->
                 _uiState.update {
@@ -234,6 +240,26 @@ class QuestionSearchViewModel(
                 deckOptions = metadata.decks,
                 cardOptions = metadata.cards,
                 selectedCardId = preserveSelectedCardId(metadata.cards),
+                errorMessage = null
+            )
+        }
+    }
+
+    /**
+     * 首次进入与手动刷新同时回写元数据和结果，是为了避免先等元数据、再等搜索结果的串行等待。
+     */
+    private fun applyRefreshResult(
+        metadata: SearchMetadata,
+        results: List<QuestionSearchResultUiModel>
+    ) {
+        _uiState.update {
+            it.copy(
+                isLoading = false,
+                availableTags = metadata.tags,
+                deckOptions = metadata.decks,
+                cardOptions = metadata.cards,
+                selectedCardId = preserveSelectedCardId(metadata.cards),
+                results = results,
                 errorMessage = null
             )
         }
