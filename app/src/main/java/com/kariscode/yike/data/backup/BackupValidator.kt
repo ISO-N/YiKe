@@ -22,6 +22,12 @@ class BackupValidator {
 
         val deckIds = document.decks.map { deck ->
             require(deck.id.isNotBlank() && deck.name.isNotBlank()) { "备份文件无效或版本不兼容" }
+            require(
+                deck.intervalStepCount in
+                    ReviewSchedulerV1.MIN_INTERVAL_STEP_COUNT..ReviewSchedulerV1.MAX_INTERVAL_STEP_COUNT
+            ) {
+                "备份文件无效或版本不兼容"
+            }
             BackupJson.parseEpochMillis(deck.createdAt)
             BackupJson.parseEpochMillis(deck.updatedAt)
             deck.id

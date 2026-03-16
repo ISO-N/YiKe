@@ -23,6 +23,7 @@ import com.kariscode.yike.domain.model.Question
 import com.kariscode.yike.domain.model.QuestionStatus
 import com.kariscode.yike.domain.model.ReviewRecord
 import com.kariscode.yike.domain.repository.AppSettingsRepository
+import com.kariscode.yike.domain.scheduler.ReviewSchedulerV1
 import java.io.FileNotFoundException
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.decodeFromString
@@ -238,6 +239,7 @@ class BackupService(
         id = id,
         name = name,
         description = description,
+        intervalStepCount = intervalStepCount,
         archived = archived,
         sortOrder = sortOrder,
         createdAt = BackupJson.formatEpochMillis(createdAt),
@@ -318,6 +320,7 @@ class BackupService(
         id = id,
         name = name,
         description = description,
+        intervalStepCount = ReviewSchedulerV1.normalizeIntervalStepCount(intervalStepCount),
         archived = archived,
         sortOrder = sortOrder,
         createdAt = BackupJson.parseEpochMillis(createdAt),

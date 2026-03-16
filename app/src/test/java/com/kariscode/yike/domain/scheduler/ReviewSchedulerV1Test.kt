@@ -248,6 +248,27 @@ class ReviewSchedulerV1Test {
         assertEquals(180, result.intervalDays)
     }
 
+    /**
+     * 卡组把间隔次数裁剪到 4 段后，GOOD 评分不应再把问题推进到第 5 段，
+     * 否则“短期卡组只保留 4 段”会在调度层失效。
+     */
+    @Test
+    fun good_withFourStepDeck_capsAtStage3() {
+        val scheduler = ReviewSchedulerV1()
+        val reviewedAt = 0L
+
+        val result = scheduler.scheduleNext(
+            currentStageIndex = 3,
+            rating = ReviewRating.GOOD,
+            reviewedAtEpochMillis = reviewedAt,
+            intervalStepCount = 4
+        )
+
+        assertEquals(3, result.nextStageIndex)
+        assertEquals(7, result.intervalDays)
+        assertEquals(7L * 86_400_000L, result.nextDueAtEpochMillis)
+    }
+
     // ── 超出范围的 currentStageIndex 被 coerce 纠正 ─────────
 
     /**

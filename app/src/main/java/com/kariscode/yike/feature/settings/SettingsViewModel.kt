@@ -8,6 +8,7 @@ import com.kariscode.yike.core.message.ErrorMessages
 import com.kariscode.yike.core.viewmodel.launchResult
 import com.kariscode.yike.core.viewmodel.typedViewModelFactory
 import com.kariscode.yike.data.reminder.ReminderScheduler
+import com.kariscode.yike.data.settings.SettingsConstants
 import com.kariscode.yike.domain.model.AppSettings
 import com.kariscode.yike.domain.repository.AppSettingsRepository
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -56,7 +57,7 @@ class SettingsViewModel(
         dailyReminderEnabled = false,
         dailyReminderHour = 20,
         dailyReminderMinute = 0,
-        schemaVersion = 1,
+        schemaVersion = SettingsConstants.SCHEMA_VERSION,
         backupLastAt = null
     )
 

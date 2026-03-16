@@ -2,6 +2,7 @@ package com.kariscode.yike.ui.component
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.OutlinedTextField
@@ -24,6 +25,7 @@ fun YikeTextMetadataDialog(
     secondaryValue: String,
     onSecondaryValueChange: (String) -> Unit,
     validationMessage: String?,
+    extraContent: @Composable ColumnScope.() -> Unit = {},
     onDismiss: () -> Unit,
     onConfirm: () -> Unit,
     modifier: Modifier = Modifier
@@ -47,6 +49,7 @@ fun YikeTextMetadataDialog(
                     label = { Text(secondaryLabel) },
                     modifier = Modifier.fillMaxWidth()
                 )
+                extraContent()
                 validationMessage?.let { message ->
                     Text(text = message)
                 }

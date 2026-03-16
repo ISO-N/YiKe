@@ -1,5 +1,6 @@
 package com.kariscode.yike.data.backup
 
+import com.kariscode.yike.domain.scheduler.ReviewSchedulerV1
 import kotlinx.serialization.Serializable
 
 /**
@@ -45,6 +46,7 @@ data class BackupDeck(
     val id: String,
     val name: String,
     val description: String,
+    val intervalStepCount: Int = ReviewSchedulerV1.DEFAULT_INTERVAL_STEP_COUNT,
     val archived: Boolean,
     val sortOrder: Int,
     val createdAt: String,

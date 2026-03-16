@@ -9,10 +9,10 @@ import com.kariscode.yike.core.message.SuccessMessages
 import com.kariscode.yike.core.time.TimeProvider
 import com.kariscode.yike.core.viewmodel.launchResult
 import com.kariscode.yike.core.viewmodel.typedViewModelFactory
-import com.kariscode.yike.feature.common.TextMetadataDraft
 import com.kariscode.yike.domain.model.Deck
 import com.kariscode.yike.domain.model.DeckSummary
 import com.kariscode.yike.domain.repository.DeckRepository
+import com.kariscode.yike.domain.scheduler.ReviewSchedulerV1
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -28,7 +28,7 @@ data class DeckListUiState(
     val isLoading: Boolean,
     val keyword: String,
     val items: List<DeckSummary>,
-    val editor: TextMetadataDraft?,
+    val editor: DeckMetadataDraft?,
     val message: String?,
     val errorMessage: String?
 )
@@ -86,7 +86,14 @@ class DeckListViewModel(
      * 新建入口打开空草稿，可让保存逻辑统一复用同一套校验与时间戳策略。
      */
     fun onCreateDeckClick() {
-        openEditor(TextMetadataDraft(entityId = null, primaryValue = "", secondaryValue = ""))
+        openEditor(
+            DeckMetadataDraft(
+                entityId = null,
+                name = "",
+                description = "",
+                intervalStepCountText = ReviewSchedulerV1.DEFAULT_INTERVAL_STEP_COUNT.toString()
+            )
+        )
     }
 
     /**
@@ -94,10 +101,11 @@ class DeckListViewModel(
      */
     fun onEditDeckClick(item: DeckSummary) {
         openEditor(
-            TextMetadataDraft(
+            DeckMetadataDraft(
                 entityId = item.deck.id,
-                primaryValue = item.deck.name,
-                secondaryValue = item.deck.description
+                name = item.deck.name,
+                description = item.deck.description,
+                intervalStepCountText = item.deck.intervalStepCount.toString()
             )
         )
     }
@@ -106,14 +114,21 @@ class DeckListViewModel(
      * 输入变更统一写入草稿状态，便于后续做就地校验与按钮可用性控制。
      */
     fun onDraftNameChange(value: String) {
-        updateEditor { it.updatePrimaryValue(value) }
+        updateEditor { it.updateName(value) }
     }
 
     /**
      * 描述变更和名称变更同样进入草稿，以确保保存时读取到的是同一份表单状态。
      */
     fun onDraftDescriptionChange(value: String) {
-        updateEditor { it.updateSecondaryValue(value) }
+        updateEditor { it.updateDescription(value) }
+    }
+
+    /**
+     * 间隔次数和其他表单字段一样由草稿统一持有，是为了让保存时读取到的是同一份编辑上下文。
+     */
+    fun onDraftIntervalStepCountChange(value: String) {
+        updateEditor { it.updateIntervalStepCountText(value) }
     }
 
     /**
@@ -136,9 +151,20 @@ class DeckListViewModel(
      */
     fun onConfirmSave() {
         val editor = _uiState.value.editor ?: return
-        val trimmedName = editor.primaryValue.trim()
+        val trimmedName = editor.name.trim()
         if (trimmedName.isBlank()) {
             _uiState.update { it.copy(editor = editor.withValidationMessage(ErrorMessages.NAME_REQUIRED)) }
+            return
+        }
+        val intervalStepCount = editor.intervalStepCountText.toIntOrNull()?.let { parsed ->
+            parsed.takeIf {
+                it in ReviewSchedulerV1.MIN_INTERVAL_STEP_COUNT..ReviewSchedulerV1.MAX_INTERVAL_STEP_COUNT
+            }
+        }
+        if (intervalStepCount == null) {
+            _uiState.update {
+                it.copy(editor = editor.withValidationMessage(ErrorMessages.INTERVAL_STEP_COUNT_INVALID))
+            }
             return
         }
 
@@ -150,7 +176,8 @@ class DeckListViewModel(
                 val deck = Deck(
                     id = editor.entityId ?: EntityIds.newDeckId(),
                     name = trimmedName,
-                    description = editor.secondaryValue,
+                    description = editor.description,
+                    intervalStepCount = intervalStepCount,
                     archived = false,
                     sortOrder = 0,
                     createdAt = now,
@@ -196,7 +223,7 @@ class DeckListViewModel(
     /**
      * 打开编辑器时统一清空旧反馈，是为了避免新一轮编辑仍残留上一次保存或失败提示。
      */
-    private fun openEditor(editor: TextMetadataDraft) {
+    private fun openEditor(editor: DeckMetadataDraft) {
         _uiState.update {
             it.copy(
                 editor = editor,
@@ -209,7 +236,7 @@ class DeckListViewModel(
     /**
      * 草稿更新集中到单点后，标题和描述输入就能共享同一套“无草稿则忽略”的保护逻辑。
      */
-    private fun updateEditor(transform: (TextMetadataDraft) -> TextMetadataDraft) {
+    private fun updateEditor(transform: (DeckMetadataDraft) -> DeckMetadataDraft) {
         _uiState.update { state ->
             val editor = state.editor ?: return@update state
             state.copy(editor = transform(editor))

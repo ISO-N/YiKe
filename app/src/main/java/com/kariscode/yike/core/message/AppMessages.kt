@@ -23,6 +23,7 @@ object ErrorMessages {
 
     // 编辑器相关
     const val NAME_REQUIRED = "名称不能为空"
+    const val INTERVAL_STEP_COUNT_INVALID = "间隔次数需为 1 到 8 之间的整数"
     const val TITLE_REQUIRED = "标题不能为空"
     const val QUESTION_CONTENT_REQUIRED = "题面不能为空"
     const val ANSWER_CONTENT_REQUIRED = "答案不能为空"

@@ -213,6 +213,7 @@ class YikeDatabaseIntegrationTest {
         id = id,
         name = id,
         description = "",
+        intervalStepCount = 8,
         archived = archived,
         sortOrder = 0,
         createdAt = 1L,

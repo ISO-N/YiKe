@@ -133,6 +133,27 @@ class OfflineReviewRepositoryTest {
     }
 
     /**
+     * 当卡组把间隔次数收窄到 4 段时，评分后阶段应停留在该卡组允许的最高层级，
+     * 这样短期卡组就不会继续被推到 7 段长周期。
+     */
+    @Test
+    fun submitRating_respectsDeckIntervalStepCountCap() = runTest {
+        seedHierarchy(deckId = "deck_1", cardId = "card_1", intervalStepCount = 4)
+        seedQuestion(id = "q_1", cardId = "card_1", stageIndex = 3)
+
+        repository.submitRating(
+            questionId = "q_1",
+            rating = ReviewRating.GOOD,
+            reviewedAtEpochMillis = 35_000L,
+            responseTimeMs = null
+        )
+
+        val updated = database.questionDao().findById("q_1")!!
+        assertEquals(3, updated.stageIndex)
+        assertEquals(35_000L + 7L * 86_400_000L, updated.dueAt)
+    }
+
+    /**
      * HARD 评分应降一级但不低于 0。
      */
     @Test
@@ -316,10 +337,15 @@ class OfflineReviewRepositoryTest {
 
     // ── helpers ────────────────────────────────────────────────
 
-    private suspend fun seedHierarchy(deckId: String, cardId: String) {
+    private suspend fun seedHierarchy(
+        deckId: String,
+        cardId: String,
+        intervalStepCount: Int = 8
+    ) {
         database.deckDao().upsert(
             DeckEntity(
                 id = deckId, name = deckId, description = "",
+                intervalStepCount = intervalStepCount,
                 archived = false, sortOrder = 0, createdAt = 1L, updatedAt = 1L
             )
         )

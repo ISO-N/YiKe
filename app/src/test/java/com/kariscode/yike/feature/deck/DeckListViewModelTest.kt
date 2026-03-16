@@ -14,6 +14,7 @@ import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Test
 
 /**
@@ -56,6 +57,29 @@ class DeckListViewModelTest {
     }
 
     /**
+     * 新建卡组默认提供 8 段间隔，是为了让用户在不理解高级设置时也能直接沿用既有默认曲线。
+     */
+    @Test
+    fun onCreateDeckClick_prefillsDefaultIntervalStepCount() = runTest {
+        Dispatchers.setMain(UnconfinedTestDispatcher(testScheduler))
+        try {
+            val viewModel = DeckListViewModel(
+                deckRepository = FakeDeckRepository(),
+                timeProvider = object : TimeProvider {
+                    override fun nowEpochMillis(): Long = 123L
+                }
+            )
+
+            viewModel.onCreateDeckClick()
+
+            assertEquals("8", viewModel.uiState.value.editor?.intervalStepCountText)
+            assertNull(viewModel.uiState.value.editor?.validationMessage)
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
+
+    /**
      * 测试数据显式保留聚合字段，是为了让归档动作在真实列表项上下文里执行。
      */
     private fun createDeckSummary(deckId: String): DeckSummary = DeckSummary(
@@ -63,6 +87,7 @@ class DeckListViewModelTest {
             id = deckId,
             name = "英语",
             description = "",
+            intervalStepCount = 8,
             archived = false,
             sortOrder = 0,
             createdAt = 1L,
