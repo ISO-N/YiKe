@@ -2,8 +2,6 @@ package com.kariscode.yike.feature.card
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -235,11 +233,11 @@ private fun CardOverviewSection(
 /**
  * 熟练度摘要在卡组层先给出分布，是为了让用户在进入具体卡片前就知道薄弱点主要落在哪里。
  */
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun CardMasterySection(
     summary: DeckMasterySummary
 ) {
+    val spacing = LocalYikeSpacing.current
     YikeStateBanner(
         title = "熟练度分布",
         description = "自动标签不写回数据库，只根据复习次数、阶段和遗忘次数即时计算。",
@@ -247,11 +245,15 @@ private fun CardMasterySection(
             YikeBadge(text = "${summary.totalQuestions} 题")
         }
     ) {
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(LocalYikeSpacing.current.sm)) {
-            YikeBadge(text = "新问题 ${summary.newCount}")
-            YikeBadge(text = "学习中 ${summary.learningCount}")
-            YikeBadge(text = "熟悉 ${summary.familiarCount}")
-            YikeBadge(text = "已掌握 ${summary.masteredCount}")
+        Column(verticalArrangement = Arrangement.spacedBy(spacing.sm)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(spacing.sm)) {
+                YikeBadge(text = "新问题 ${summary.newCount}")
+                YikeBadge(text = "学习中 ${summary.learningCount}")
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(spacing.sm)) {
+                YikeBadge(text = "熟悉 ${summary.familiarCount}")
+                YikeBadge(text = "已掌握 ${summary.masteredCount}")
+            }
         }
     }
 }

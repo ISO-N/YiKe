@@ -2,14 +2,13 @@ package com.kariscode.yike.feature.home
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -215,7 +214,6 @@ private fun HomeHeroSection(
  * 节奏区只基于真实待复习数量给出当前状态说明，
  * 这样即使暂时没有更细粒度统计，也能保持原型要求的状态层级。
  */
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun HomeRhythmSection(
     dueQuestions: Int,
@@ -239,20 +237,19 @@ private fun HomeRhythmSection(
         }
     ) {
         YikeProgressBar(progress = if (dueQuestions <= 0) 1f else 0f)
-        FlowRow(
-            horizontalArrangement = Arrangement.spacedBy(spacing.sm),
-            verticalArrangement = Arrangement.spacedBy(spacing.sm)
-        ) {
-            YikeSecondaryButton(
-                text = "复习统计",
-                onClick = onOpenAnalytics,
-                modifier = Modifier.fillMaxWidth()
-            )
-            YikeSecondaryButton(
-                text = "问题检索",
-                onClick = onOpenSearch,
-                modifier = Modifier.fillMaxWidth()
-            )
+        Column(verticalArrangement = Arrangement.spacedBy(spacing.sm)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(spacing.sm)) {
+                YikeSecondaryButton(
+                    text = "复习统计",
+                    onClick = onOpenAnalytics,
+                    modifier = Modifier.weight(1f)
+                )
+                YikeSecondaryButton(
+                    text = "问题检索",
+                    onClick = onOpenSearch,
+                    modifier = Modifier.weight(1f)
+                )
+            }
             YikeSecondaryButton(
                 text = "浏览卡组",
                 onClick = onOpenDeckList,

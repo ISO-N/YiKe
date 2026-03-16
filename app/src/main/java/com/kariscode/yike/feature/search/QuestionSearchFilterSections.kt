@@ -2,16 +2,17 @@ package com.kariscode.yike.feature.search
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import com.kariscode.yike.domain.model.QuestionMasteryLevel
 import com.kariscode.yike.domain.model.QuestionStatus
 import com.kariscode.yike.ui.component.YikeBadge
@@ -47,7 +48,6 @@ internal fun QuestionSearchHeroSection(
 /**
  * 筛选面板把当前结果数放在标题区，是为了让用户知道每次点击筛选后是否真的缩小了范围。
  */
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun QuestionSearchFilterSection(
     uiState: QuestionSearchUiState,
@@ -79,10 +79,7 @@ internal fun QuestionSearchFilterSection(
             )
             if (uiState.availableTags.isNotEmpty()) {
                 FilterSectionLabel(text = "标签")
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(spacing.sm),
-                    verticalArrangement = Arrangement.spacedBy(spacing.sm)
-                ) {
+                QuestionSearchChipRow {
                     FilterChip(
                         selected = uiState.selectedTag == null,
                         onClick = { onTagSelected(null) },
@@ -98,10 +95,7 @@ internal fun QuestionSearchFilterSection(
                 }
             }
             FilterSectionLabel(text = "卡组")
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(spacing.sm),
-                verticalArrangement = Arrangement.spacedBy(spacing.sm)
-            ) {
+            QuestionSearchChipRow {
                 FilterChip(
                     selected = uiState.selectedDeckId == null,
                     onClick = { onDeckSelected(null) },
@@ -117,10 +111,7 @@ internal fun QuestionSearchFilterSection(
             }
             if (uiState.cardOptions.isNotEmpty()) {
                 FilterSectionLabel(text = "卡片")
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(spacing.sm),
-                    verticalArrangement = Arrangement.spacedBy(spacing.sm)
-                ) {
+                QuestionSearchChipRow {
                     FilterChip(
                         selected = uiState.selectedCardId == null,
                         onClick = { onCardSelected(null) },
@@ -136,10 +127,7 @@ internal fun QuestionSearchFilterSection(
                 }
             }
             FilterSectionLabel(text = "熟练度")
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(spacing.sm),
-                verticalArrangement = Arrangement.spacedBy(spacing.sm)
-            ) {
+            QuestionSearchChipRow {
                 FilterChip(
                     selected = uiState.selectedMasteryLevel == null,
                     onClick = { onMasterySelected(null) },
@@ -175,7 +163,6 @@ private data class QuestionStatusFilterOption(
 /**
  * 状态筛选单独封装，是为了让“全部 / 进行中 / 已归档”的行为始终和其他筛选区一致。
  */
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun QuestionSearchChipGroup(
     title: String,
@@ -183,12 +170,8 @@ private fun QuestionSearchChipGroup(
     selectedStatus: QuestionStatus?,
     onStatusSelected: (QuestionStatus?) -> Unit
 ) {
-    val spacing = LocalYikeSpacing.current
     FilterSectionLabel(text = title)
-    FlowRow(
-        horizontalArrangement = Arrangement.spacedBy(spacing.sm),
-        verticalArrangement = Arrangement.spacedBy(spacing.sm)
-    ) {
+    QuestionSearchChipRow {
         options.forEach { option ->
             FilterChip(
                 selected = selectedStatus == option.status,
@@ -205,4 +188,18 @@ private fun QuestionSearchChipGroup(
 @Composable
 private fun FilterSectionLabel(text: String) {
     Text(text = text, style = MaterialTheme.typography.labelLarge)
+}
+
+/**
+ * 筛选芯片改为横向滚动行，是为了兼容当前 Compose 运行时并保留窄屏下的可浏览性。
+ */
+@Composable
+private fun QuestionSearchChipRow(
+    content: @Composable RowScope.() -> Unit
+) {
+    Row(
+        modifier = Modifier.horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(LocalYikeSpacing.current.sm),
+        content = content
+    )
 }
