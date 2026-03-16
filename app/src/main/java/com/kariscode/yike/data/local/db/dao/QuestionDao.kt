@@ -15,6 +15,28 @@ data class TodayReviewSummaryRow(
 )
 
 /**
+ * 题目上下文行把问题和所属层级一并返回，是为了让搜索与预览页面避免再次做 N+1 层级查询。
+ */
+data class QuestionContextRow(
+    val id: String,
+    val cardId: String,
+    val prompt: String,
+    val answer: String,
+    val tagsJson: String,
+    val status: String,
+    val stageIndex: Int,
+    val dueAt: Long,
+    val lastReviewedAt: Long?,
+    val reviewCount: Int,
+    val lapseCount: Int,
+    val createdAt: Long,
+    val updatedAt: Long,
+    val deckId: String,
+    val deckName: String,
+    val cardTitle: String
+)
+
+/**
  * QuestionDao 的查询需要显式包含 status 与 due 条件，
  * 这是为了保证“归档不出现”和“今日到期口径”在全应用范围内一致。
  */
@@ -34,6 +56,66 @@ interface QuestionDao {
 
     @Query("SELECT * FROM question WHERE id = :questionId LIMIT 1")
     suspend fun findById(questionId: String): QuestionEntity?
+
+    /**
+     * 搜索与今日预览都需要题目附带所属卡组/卡片信息，
+     * 因此在 DAO 层直接完成关联能避免上层反复拼接层级数据。
+     */
+    @Query(
+        """
+        SELECT
+            q.id AS id,
+            q.cardId AS cardId,
+            q.prompt AS prompt,
+            q.answer AS answer,
+            q.tagsJson AS tagsJson,
+            q.status AS status,
+            q.stageIndex AS stageIndex,
+            q.dueAt AS dueAt,
+            q.lastReviewedAt AS lastReviewedAt,
+            q.reviewCount AS reviewCount,
+            q.lapseCount AS lapseCount,
+            q.createdAt AS createdAt,
+            q.updatedAt AS updatedAt,
+            c.deckId AS deckId,
+            d.name AS deckName,
+            c.title AS cardTitle
+        FROM question q
+        JOIN card c ON c.id = q.cardId
+        JOIN deck d ON d.id = c.deckId
+        WHERE d.archived = 0
+          AND c.archived = 0
+          AND (:status IS NULL OR q.status = :status)
+          AND (:deckId IS NULL OR c.deckId = :deckId)
+          AND (:cardId IS NULL OR q.cardId = :cardId)
+          AND (:maxDueAt IS NULL OR q.dueAt <= :maxDueAt)
+          AND (
+            :keyword IS NULL OR :keyword = ''
+            OR q.prompt LIKE '%' || :keyword || '%'
+            OR q.answer LIKE '%' || :keyword || '%'
+          )
+          AND (
+            :tagKeyword IS NULL OR :tagKeyword = ''
+            OR q.tagsJson LIKE '%' || :tagKeyword || '%'
+          )
+        ORDER BY q.dueAt ASC, q.updatedAt DESC, q.createdAt ASC
+        """
+    )
+    suspend fun listQuestionContexts(
+        keyword: String?,
+        tagKeyword: String?,
+        status: String?,
+        deckId: String?,
+        cardId: String?,
+        maxDueAt: Long?
+    ): List<QuestionContextRow>
+
+    /**
+     * 标签候选直接读取原始 JSON 字段，是为了让仓储层统一负责解析与去重策略，
+     * 避免 SQL 为了拆 JSON 引入超出当前需求的复杂度。
+     */
+    @Query("SELECT tagsJson FROM question WHERE status = :activeStatus")
+    suspend fun listTagsJson(activeStatus: String): List<String>
 
     /**
      * 复习页需要只加载当前卡片本轮到期的问题，

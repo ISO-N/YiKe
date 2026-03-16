@@ -8,6 +8,30 @@ import com.kariscode.yike.data.local.db.entity.ReviewRecordEntity
 import kotlinx.coroutines.flow.Flow
 
 /**
+ * 统计摘要行把评分分布和平均耗时一次性聚合出来，
+ * 是为了让统计页避免在内存里重复扫描历史记录。
+ */
+data class ReviewAnalyticsRow(
+    val totalReviews: Int,
+    val againCount: Int,
+    val hardCount: Int,
+    val goodCount: Int,
+    val easyCount: Int,
+    val averageResponseTimeMs: Double?
+)
+
+/**
+ * 卡组聚合统计行单独建模，是为了让统计页可以直接给出“先处理哪个卡组”的建议依据。
+ */
+data class DeckReviewAnalyticsRow(
+    val deckId: String,
+    val deckName: String,
+    val reviewCount: Int,
+    val againCount: Int,
+    val averageResponseTimeMs: Double?
+)
+
+/**
  * ReviewRecord 只允许追加写入，不允许编辑，
  * 这样才能保证复习历史可追溯，且备份恢复后的历史不会被 UI 操作意外篡改。
  */
@@ -18,6 +42,72 @@ interface ReviewRecordDao {
 
     @Query("SELECT * FROM review_record WHERE questionId = :questionId ORDER BY reviewedAt DESC")
     fun observeByQuestion(questionId: String): Flow<List<ReviewRecordEntity>>
+
+    /**
+     * 时间戳序列留给上层按本地时区计算连续学习天数，
+     * 可以避免数据库侧以 UTC 切天后和用户感知日期不一致。
+     */
+    @Query(
+        """
+        SELECT rr.reviewedAt
+        FROM review_record rr
+        JOIN question q ON q.id = rr.questionId
+        JOIN card c ON c.id = q.cardId
+        JOIN deck d ON d.id = c.deckId
+        WHERE (:startEpochMillis IS NULL OR rr.reviewedAt >= :startEpochMillis)
+          AND d.archived = 0
+          AND c.archived = 0
+        ORDER BY rr.reviewedAt DESC
+        """
+    )
+    suspend fun listReviewTimestamps(startEpochMillis: Long?): List<Long>
+
+    /**
+     * 统计摘要只聚合未归档层级的历史，是为了让“当前活跃内容的学习效果”与内容管理默认口径一致。
+     */
+    @Query(
+        """
+        SELECT
+            COUNT(rr.id) AS totalReviews,
+            COALESCE(SUM(CASE WHEN rr.rating = 'AGAIN' THEN 1 ELSE 0 END), 0) AS againCount,
+            COALESCE(SUM(CASE WHEN rr.rating = 'HARD' THEN 1 ELSE 0 END), 0) AS hardCount,
+            COALESCE(SUM(CASE WHEN rr.rating = 'GOOD' THEN 1 ELSE 0 END), 0) AS goodCount,
+            COALESCE(SUM(CASE WHEN rr.rating = 'EASY' THEN 1 ELSE 0 END), 0) AS easyCount,
+            AVG(rr.responseTimeMs) AS averageResponseTimeMs
+        FROM review_record rr
+        JOIN question q ON q.id = rr.questionId
+        JOIN card c ON c.id = q.cardId
+        JOIN deck d ON d.id = c.deckId
+        WHERE d.archived = 0
+          AND c.archived = 0
+          AND (:startEpochMillis IS NULL OR rr.reviewedAt >= :startEpochMillis)
+        """
+    )
+    suspend fun getReviewAnalytics(startEpochMillis: Long?): ReviewAnalyticsRow
+
+    /**
+     * 卡组拆分统计下推到数据库，是为了避免统计页先拉全量记录再在内存里做多层分组。
+     */
+    @Query(
+        """
+        SELECT
+            d.id AS deckId,
+            d.name AS deckName,
+            COUNT(rr.id) AS reviewCount,
+            COALESCE(SUM(CASE WHEN rr.rating = 'AGAIN' THEN 1 ELSE 0 END), 0) AS againCount,
+            AVG(rr.responseTimeMs) AS averageResponseTimeMs
+        FROM review_record rr
+        JOIN question q ON q.id = rr.questionId
+        JOIN card c ON c.id = q.cardId
+        JOIN deck d ON d.id = c.deckId
+        WHERE d.archived = 0
+          AND c.archived = 0
+          AND (:startEpochMillis IS NULL OR rr.reviewedAt >= :startEpochMillis)
+        GROUP BY d.id
+        ORDER BY reviewCount DESC, deckName ASC
+        """
+    )
+    suspend fun listDeckReviewAnalytics(startEpochMillis: Long?): List<DeckReviewAnalyticsRow>
 
     /**
      * 备份导出必须保留完整历史记录，

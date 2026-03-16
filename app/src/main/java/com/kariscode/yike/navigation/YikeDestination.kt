@@ -12,12 +12,16 @@ object YikeDestination {
     const val SETTINGS = "settings"
     const val BACKUP_RESTORE = "backup_restore"
     const val DEBUG = "debug"
+    const val TODAY_PREVIEW = "today_preview"
+    const val REVIEW_ANALYTICS = "review_analytics"
 
     const val REVIEW_QUEUE = "review_queue"
     const val REVIEW_CARD = "review_card/{cardId}"
 
     const val CARD_LIST = "card_list/{deckId}"
     const val QUESTION_EDITOR = "question_editor/{cardId}?deckId={deckId}"
+    const val QUESTION_SEARCH = "question_search"
+    const val QUESTION_SEARCH_ROUTE = "question_search?deckId={deckId}&cardId={cardId}"
 
     fun reviewCard(cardId: String): String = "review_card/$cardId"
 
@@ -31,5 +35,17 @@ object YikeDestination {
         val route = "question_editor/$cardId"
         if (deckId == null) return route
         return "$route?deckId=$deckId".toUri().toString()
+    }
+
+    /**
+     * 搜索页允许带入 deckId/cardId 预设筛选，是为了让首页总入口和卡片页“检索本卡”共享同一页面。
+     */
+    fun questionSearch(deckId: String? = null, cardId: String? = null): String {
+        val params = buildList {
+            deckId?.let { add("deckId=$it") }
+            cardId?.let { add("cardId=$it") }
+        }
+        if (params.isEmpty()) return QUESTION_SEARCH
+        return "$QUESTION_SEARCH?${params.joinToString("&")}"
     }
 }
