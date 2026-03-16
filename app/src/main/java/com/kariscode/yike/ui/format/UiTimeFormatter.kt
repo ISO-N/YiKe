@@ -29,3 +29,8 @@ fun formatPreviewDateTime(epochMillis: Long, zoneId: ZoneId = ZoneId.systemDefau
     Instant.ofEpochMilli(epochMillis)
         .atZone(zoneId)
         .format(UiDateTimeFormatters.PREVIEW_DATE)
+
+/**
+ * 提醒时间统一走共享格式化入口，是为了让设置页、提醒说明和后续可能出现的提醒摘要保持同一显示口径。
+ */
+fun formatReminderTime(hour: Int, minute: Int): String = "%02d:%02d".format(hour, minute)

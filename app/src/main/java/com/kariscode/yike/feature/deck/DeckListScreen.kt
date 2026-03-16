@@ -27,6 +27,7 @@ import com.kariscode.yike.ui.component.YikeFab
 import com.kariscode.yike.ui.component.YikeHeroCard
 import com.kariscode.yike.ui.component.YikeListItemCard
 import com.kariscode.yike.ui.component.YikeMetricCard
+import com.kariscode.yike.ui.component.YikeOperationFeedback
 import com.kariscode.yike.ui.component.YikePrimaryButton
 import com.kariscode.yike.ui.component.YikePrimaryDestination
 import com.kariscode.yike.ui.component.YikePrimaryScaffold
@@ -150,12 +151,10 @@ private fun DeckListContent(
             }
         }
 
-        uiState.message?.let { message ->
-            YikeStateBanner(
-                title = "操作已完成",
-                description = message
-            )
-        }
+        YikeOperationFeedback(
+            successMessage = uiState.message,
+            errorMessage = null
+        )
         Spacer(modifier = Modifier.height(contentPadding.calculateBottomPadding()))
     }
 

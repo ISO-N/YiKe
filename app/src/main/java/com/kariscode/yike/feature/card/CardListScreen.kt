@@ -27,6 +27,7 @@ import com.kariscode.yike.ui.component.YikeFlowScaffold
 import com.kariscode.yike.ui.component.YikeHeroCard
 import com.kariscode.yike.ui.component.YikeListItemCard
 import com.kariscode.yike.ui.component.YikeMetricCard
+import com.kariscode.yike.ui.component.YikeOperationFeedback
 import com.kariscode.yike.ui.component.YikePrimaryButton
 import com.kariscode.yike.ui.component.YikeSecondaryButton
 import com.kariscode.yike.ui.component.YikeStateBanner
@@ -159,12 +160,10 @@ private fun CardListContent(
             }
         }
 
-        uiState.message?.let { message ->
-            YikeStateBanner(
-                title = "操作已完成",
-                description = message
-            )
-        }
+        YikeOperationFeedback(
+            successMessage = uiState.message,
+            errorMessage = null
+        )
     }
 
     uiState.editor?.let { editor ->

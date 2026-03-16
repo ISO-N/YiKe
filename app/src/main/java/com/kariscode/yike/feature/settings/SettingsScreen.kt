@@ -29,11 +29,13 @@ import com.kariscode.yike.app.LocalAppContainer
 import com.kariscode.yike.ui.component.CollectFlowEffect
 import com.kariscode.yike.ui.component.YikeBadge
 import com.kariscode.yike.ui.component.YikeListItemCard
+import com.kariscode.yike.ui.component.YikeOperationFeedback
 import com.kariscode.yike.ui.component.YikePrimaryDestination
 import com.kariscode.yike.ui.component.YikePrimaryScaffold
 import com.kariscode.yike.ui.component.YikeSecondaryButton
 import com.kariscode.yike.ui.component.YikeStateBanner
 import com.kariscode.yike.ui.format.formatLocalDateTime
+import com.kariscode.yike.ui.format.formatReminderTime
 import com.kariscode.yike.ui.theme.LocalYikeSpacing
 
 /**
@@ -132,18 +134,12 @@ private fun SettingsContent(
             hasNotificationPermission = hasNotificationPermission
         )
 
-        uiState.message?.let { message ->
-            YikeStateBanner(
-                title = "设置已更新",
-                description = message
-            )
-        }
-        uiState.errorMessage?.let { message ->
-            YikeStateBanner(
-                title = "设置更新失败",
-                description = message
-            )
-        }
+        YikeOperationFeedback(
+            successMessage = uiState.message,
+            errorMessage = uiState.errorMessage,
+            successTitle = "设置已更新",
+            errorTitle = "设置更新失败"
+        )
 
         ReminderSettingsSection(
             uiState = uiState,
@@ -249,9 +245,4 @@ private fun ReminderSettingsSection(
         }
     }
 }
-
-/**
- * 提醒时间在页面层做轻量格式化即可，是为了让用户一眼读懂当前持久化结果。
- */
-private fun formatReminderTime(hour: Int, minute: Int): String = "%02d:%02d".format(hour, minute)
 

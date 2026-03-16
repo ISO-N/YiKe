@@ -428,6 +428,34 @@ fun YikeStateBanner(
 }
 
 /**
+ * 操作结果反馈经常以“成功/失败二选一”的形式成对出现，抽成共享组件后可以让页面只表达文案差异，
+ * 避免在设置、备份等低频操作页反复手写相同的条件渲染模板。
+ */
+@Composable
+fun YikeOperationFeedback(
+    successMessage: String?,
+    errorMessage: String?,
+    modifier: Modifier = Modifier,
+    successTitle: String = "操作已完成",
+    errorTitle: String = "操作失败"
+) {
+    successMessage?.let { message ->
+        YikeStateBanner(
+            title = successTitle,
+            description = message,
+            modifier = modifier
+        )
+    }
+    errorMessage?.let { message ->
+        YikeStateBanner(
+            title = errorTitle,
+            description = message,
+            modifier = modifier
+        )
+    }
+}
+
+/**
  * 危险提示卡始终使用暖色层级，是为了让删除、恢复等不可逆动作在视觉上立刻可分辨。
  */
 @Composable

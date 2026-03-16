@@ -22,6 +22,7 @@ import com.kariscode.yike.ui.component.backNavigationAction
 import com.kariscode.yike.ui.component.YikeBadge
 import com.kariscode.yike.ui.component.YikeDangerButton
 import com.kariscode.yike.ui.component.YikeFlowScaffold
+import com.kariscode.yike.ui.component.YikeOperationFeedback
 import com.kariscode.yike.ui.component.YikePrimaryButton
 import com.kariscode.yike.ui.component.YikeSecondaryButton
 import com.kariscode.yike.ui.component.YikeStateBanner
@@ -134,19 +135,10 @@ fun BackupRestoreContent(
             )
         }
 
-        uiState.message?.let { message ->
-            YikeStateBanner(
-                title = "操作已完成",
-                description = message
-            )
-        }
-
-        uiState.errorMessage?.let { message ->
-            YikeStateBanner(
-                title = "操作失败",
-                description = message
-            )
-        }
+        YikeOperationFeedback(
+            successMessage = uiState.message,
+            errorMessage = uiState.errorMessage
+        )
     }
 }
 
