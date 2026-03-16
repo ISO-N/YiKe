@@ -4,6 +4,8 @@ import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.kariscode.yike.core.message.ErrorMessages
+import com.kariscode.yike.core.message.SuccessMessages
 import com.kariscode.yike.core.viewmodel.typedViewModelFactory
 import com.kariscode.yike.data.backup.BackupService
 import com.kariscode.yike.data.reminder.ReminderScheduler
@@ -100,7 +102,7 @@ class BackupRestoreViewModel(
                 _uiState.update {
                     it.copy(
                         isExporting = false,
-                        message = "备份已导出",
+                        message = SuccessMessages.BACKUP_EXPORTED,
                         errorMessage = null
                     )
                 }
@@ -109,7 +111,7 @@ class BackupRestoreViewModel(
                     it.copy(
                         isExporting = false,
                         message = null,
-                        errorMessage = "导出失败，请重试"
+                        errorMessage = ErrorMessages.BACKUP_EXPORT_FAILED
                     )
                 }
             }
@@ -167,7 +169,7 @@ class BackupRestoreViewModel(
                 _uiState.update {
                     it.copy(
                         isImporting = false,
-                        message = "恢复成功",
+                        message = SuccessMessages.BACKUP_RESTORED,
                         errorMessage = null
                     )
                 }
@@ -176,7 +178,7 @@ class BackupRestoreViewModel(
                     it.copy(
                         isImporting = false,
                         message = null,
-                        errorMessage = throwable.message ?: "恢复失败，当前数据未被修改"
+                        errorMessage = throwable.message ?: ErrorMessages.BACKUP_RESTORE_FAILED
                     )
                 }
             }

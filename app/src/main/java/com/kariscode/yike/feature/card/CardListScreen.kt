@@ -17,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kariscode.yike.app.LocalAppContainer
+import com.kariscode.yike.core.message.ErrorMessages
 import com.kariscode.yike.domain.model.CardSummary
 import com.kariscode.yike.ui.component.backNavigationAction
 import com.kariscode.yike.ui.component.YikeBadge
@@ -126,7 +127,7 @@ private fun CardListContent(
 
             uiState.errorMessage != null -> {
                 YikeStateBanner(
-                    title = "卡片列表加载失败",
+                    title = ErrorMessages.CARD_LIST_LOAD_FAILED,
                     description = uiState.errorMessage
                 )
             }

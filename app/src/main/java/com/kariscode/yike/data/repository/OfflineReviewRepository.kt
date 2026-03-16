@@ -2,6 +2,7 @@ package com.kariscode.yike.data.repository
 
 import androidx.room.withTransaction
 import com.kariscode.yike.core.dispatchers.AppDispatchers
+import com.kariscode.yike.core.id.EntityIds
 import com.kariscode.yike.data.local.db.YikeDatabase
 import com.kariscode.yike.data.local.db.dao.QuestionDao
 import com.kariscode.yike.data.local.db.dao.ReviewRecordDao
@@ -13,7 +14,6 @@ import com.kariscode.yike.domain.model.ReviewRecord
 import com.kariscode.yike.domain.model.ReviewSubmission
 import com.kariscode.yike.domain.repository.ReviewRepository
 import com.kariscode.yike.domain.scheduler.ReviewSchedulerV1
-import java.util.UUID
 import kotlinx.coroutines.withContext
 
 /**
@@ -70,7 +70,7 @@ class OfflineReviewRepository(
             )
 
             val reviewRecord = ReviewRecord(
-                id = "review_${UUID.randomUUID()}",
+                id = EntityIds.newReviewRecordId(),
                 questionId = currentQuestion.id,
                 rating = rating,
                 oldStageIndex = currentQuestion.stageIndex,

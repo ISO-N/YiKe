@@ -3,6 +3,7 @@ package com.kariscode.yike.feature.review
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.kariscode.yike.core.message.ErrorMessages
 import com.kariscode.yike.core.time.TimeProvider
 import com.kariscode.yike.core.viewmodel.typedViewModelFactory
 import com.kariscode.yike.domain.repository.QuestionRepository
@@ -68,7 +69,7 @@ class ReviewQueueViewModel(
                 if (nextCardId == null) _effects.tryEmit(ReviewQueueEffect.BackToHomeCompleted)
                 else _effects.tryEmit(ReviewQueueEffect.NavigateToCard(nextCardId))
             }.onFailure { throwable ->
-                _uiState.update { it.copy(isLoading = false, errorMessage = throwable.message ?: "加载失败") }
+                _uiState.update { it.copy(isLoading = false, errorMessage = throwable.message ?: ErrorMessages.REVIEW_LOAD_FAILED) }
             }
         }
     }

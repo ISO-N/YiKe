@@ -16,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kariscode.yike.app.LocalAppContainer
+import com.kariscode.yike.core.message.ErrorMessages
 import com.kariscode.yike.domain.model.DeckSummary
 import com.kariscode.yike.ui.component.YikeBadge
 import com.kariscode.yike.ui.component.YikeHeaderBlock
@@ -108,7 +109,7 @@ fun HomeContent(
 
             uiState.errorMessage != null -> {
                 YikeStateBanner(
-                    title = "首页加载失败",
+                    title = ErrorMessages.HOME_LOAD_FAILED,
                     description = uiState.errorMessage ?: "请稍后重试，或先进入内容管理继续整理卡组。"
                 ) {
                     Row(horizontalArrangement = Arrangement.spacedBy(spacing.sm)) {

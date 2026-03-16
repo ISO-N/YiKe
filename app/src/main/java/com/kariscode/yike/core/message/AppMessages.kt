@@ -36,8 +36,15 @@ object ErrorMessages {
     // 复习
     const val REVIEW_RECORD_FAILED = "记录失败，请重试"
     const val REVIEW_SUBMIT_FAILED = "评分提交失败"
+
+    // 搜索
+    const val SEARCH_FAILED = "搜索失败，请稍后重试"
 }
 
+/**
+ * 统一管理应用中的成功提示文本，
+ * 避免多个页面各自维护相似文案导致口径逐渐漂移。
+ */
 object SuccessMessages {
     const val SAVED = "已保存"
     const val DELETED = "已删除"

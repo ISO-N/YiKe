@@ -3,16 +3,15 @@ package com.kariscode.yike.feature.analytics
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.kariscode.yike.core.coroutine.parallel
+import com.kariscode.yike.core.message.ErrorMessages
 import com.kariscode.yike.core.time.TimeConstants
 import com.kariscode.yike.core.time.TimeProvider
 import com.kariscode.yike.core.viewmodel.typedViewModelFactory
 import com.kariscode.yike.domain.model.ReviewAnalyticsSnapshot
 import com.kariscode.yike.domain.repository.StudyInsightsRepository
 import java.time.Instant
-import java.time.LocalDate
 import java.time.ZoneId
-import kotlinx.coroutines.async
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -114,23 +113,19 @@ class AnalyticsViewModel(
         _uiState.update { it.copy(isLoading = true, errorMessage = null) }
         viewModelScope.launch {
             runCatching {
-                coroutineScope {
-                    val startEpochMillis = _uiState.value.selectedRange.toStartEpochMillis(timeProvider.nowEpochMillis())
-                    val analytics = async {
-                        studyInsightsRepository.getReviewAnalytics(startEpochMillis = startEpochMillis)
-                    }
-                    val timestamps = async {
-                        studyInsightsRepository.listReviewTimestamps(startEpochMillis = startEpochMillis)
-                    }
-                    buildUiState(analytics.await(), timestamps.await())
-                }
+                val startEpochMillis = _uiState.value.selectedRange.toStartEpochMillis(timeProvider.nowEpochMillis())
+                val (analytics, timestamps) = parallel(
+                    first = { studyInsightsRepository.getReviewAnalytics(startEpochMillis = startEpochMillis) },
+                    second = { studyInsightsRepository.listReviewTimestamps(startEpochMillis = startEpochMillis) }
+                )
+                buildUiState(analytics, timestamps)
             }.onSuccess { state ->
                 _uiState.value = state
             }.onFailure { throwable ->
                 _uiState.update {
                     it.copy(
                         isLoading = false,
-                        errorMessage = throwable.message ?: "统计页加载失败"
+                        errorMessage = throwable.message ?: ErrorMessages.ANALYTICS_LOAD_FAILED
                     )
                 }
             }

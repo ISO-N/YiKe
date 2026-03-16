@@ -3,6 +3,8 @@ package com.kariscode.yike.feature.search
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.kariscode.yike.core.coroutine.parallel3
+import com.kariscode.yike.core.message.ErrorMessages
 import com.kariscode.yike.core.time.TimeProvider
 import com.kariscode.yike.core.viewmodel.typedViewModelFactory
 import com.kariscode.yike.domain.model.QuestionMasteryCalculator
@@ -13,8 +15,6 @@ import com.kariscode.yike.domain.repository.CardRepository
 import com.kariscode.yike.domain.repository.DeckRepository
 import com.kariscode.yike.domain.repository.StudyInsightsRepository
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.async
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -67,16 +67,15 @@ class QuestionSearchViewModel(
         _uiState.update { it.copy(isLoading = true, errorMessage = null) }
         viewModelScope.launch {
             runCatching {
-                coroutineScope {
-                    val tags = async { studyInsightsRepository.listAvailableTags(limit = 8) }
-                    val decks = async {
+                parallel3(
+                    first = { studyInsightsRepository.listAvailableTags(limit = 8) },
+                    second = {
                         deckRepository.observeActiveDecks()
                             .first()
                             .map { deck -> SearchDeckOption(id = deck.id, name = deck.name) }
-                    }
-                    val cards = async { loadCardsForDeck(_uiState.value.selectedDeckId) }
-                    Triple(tags.await(), decks.await(), cards.await())
-                }
+                    },
+                    third = { loadCardsForDeck(_uiState.value.selectedDeckId) }
+                )
             }.onSuccess { (tags, decks, cards) ->
                 val preservedCardId = _uiState.value.selectedCardId?.takeIf { selectedId ->
                     cards.any { card -> card.id == selectedId }
@@ -96,7 +95,7 @@ class QuestionSearchViewModel(
                 _uiState.update {
                     it.copy(
                         isLoading = false,
-                        errorMessage = throwable.message ?: "搜索页加载失败"
+                        errorMessage = throwable.message ?: ErrorMessages.SEARCH_LOAD_FAILED
                     )
                 }
             }
@@ -221,7 +220,7 @@ class QuestionSearchViewModel(
                     it.copy(
                         isLoading = false,
                         results = emptyList(),
-                        errorMessage = throwable.message ?: "搜索失败"
+                        errorMessage = throwable.message ?: ErrorMessages.SEARCH_FAILED
                     )
                 }
             }

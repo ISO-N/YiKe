@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.kariscode.yike.core.viewmodel.typedViewModelFactory
+import com.kariscode.yike.core.message.ErrorMessages
 import com.kariscode.yike.data.reminder.ReminderScheduler
 import com.kariscode.yike.domain.model.AppSettings
 import com.kariscode.yike.domain.repository.AppSettingsRepository
@@ -181,7 +182,7 @@ class SettingsViewModel(
                     _uiState.update {
                         it.copy(
                             message = null,
-                            errorMessage = "设置保存失败，请稍后重试"
+                            errorMessage = ErrorMessages.SETTINGS_SAVE_FAILED
                         )
                     }
                 }

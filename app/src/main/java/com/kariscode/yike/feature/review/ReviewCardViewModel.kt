@@ -3,13 +3,13 @@ package com.kariscode.yike.feature.review
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.kariscode.yike.core.coroutine.parallel
+import com.kariscode.yike.core.message.ErrorMessages
 import com.kariscode.yike.core.time.TimeProvider
 import com.kariscode.yike.core.viewmodel.typedViewModelFactory
 import com.kariscode.yike.domain.model.ReviewRating
 import com.kariscode.yike.domain.repository.CardRepository
 import com.kariscode.yike.domain.repository.ReviewRepository
-import kotlinx.coroutines.async
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -110,14 +110,12 @@ class ReviewCardViewModel(
         }
         viewModelScope.launch {
             runCatching {
-                coroutineScope {
-                    val now = timeProvider.nowEpochMillis()
-                    val cardDeferred = async { cardRepository.findById(cardId) ?: error("这张卡片不存在") }
-                    val dueQuestionsDeferred = async {
-                        reviewRepository.listDueQuestionsByCard(cardId = cardId, nowEpochMillis = now)
-                    }
-                    cardDeferred.await().title to dueQuestionsDeferred.await()
-                }
+                val now = timeProvider.nowEpochMillis()
+                val (card, dueQuestions) = parallel(
+                    first = { cardRepository.findById(cardId) ?: error(ErrorMessages.CARD_NOT_FOUND) },
+                    second = { reviewRepository.listDueQuestionsByCard(cardId = cardId, nowEpochMillis = now) }
+                )
+                card.title to dueQuestions
             }.onSuccess { (cardTitle, dueQuestions) ->
                 if (dueQuestions.isEmpty()) {
                     _effects.tryEmit(ReviewCardEffect.NavigateToQueue)
@@ -149,7 +147,7 @@ class ReviewCardViewModel(
                 _uiState.update { state ->
                     state.copy(
                         isLoading = false,
-                        errorMessage = "加载失败，请重试"
+                        errorMessage = ErrorMessages.REVIEW_LOAD_FAILED
                     )
                 }
             }
@@ -211,7 +209,7 @@ class ReviewCardViewModel(
                 _uiState.update { state ->
                     state.copy(
                         isSubmitting = false,
-                        errorMessage = "记录失败，请重试"
+                        errorMessage = ErrorMessages.REVIEW_RECORD_FAILED
                     )
                 }
             }

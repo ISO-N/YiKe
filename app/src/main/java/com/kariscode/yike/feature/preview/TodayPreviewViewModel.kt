@@ -3,16 +3,18 @@ package com.kariscode.yike.feature.preview
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.kariscode.yike.core.coroutine.parallel
+import com.kariscode.yike.core.message.ErrorMessages
 import com.kariscode.yike.core.time.TimeConstants
 import com.kariscode.yike.core.time.TimeProvider
 import com.kariscode.yike.core.viewmodel.typedViewModelFactory
+import com.kariscode.yike.domain.model.Question
 import com.kariscode.yike.domain.model.QuestionContext
 import com.kariscode.yike.domain.model.QuestionMasteryCalculator
+import com.kariscode.yike.domain.model.QuestionMasteryLevel
 import com.kariscode.yike.domain.model.QuestionMasterySnapshot
 import com.kariscode.yike.domain.repository.StudyInsightsRepository
 import kotlin.math.ceil
-import kotlinx.coroutines.async
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -111,24 +113,22 @@ class TodayPreviewViewModel(
         _uiState.update { it.copy(isLoading = true, errorMessage = null) }
         viewModelScope.launch {
             runCatching {
-                coroutineScope {
-                    val now = timeProvider.nowEpochMillis()
-                    val dueQuestions = async { studyInsightsRepository.listDueQuestionContexts(now) }
-                    val analytics = async {
-                        studyInsightsRepository.getReviewAnalytics(startEpochMillis = now - TimeConstants.WEEK_MILLIS)
-                    }
-                    buildUiState(
-                        dueQuestions = dueQuestions.await(),
-                        averageResponseTimeMs = analytics.await().averageResponseTimeMs
-                    )
-                }
+                val now = timeProvider.nowEpochMillis()
+                val (dueQuestions, analytics) = parallel(
+                    first = { studyInsightsRepository.listDueQuestionContexts(now) },
+                    second = { studyInsightsRepository.getReviewAnalytics(startEpochMillis = now - TimeConstants.WEEK_MILLIS) }
+                )
+                buildUiState(
+                    dueQuestions = dueQuestions,
+                    averageResponseTimeMs = analytics.averageResponseTimeMs
+                )
             }.onSuccess { state ->
                 _uiState.value = state
             }.onFailure { throwable ->
                 _uiState.update {
                     it.copy(
                         isLoading = false,
-                        errorMessage = throwable.message ?: "今日预览加载失败"
+                        errorMessage = throwable.message ?: ErrorMessages.PREVIEW_LOAD_FAILED
                     )
                 }
             }
@@ -219,10 +219,9 @@ class TodayPreviewViewModel(
     /**
      * 低熟练度定义集中在 ViewModel 辅助函数中，是为了让摘要和卡片分组共享同一判断标准。
      */
-    private fun com.kariscode.yike.domain.model.Question.isLowMastery(): Boolean =
+    private fun Question.isLowMastery(): Boolean =
         QuestionMasteryCalculator.snapshot(this).level.run {
-            this == com.kariscode.yike.domain.model.QuestionMasteryLevel.NEW ||
-                this == com.kariscode.yike.domain.model.QuestionMasteryLevel.LEARNING
+            this == QuestionMasteryLevel.NEW || this == QuestionMasteryLevel.LEARNING
         }
 
     companion object {

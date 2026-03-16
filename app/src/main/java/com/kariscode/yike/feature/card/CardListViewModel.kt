@@ -3,7 +3,8 @@ package com.kariscode.yike.feature.card
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.kariscode.yike.core.constant.EntityIdPrefixes
+import com.kariscode.yike.core.coroutine.parallel
+import com.kariscode.yike.core.id.EntityIds
 import com.kariscode.yike.core.message.ErrorMessages
 import com.kariscode.yike.core.message.SuccessMessages
 import com.kariscode.yike.core.time.TimeProvider
@@ -17,9 +18,6 @@ import com.kariscode.yike.domain.model.QuestionStatus
 import com.kariscode.yike.domain.repository.CardRepository
 import com.kariscode.yike.domain.repository.DeckRepository
 import com.kariscode.yike.domain.repository.StudyInsightsRepository
-import java.util.UUID
-import kotlinx.coroutines.async
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -98,21 +96,17 @@ class CardListViewModel(
          * 避免顺序执行导致的等待时间叠加。
          */
         viewModelScope.launch {
-            coroutineScope {
-                val deckDeferred = async { deckRepository.findById(deckId) }
-                val now = timeProvider.nowEpochMillis()
-                val cardsDeferred = async {
-                    cardRepository.observeActiveCardSummaries(deckId, now).catch {}.first()
-                }
-                val deck = deckDeferred.await()
-                val cards = cardsDeferred.await()
-                _uiState.update {
-                    it.copy(
-                        deckName = deck?.name,
-                        items = cards ?: emptyList(),
-                        isLoading = false
-                    )
-                }
+            val now = timeProvider.nowEpochMillis()
+            val (deck, cards) = parallel(
+                first = { deckRepository.findById(deckId) },
+                second = { cardRepository.observeActiveCardSummaries(deckId, now).catch {}.first() }
+            )
+            _uiState.update {
+                it.copy(
+                    deckName = deck?.name,
+                    items = cards ?: emptyList(),
+                    isLoading = false
+                )
             }
             // 初始加载完成后，启动 Flow 订阅以保持列表实时更新
             launch {
@@ -199,7 +193,7 @@ class CardListViewModel(
                 // Room 的 upsert 会自动处理"不存在则插入，存在则更新"的逻辑
                 // 直接构建对象并 upsert，无需先查询
                 val card = Card(
-                    id = editor.cardId ?: "${EntityIdPrefixes.CARD}${UUID.randomUUID()}",
+                    id = editor.cardId ?: EntityIds.newCardId(),
                     deckId = deckId,
                     title = trimmedTitle,
                     description = editor.description,

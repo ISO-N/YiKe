@@ -3,7 +3,7 @@ package com.kariscode.yike.feature.deck
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.kariscode.yike.core.constant.EntityIdPrefixes
+import com.kariscode.yike.core.id.EntityIds
 import com.kariscode.yike.core.message.ErrorMessages
 import com.kariscode.yike.core.message.SuccessMessages
 import com.kariscode.yike.core.time.TimeProvider
@@ -11,7 +11,6 @@ import com.kariscode.yike.core.viewmodel.typedViewModelFactory
 import com.kariscode.yike.domain.model.Deck
 import com.kariscode.yike.domain.model.DeckSummary
 import com.kariscode.yike.domain.repository.DeckRepository
-import java.util.UUID
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -151,7 +150,7 @@ class DeckListViewModel(
                 // Room 的 upsert 会自动处理"不存在则插入，存在则更新"的逻辑
                 // 直接构建对象并 upsert，无需先查询
                 val deck = Deck(
-                    id = editor.deckId ?: "${EntityIdPrefixes.DECK}${UUID.randomUUID()}",
+                    id = editor.deckId ?: EntityIds.newDeckId(),
                     name = trimmedName,
                     description = editor.description,
                     archived = false,

@@ -12,6 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kariscode.yike.app.LocalAppContainer
+import com.kariscode.yike.core.message.ErrorMessages
 import com.kariscode.yike.ui.component.YikeFlowScaffold
 import com.kariscode.yike.ui.component.YikePrimaryButton
 import com.kariscode.yike.ui.component.YikeSecondaryButton
@@ -97,7 +98,7 @@ private fun QuestionSearchContent(
         }
         if (uiState.errorMessage != null) {
             YikeStateBanner(
-                title = "搜索页加载失败",
+                title = ErrorMessages.SEARCH_LOAD_FAILED,
                 description = uiState.errorMessage
             ) {
                 Row(horizontalArrangement = Arrangement.spacedBy(spacing.sm)) {
