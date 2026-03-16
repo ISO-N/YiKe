@@ -26,9 +26,9 @@ import kotlinx.coroutines.launch
  */
 data class DeckListUiState(
     val isLoading: Boolean,
+    val keyword: String,
     val items: List<DeckSummary>,
     val editor: TextMetadataDraft?,
-    val pendingDelete: DeckSummary?,
     val message: String?,
     val errorMessage: String?
 )
@@ -44,9 +44,9 @@ class DeckListViewModel(
     private val _uiState = MutableStateFlow(
         DeckListUiState(
             isLoading = true,
+            keyword = "",
             items = emptyList(),
             editor = null,
-            pendingDelete = null,
             message = null,
             errorMessage = null
         )
@@ -117,6 +117,13 @@ class DeckListViewModel(
     }
 
     /**
+     * 查找关键字只保留在页面状态里，是为了让筛选输入在配置变更后仍能保留当前浏览上下文。
+     */
+    fun onKeywordChange(value: String) {
+        _uiState.update { it.copy(keyword = value) }
+    }
+
+    /**
      * 关闭编辑器会丢弃草稿，这样能明确“未保存不生效”的交互语义。
      */
     fun onDismissEditor() {
@@ -161,38 +168,29 @@ class DeckListViewModel(
     }
 
     /**
-     * 归档与反归档通过同一入口切换，便于未来把“归档后不进入待复习”作为统一规则拓展。
+     * 卡组页只保留归档入口，是为了把“暂时移出默认列表、需要时再恢复”的语义收敛成单一路径。
      */
     fun onToggleArchiveClick(item: DeckSummary) {
-        executeMutation(errorMessage = ErrorMessages.UPDATE_FAILED) {
-            val now = timeProvider.nowEpochMillis()
-            deckRepository.setArchived(deckId = item.deck.id, archived = !item.deck.archived, updatedAt = now)
-        }
-    }
-
-    /**
-     * 删除属于高风险操作，因此必须先进入确认态，而不是直接执行。
-     */
-    fun onDeleteDeckClick(item: DeckSummary) {
-        _uiState.update { it.copy(pendingDelete = item, errorMessage = null) }
-    }
-
-    /**
-     * 退出确认态可以避免误触造成的数据丢失。
-     */
-    fun onDismissDelete() {
-        _uiState.update { it.copy(pendingDelete = null, errorMessage = null) }
-    }
-
-    /**
-     * 确认删除后执行级联删除，以保证下层数据不会残留失效外键。
-     */
-    fun onConfirmDelete() {
-        val pending = _uiState.value.pendingDelete ?: return
-        executeMutation(errorMessage = ErrorMessages.DELETE_FAILED) {
-            deckRepository.delete(pending.deck.id)
-            _uiState.update { it.copy(pendingDelete = null, message = SuccessMessages.DELETED, errorMessage = null) }
-        }
+        launchResult(
+            action = {
+                deckRepository.setArchived(
+                    deckId = item.deck.id,
+                    archived = !item.deck.archived,
+                    updatedAt = timeProvider.nowEpochMillis()
+                )
+            },
+            onSuccess = {
+                _uiState.update {
+                    it.copy(
+                        message = if (item.deck.archived) "已恢复到卡组列表" else "已归档，可在已归档内容中恢复",
+                        errorMessage = null
+                    )
+                }
+            },
+            onFailure = {
+                _uiState.update { it.copy(message = null, errorMessage = ErrorMessages.UPDATE_FAILED) }
+            }
+        )
     }
 
     /**

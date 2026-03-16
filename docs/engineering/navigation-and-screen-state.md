@@ -33,6 +33,7 @@ question_editor/{cardId}?deckId={deckId}
 review_queue
 review_card/{cardId}
 settings
+recycle_bin
 backup_restore
 debug
 ```
@@ -64,6 +65,7 @@ debug
               -> question_editor/{cardId}
   -> 设置
       -> settings
+          -> recycle_bin
           -> backup_restore
   -> 调试工具（仅 debug 构建）
       -> debug
@@ -204,7 +206,8 @@ error: HomeError?
 ### 8.1 页面职责
 
 - 展示全部卡组
-- 支持新建、编辑、归档/删除
+- 支持按名称或说明查找卡组
+- 支持新建、编辑、归档
 
 ### 8.2 `DeckListUiState` 建议
 
@@ -227,6 +230,7 @@ error: DeckListError?
 ### 8.4 关键事件
 
 - `OnCreateDeckClick`
+- `OnKeywordChange`
 - `OnDeckNameChange`
 - `OnConfirmCreateDeck`
 - `OnDeckClick(deckId)`
@@ -439,6 +443,7 @@ error: ReviewError?
 ### 14.1 页面职责
 
 - 管理提醒设置
+- 提供已归档内容入口
 - 提供备份恢复入口
 - 展示应用信息
 
@@ -458,11 +463,42 @@ error: SettingsError?
 - `OnReminderEnabledChange`
 - `OnReminderTimeClick`
 - `OnReminderTimeConfirmed`
+- `OnArchivedContentClick`
 - `OnBackupRestoreClick`
 
 ---
 
-## 15. 今日预览页 `TodayPreviewScreen`
+## 15. 已归档内容页 `RecycleBinScreen`
+
+### 15.1 页面职责
+
+- 展示已归档卡组与卡片
+- 支持恢复归档内容
+- 支持彻底删除已归档内容
+
+### 15.2 `RecycleBinUiState` 建议
+
+```text
+isLoading: Boolean
+archivedDecks: List<DeckSummaryUiModel>
+archivedCards: List<ArchivedCardSummaryUiModel>
+pendingDelete: RecycleBinDeleteTarget?
+message: String?
+errorMessage: String?
+```
+
+### 15.3 关键事件
+
+- `OnRestoreDeckClick`
+- `OnDeleteDeckClick`
+- `OnRestoreCardClick`
+- `OnDeleteCardClick`
+- `OnConfirmDelete`
+- `OnDismissDelete`
+
+---
+
+## 16. 今日预览页 `TodayPreviewScreen`
 
 ### 15.1 页面职责
 
@@ -494,7 +530,7 @@ errorMessage: String?
 
 ---
 
-## 16. 统计页 `AnalyticsScreen`
+## 17. 统计页 `AnalyticsScreen`
 
 ### 16.1 页面职责
 
@@ -527,7 +563,7 @@ errorMessage: String?
 
 ---
 
-## 17. 搜索页 `QuestionSearchScreen`
+## 18. 搜索页 `QuestionSearchScreen`
 
 ### 17.1 页面职责
 
@@ -565,7 +601,7 @@ errorMessage: String?
 
 ---
 
-## 18. 备份与恢复页 `BackupRestoreScreen`
+## 19. 备份与恢复页 `BackupRestoreScreen`
 
 ### 15.1 页面职责
 
@@ -598,7 +634,7 @@ error: BackupRestoreError?
 
 ---
 
-## 19. 导航返回策略
+## 20. 导航返回策略
 
 ### 19.1 内容管理流
 
@@ -615,6 +651,7 @@ error: BackupRestoreError?
 
 ### 19.3 设置流
 
+- `recycle_bin` 返回 `settings`
 - `backup_restore` 返回 `settings`
 - `settings` 返回 `home`
 - `debug` 返回 `home`
@@ -622,7 +659,7 @@ error: BackupRestoreError?
 
 ---
 
-## 20. 页面间通信原则
+## 21. 页面间通信原则
 
 不建议通过 SavedStateHandle 传递大对象。
 
@@ -641,7 +678,7 @@ error: BackupRestoreError?
 
 ---
 
-## 21. 进程重建与状态恢复
+## 22. 进程重建与状态恢复
 
 第一版至少保证以下能力：
 
@@ -656,7 +693,7 @@ error: BackupRestoreError?
 
 ---
 
-## 22. 结论
+## 23. 结论
 
 忆刻 v0.1 的导航设计应坚持：
 

@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
@@ -282,8 +281,9 @@ private fun YikePrimaryHeaderBlock(
     subtitle: String
 ) {
     val supportingText = when {
-        title.isNotBlank() -> title
+        title.isNotBlank() && title != eyebrow -> title
         subtitle.isNotBlank() -> subtitle
+        title.isNotBlank() -> title
         else -> null
     }
 
@@ -551,7 +551,7 @@ fun YikeListItemCard(
     modifier: Modifier = Modifier,
     badge: @Composable (() -> Unit)? = null,
     supporting: String? = null,
-    actions: @Composable RowScope.() -> Unit = {}
+    actions: @Composable ColumnScope.() -> Unit = {}
 ) {
     val spacing = LocalYikeSpacing.current
     YikeSurfaceCard(modifier = modifier) {
@@ -583,9 +583,9 @@ fun YikeListItemCard(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
-        Row(
+        Column(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(spacing.sm),
+            verticalArrangement = Arrangement.spacedBy(spacing.sm),
             content = actions
         )
     }

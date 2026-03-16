@@ -1,9 +1,10 @@
 package com.kariscode.yike.feature.search
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -19,72 +20,90 @@ import com.kariscode.yike.ui.format.formatPreviewDateTime
 import com.kariscode.yike.ui.theme.LocalYikeSpacing
 
 /**
- * 结果区在空态时给出下一步建议，是为了避免用户面对 0 结果时不知道该放宽哪一类条件。
+ * 结果区改成惰性列表，是为了避免搜索命中很多问题时在首屏一次性组合全部卡片导致掉帧。
  */
-@Composable
-internal fun QuestionSearchResultSection(
+internal fun LazyListScope.questionSearchResultItems(
     uiState: QuestionSearchUiState,
     onOpenEditor: (String) -> Unit,
     onOpenReview: (String) -> Unit
 ) {
-    val spacing = LocalYikeSpacing.current
     if (uiState.results.isEmpty()) {
-        YikeStateBanner(
-            title = "没有找到符合条件的问题",
-            description = "可以尝试清空熟练度或卡片筛选，先扩大范围，再进入专项处理。"
-        )
+        item {
+            YikeStateBanner(
+                title = "没有找到符合条件的问题",
+                description = "可以尝试清空熟练度或卡片筛选，先扩大范围，再进入专项处理。"
+            )
+        }
         return
     }
 
-    Column(verticalArrangement = Arrangement.spacedBy(spacing.md)) {
-        uiState.results.forEach { item ->
-            YikeSurfaceCard {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(
-                        text = item.context.question.prompt,
-                        modifier = Modifier.weight(1f),
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                    YikeBadge(text = item.mastery.level.label)
-                }
-                Text(
-                    text = buildAnswerSnippet(item),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Row(horizontalArrangement = Arrangement.spacedBy(spacing.sm)) {
-                    item.context.question.tags.forEach { tag ->
-                        YikeBadge(text = tag)
-                    }
-                }
-                Text(
-                    text = "${item.context.deckName} / ${item.context.cardTitle}",
-                    style = MaterialTheme.typography.labelLarge
-                )
-                Text(
-                    text = buildMetaLine(item),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                YikeProgressBar(progress = item.mastery.progress)
-                Row(horizontalArrangement = Arrangement.spacedBy(spacing.sm)) {
-                    YikeSecondaryButton(
-                        text = "编辑问题",
-                        onClick = { onOpenEditor(item.context.question.cardId) },
-                        modifier = Modifier.weight(1f)
-                    )
-                    YikePrimaryButton(
-                        text = if (item.isDue) "立即复习" else "查看卡片",
-                        onClick = {
-                            if (item.isDue) onOpenReview(item.context.question.cardId) else onOpenEditor(item.context.question.cardId)
-                        },
-                        modifier = Modifier.weight(1f)
-                    )
-                }
+    items(
+        items = uiState.results,
+        key = { item -> item.context.question.id }
+    ) { item ->
+        QuestionSearchResultCard(
+            item = item,
+            onOpenEditor = onOpenEditor,
+            onOpenReview = onOpenReview
+        )
+    }
+}
+
+/**
+ * 单条结果卡继续保留操作按钮和层级信息，是为了让惰性列表优化后不牺牲原有定位效率。
+ */
+@Composable
+private fun QuestionSearchResultCard(
+    item: QuestionSearchResultUiModel,
+    onOpenEditor: (String) -> Unit,
+    onOpenReview: (String) -> Unit
+) {
+    val spacing = LocalYikeSpacing.current
+    YikeSurfaceCard {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                text = item.context.question.prompt,
+                modifier = Modifier.weight(1f),
+                style = MaterialTheme.typography.titleMedium
+            )
+            YikeBadge(text = item.mastery.level.label)
+        }
+        Text(
+            text = buildAnswerSnippet(item),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(spacing.sm)) {
+            item.context.question.tags.forEach { tag ->
+                YikeBadge(text = tag)
             }
+        }
+        Text(
+            text = "${item.context.deckName} / ${item.context.cardTitle}",
+            style = MaterialTheme.typography.labelLarge
+        )
+        Text(
+            text = buildMetaLine(item),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        YikeProgressBar(progress = item.mastery.progress)
+        Row(horizontalArrangement = Arrangement.spacedBy(spacing.sm)) {
+            YikeSecondaryButton(
+                text = "编辑问题",
+                onClick = { onOpenEditor(item.context.question.cardId) },
+                modifier = Modifier.weight(1f)
+            )
+            YikePrimaryButton(
+                text = if (item.isDue) "立即复习" else "查看卡片",
+                onClick = {
+                    if (item.isDue) onOpenReview(item.context.question.cardId) else onOpenEditor(item.context.question.cardId)
+                },
+                modifier = Modifier.weight(1f)
+            )
         }
     }
 }

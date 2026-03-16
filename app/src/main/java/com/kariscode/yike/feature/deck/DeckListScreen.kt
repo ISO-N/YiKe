@@ -7,8 +7,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
@@ -28,7 +28,6 @@ import com.kariscode.yike.ui.component.YikePrimaryDestination
 import com.kariscode.yike.ui.component.YikePrimaryScaffold
 import com.kariscode.yike.ui.component.YikeScrollableColumn
 import com.kariscode.yike.ui.component.YikeSecondaryButton
-import com.kariscode.yike.ui.component.YikeDangerConfirmationDialog
 import com.kariscode.yike.ui.component.YikeStateBanner
 import com.kariscode.yike.ui.component.YikeTextMetadataDialog
 import com.kariscode.yike.ui.theme.LocalYikeSpacing
@@ -54,7 +53,7 @@ fun DeckListScreen(
     YikePrimaryScaffold(
         currentDestination = YikePrimaryDestination.DECKS,
         title = "卡组",
-        subtitle = "优先把主题拆成卡组，复习和录入都会更容易维护。",
+        subtitle = "管理卡组、查找内容和归档操作。",
         floatingActionButton = {
             YikeFab(
                 text = "+ 新建",
@@ -66,15 +65,13 @@ fun DeckListScreen(
             uiState = uiState,
             onCreateDeck = viewModel::onCreateDeckClick,
             onOpenDeck = onOpenDeck,
+            onKeywordChange = viewModel::onKeywordChange,
             onNameChange = viewModel::onDraftNameChange,
             onDescriptionChange = viewModel::onDraftDescriptionChange,
             onDismissEditor = viewModel::onDismissEditor,
             onConfirmSave = viewModel::onConfirmSave,
             onEditDeck = viewModel::onEditDeckClick,
             onToggleArchive = viewModel::onToggleArchiveClick,
-            onDeleteDeck = viewModel::onDeleteDeckClick,
-            onDismissDelete = viewModel::onDismissDelete,
-            onConfirmDelete = viewModel::onConfirmDelete,
             modifier = modifier,
             contentPadding = padding
         )
@@ -89,26 +86,34 @@ private fun DeckListContent(
     uiState: DeckListUiState,
     onCreateDeck: () -> Unit,
     onOpenDeck: (deckId: String) -> Unit,
+    onKeywordChange: (String) -> Unit,
     onNameChange: (String) -> Unit,
     onDescriptionChange: (String) -> Unit,
     onDismissEditor: () -> Unit,
     onConfirmSave: () -> Unit,
     onEditDeck: (DeckSummary) -> Unit,
     onToggleArchive: (DeckSummary) -> Unit,
-    onDeleteDeck: (DeckSummary) -> Unit,
-    onDismissDelete: () -> Unit,
-    onConfirmDelete: () -> Unit,
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues = PaddingValues()
 ) {
+    val visibleItems = uiState.items.filter { item ->
+        val keyword = uiState.keyword.trim()
+        keyword.isBlank() ||
+            item.deck.name.contains(keyword, ignoreCase = true) ||
+            item.deck.description.contains(keyword, ignoreCase = true)
+    }
     YikeScrollableColumn(modifier = modifier) {
-        DeckOverviewSection(items = uiState.items)
+        DeckOverviewSection(items = visibleItems)
+        DeckSearchSection(
+            keyword = uiState.keyword,
+            onKeywordChange = onKeywordChange
+        )
 
         when {
             uiState.isLoading -> {
                 YikeStateBanner(
                     title = "正在加载卡组",
-                    description = "稍等一下，我们会把卡组统计和今天到期的内容一起准备好。"
+                    description = "正在同步卡组和到期统计。"
                 )
             }
 
@@ -122,7 +127,7 @@ private fun DeckListContent(
             uiState.items.isEmpty() -> {
                 YikeStateBanner(
                     title = "还没有卡组",
-                    description = "先创建一个卡组，把知识块拆成更容易维护的复习单元。"
+                    description = "先创建一个卡组开始整理内容。"
                 ) {
                     YikePrimaryButton(
                         text = "创建第一个卡组",
@@ -132,14 +137,20 @@ private fun DeckListContent(
                 }
             }
 
+            visibleItems.isEmpty() -> {
+                YikeStateBanner(
+                    title = "没有找到匹配的卡组",
+                    description = "换个关键词试试，卡组名称和说明都会参与查找。"
+                )
+            }
+
             else -> {
-                uiState.items.forEach { item ->
+                visibleItems.forEach { item ->
                     DeckSummaryCard(
                         item = item,
                         onOpen = { onOpenDeck(item.deck.id) },
                         onEdit = { onEditDeck(item) },
-                        onArchive = { onToggleArchive(item) },
-                        onDelete = { onDeleteDeck(item) }
+                        onArchive = { onToggleArchive(item) }
                     )
                 }
             }
@@ -166,16 +177,6 @@ private fun DeckListContent(
             onConfirm = onConfirmSave
         )
     }
-
-    uiState.pendingDelete?.let {
-        YikeDangerConfirmationDialog(
-            title = "确认删除卡组？",
-            description = "删除会级联清理该卡组下的卡片、问题与复习记录，且无法恢复。",
-            confirmText = "删除",
-            onDismiss = onDismissDelete,
-            onConfirm = onConfirmDelete
-        )
-    }
 }
 
 /**
@@ -187,7 +188,7 @@ private fun DeckOverviewSection(items: List<DeckSummary>) {
     YikeHeroCard(
         eyebrow = "Overview",
         title = "${items.size} 个活跃卡组",
-        description = "今天到期的内容会优先显示在每个列表项上，方便你快速决定先维护哪里。"
+        description = "先看数量，再决定今天先维护哪组内容。"
     ) {
         Row(horizontalArrangement = Arrangement.spacedBy(LocalYikeSpacing.current.md)) {
             YikeMetricCard(
@@ -212,17 +213,16 @@ private fun DeckSummaryCard(
     item: DeckSummary,
     onOpen: () -> Unit,
     onEdit: () -> Unit,
-    onArchive: () -> Unit,
-    onDelete: () -> Unit
+    onArchive: () -> Unit
 ) {
     YikeListItemCard(
         title = item.deck.name,
         summary = "${item.cardCount} 张卡片 · ${item.questionCount} 个问题",
         supporting = item.deck.description.ifBlank {
             if (item.dueQuestionCount > 0) {
-                "今天还有 ${item.dueQuestionCount} 题到期，适合继续维护和复习。"
+                "今天还有 ${item.dueQuestionCount} 题到期。"
             } else {
-                "今天暂无到期题目，可以继续录入或整理内容。"
+                "今天暂无到期题目。"
             }
         },
         badge = {
@@ -250,12 +250,29 @@ private fun DeckSummaryCard(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(LocalYikeSpacing.current.sm)
         ) {
-            TextButton(onClick = onArchive, modifier = Modifier.weight(1f)) {
-                Text("归档")
-            }
-            TextButton(onClick = onDelete, modifier = Modifier.weight(1f)) {
-                Text("删除")
-            }
+            YikeSecondaryButton(
+                text = "归档",
+                onClick = onArchive,
+                modifier = Modifier.weight(1f)
+            )
         }
     }
+}
+
+/**
+ * 查找框放在总览之后，是为了让用户先看到当前规模，再决定是否收窄到具体卡组。
+ */
+@Composable
+private fun DeckSearchSection(
+    keyword: String,
+    onKeywordChange: (String) -> Unit
+) {
+    OutlinedTextField(
+        value = keyword,
+        onValueChange = onKeywordChange,
+        label = { Text("查找卡组") },
+        placeholder = { Text("输入名称或说明") },
+        modifier = Modifier.fillMaxWidth(),
+        singleLine = true
+    )
 }
