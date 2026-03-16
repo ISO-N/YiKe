@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -66,6 +67,7 @@ fun DeckListScreen(
             uiState = uiState,
             onCreateDeck = viewModel::onCreateDeckClick,
             onOpenDeck = onOpenDeck,
+            onKeywordChange = viewModel::onKeywordChange,
             onNameChange = viewModel::onDraftNameChange,
             onDescriptionChange = viewModel::onDraftDescriptionChange,
             onDismissEditor = viewModel::onDismissEditor,
@@ -89,6 +91,7 @@ private fun DeckListContent(
     uiState: DeckListUiState,
     onCreateDeck: () -> Unit,
     onOpenDeck: (deckId: String) -> Unit,
+    onKeywordChange: (String) -> Unit,
     onNameChange: (String) -> Unit,
     onDescriptionChange: (String) -> Unit,
     onDismissEditor: () -> Unit,
@@ -101,8 +104,18 @@ private fun DeckListContent(
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues = PaddingValues()
 ) {
+    val visibleItems = uiState.items.filter { item ->
+        val keyword = uiState.keyword.trim()
+        keyword.isBlank() ||
+            item.deck.name.contains(keyword, ignoreCase = true) ||
+            item.deck.description.contains(keyword, ignoreCase = true)
+    }
     YikeScrollableColumn(modifier = modifier) {
-        DeckOverviewSection(items = uiState.items)
+        DeckOverviewSection(items = visibleItems)
+        DeckSearchSection(
+            keyword = uiState.keyword,
+            onKeywordChange = onKeywordChange
+        )
 
         when {
             uiState.isLoading -> {
@@ -132,8 +145,15 @@ private fun DeckListContent(
                 }
             }
 
+            visibleItems.isEmpty() -> {
+                YikeStateBanner(
+                    title = "没有找到匹配的卡组",
+                    description = "换个关键词试试，卡组名称和说明都会参与查找。"
+                )
+            }
+
             else -> {
-                uiState.items.forEach { item ->
+                visibleItems.forEach { item ->
                     DeckSummaryCard(
                         item = item,
                         onOpen = { onOpenDeck(item.deck.id) },
@@ -258,4 +278,22 @@ private fun DeckSummaryCard(
             }
         }
     }
+}
+
+/**
+ * 查找框放在总览之后，是为了让用户先看到当前规模，再决定是否收窄到具体卡组。
+ */
+@Composable
+private fun DeckSearchSection(
+    keyword: String,
+    onKeywordChange: (String) -> Unit
+) {
+    OutlinedTextField(
+        value = keyword,
+        onValueChange = onKeywordChange,
+        label = { Text("查找卡组") },
+        placeholder = { Text("输入名称或说明") },
+        modifier = Modifier.fillMaxWidth(),
+        singleLine = true
+    )
 }

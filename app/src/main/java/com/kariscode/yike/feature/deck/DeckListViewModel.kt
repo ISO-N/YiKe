@@ -26,6 +26,7 @@ import kotlinx.coroutines.launch
  */
 data class DeckListUiState(
     val isLoading: Boolean,
+    val keyword: String,
     val items: List<DeckSummary>,
     val editor: TextMetadataDraft?,
     val pendingDelete: DeckSummary?,
@@ -44,6 +45,7 @@ class DeckListViewModel(
     private val _uiState = MutableStateFlow(
         DeckListUiState(
             isLoading = true,
+            keyword = "",
             items = emptyList(),
             editor = null,
             pendingDelete = null,
@@ -114,6 +116,13 @@ class DeckListViewModel(
      */
     fun onDraftDescriptionChange(value: String) {
         updateEditor { it.updateSecondaryValue(value) }
+    }
+
+    /**
+     * 查找关键字只保留在页面状态里，是为了让筛选输入在配置变更后仍能保留当前浏览上下文。
+     */
+    fun onKeywordChange(value: String) {
+        _uiState.update { it.copy(keyword = value) }
     }
 
     /**
