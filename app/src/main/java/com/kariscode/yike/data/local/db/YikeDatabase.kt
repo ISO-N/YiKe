@@ -2,6 +2,7 @@ package com.kariscode.yike.data.local.db
 
 import androidx.room.Database
 import androidx.room.RoomDatabase
+import androidx.room.AutoMigration
 import com.kariscode.yike.data.local.db.dao.CardDao
 import com.kariscode.yike.data.local.db.dao.DeckDao
 import com.kariscode.yike.data.local.db.dao.QuestionDao
@@ -23,7 +24,8 @@ import com.kariscode.yike.data.local.db.entity.ReviewRecordEntity
         ReviewRecordEntity::class
     ],
     version = DatabaseConstants.ROOM_SCHEMA_VERSION,
-    exportSchema = true
+    exportSchema = true,
+    autoMigrations = [AutoMigration(from = 1, to = 2)]
 )
 abstract class YikeDatabase : RoomDatabase() {
     abstract fun deckDao(): DeckDao

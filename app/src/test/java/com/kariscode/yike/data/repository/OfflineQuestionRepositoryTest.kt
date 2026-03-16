@@ -503,6 +503,8 @@ class OfflineQuestionRepositoryTest {
         override suspend fun findById(questionId: String): QuestionEntity? =
             storedQuestions[questionId]
 
+        override suspend fun findDeckIntervalStepCountByQuestionId(questionId: String): Int? = null
+
         override suspend fun listQuestionContexts(
             keyword: String?,
             tagKeyword: String?,

@@ -143,6 +143,7 @@ question
 | `id` | `TEXT` | 否 | 无 | 主键 |
 | `name` | `TEXT` | 否 | 无 | 卡组名称 |
 | `description` | `TEXT` | 否 | `""` | 描述 |
+| `intervalStepCount` | `INTEGER` | 否 | `8` | 间隔序列次数，范围 `1..8` |
 | `archived` | `INTEGER` | 否 | `0` | 0=false, 1=true |
 | `sortOrder` | `INTEGER` | 否 | `0` | 手动排序值 |
 | `createdAt` | `INTEGER` | 否 | 无 | 创建时间 |
@@ -151,6 +152,7 @@ question
 ### 7.3 约束
 
 - `name` 不能为空
+- `intervalStepCount` 必须在 `1..8`
 - 第一版不支持父子卡组
 
 ### 7.4 索引建议

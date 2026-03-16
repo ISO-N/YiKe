@@ -13,6 +13,7 @@ import com.kariscode.yike.data.local.db.entity.DeckEntity
 import com.kariscode.yike.data.local.db.entity.QuestionEntity
 import com.kariscode.yike.data.local.db.entity.ReviewRecordEntity
 import com.kariscode.yike.domain.model.ReviewRating
+import com.kariscode.yike.domain.scheduler.ReviewSchedulerV1
 import java.util.UUID
 import kotlin.random.Random
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -265,6 +266,7 @@ class DebugViewModel(
             id = "deck_${UUID.randomUUID()}",
             name = "调试卡组 ${deckIndex + 1} · $topic",
             description = "用于快速验证随机复习数据与列表展示。",
+            intervalStepCount = ReviewSchedulerV1.DEFAULT_INTERVAL_STEP_COUNT,
             archived = false,
             sortOrder = deckIndex,
             createdAt = nowEpochMillis,

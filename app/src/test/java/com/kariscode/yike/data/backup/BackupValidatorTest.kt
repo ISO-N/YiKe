@@ -88,6 +88,7 @@ class BackupValidatorTest {
                 id = "deck_1",
                 name = "测试卡组",
                 description = "",
+                intervalStepCount = 4,
                 archived = false,
                 sortOrder = 0,
                 createdAt = "2026-03-15T10:00:00+08:00",

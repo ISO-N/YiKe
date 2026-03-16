@@ -7,11 +7,13 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kariscode.yike.app.LocalAppContainer
@@ -68,6 +70,7 @@ fun DeckListScreen(
             onKeywordChange = viewModel::onKeywordChange,
             onNameChange = viewModel::onDraftNameChange,
             onDescriptionChange = viewModel::onDraftDescriptionChange,
+            onIntervalStepCountChange = viewModel::onDraftIntervalStepCountChange,
             onDismissEditor = viewModel::onDismissEditor,
             onConfirmSave = viewModel::onConfirmSave,
             onEditDeck = viewModel::onEditDeckClick,
@@ -89,6 +92,7 @@ private fun DeckListContent(
     onKeywordChange: (String) -> Unit,
     onNameChange: (String) -> Unit,
     onDescriptionChange: (String) -> Unit,
+    onIntervalStepCountChange: (String) -> Unit,
     onDismissEditor: () -> Unit,
     onConfirmSave: () -> Unit,
     onEditDeck: (DeckSummary) -> Unit,
@@ -167,12 +171,23 @@ private fun DeckListContent(
         YikeTextMetadataDialog(
             title = if (editor.entityId == null) "新建卡组" else "编辑卡组",
             primaryLabel = "名称",
-            primaryValue = editor.primaryValue,
+            primaryValue = editor.name,
             onPrimaryValueChange = onNameChange,
             secondaryLabel = "说明",
-            secondaryValue = editor.secondaryValue,
+            secondaryValue = editor.description,
             onSecondaryValueChange = onDescriptionChange,
             validationMessage = editor.validationMessage,
+            extraContent = {
+                OutlinedTextField(
+                    value = editor.intervalStepCountText,
+                    onValueChange = onIntervalStepCountChange,
+                    label = { Text("间隔次数") },
+                    placeholder = { Text("1-8，默认 8") },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
             onDismiss = onDismissEditor,
             onConfirm = onConfirmSave
         )
@@ -217,7 +232,7 @@ private fun DeckSummaryCard(
 ) {
     YikeListItemCard(
         title = item.deck.name,
-        summary = "${item.cardCount} 张卡片 · ${item.questionCount} 个问题",
+        summary = "${item.cardCount} 张卡片 · ${item.questionCount} 个问题 · ${item.deck.intervalStepCount} 段间隔",
         supporting = item.deck.description.ifBlank {
             if (item.dueQuestionCount > 0) {
                 "今天还有 ${item.dueQuestionCount} 题到期。"

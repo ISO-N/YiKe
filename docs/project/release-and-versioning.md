@@ -72,8 +72,8 @@
 
 ### 4.2 数据结构版本
 
-- `schemaVersion = 1`
-- Room `version = 1`
+- `schemaVersion = 2`
+- Room `version = 2`
 
 ### 4.3 备份格式版本
 

@@ -6,6 +6,7 @@ import androidx.test.platform.app.InstrumentationRegistry
 import com.kariscode.yike.core.dispatchers.DefaultAppDispatchers
 import com.kariscode.yike.core.time.TimeProvider
 import com.kariscode.yike.data.local.db.YikeDatabase
+import com.kariscode.yike.domain.scheduler.ReviewSchedulerV1
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -66,7 +67,10 @@ class DebugViewModelIntegrationTest {
         assertTrue("卡片总数应落在 6 到 10 之间。", cards.size in 6..10)
         assertTrue("问题总数应落在 12 到 30 之间。", questions.size in 12..30)
         assertTrue("至少 20% 的问题应在今天到期。", dueTodayCount * 5 >= questions.size)
-        assertTrue("stageIndex 应只分布在 0 到 3。", questions.all { it.stageIndex in 0..3 })
+        assertTrue(
+            "stageIndex 应落在当前调度器支持的范围内。",
+            questions.all { it.stageIndex in 0..ReviewSchedulerV1.DEFAULT_INTERVAL_DAYS_BY_STAGE.lastIndex }
+        )
     }
 
     /**

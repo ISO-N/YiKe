@@ -58,6 +58,22 @@ interface QuestionDao {
     suspend fun findById(questionId: String): QuestionEntity?
 
     /**
+     * 评分事务需要知道题目所属卡组的调度上限，
+     * 在 DAO 层直接关联查询可以避免仓储为了一次提交再拼多跳读取链路。
+     */
+    @Query(
+        """
+        SELECT d.intervalStepCount
+        FROM question q
+        JOIN card c ON c.id = q.cardId
+        JOIN deck d ON d.id = c.deckId
+        WHERE q.id = :questionId
+        LIMIT 1
+        """
+    )
+    suspend fun findDeckIntervalStepCountByQuestionId(questionId: String): Int?
+
+    /**
      * 搜索与今日预览都需要题目附带所属卡组/卡片信息，
      * 因此在 DAO 层直接完成关联能避免上层反复拼接层级数据。
      */

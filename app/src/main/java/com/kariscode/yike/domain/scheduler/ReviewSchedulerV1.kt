@@ -18,9 +18,16 @@ class ReviewSchedulerV1(
     fun scheduleNext(
         currentStageIndex: Int,
         rating: ReviewRating,
-        reviewedAtEpochMillis: Long
+        reviewedAtEpochMillis: Long,
+        intervalStepCount: Int = intervalDaysByStage.size
     ): ReviewScheduleResult {
-        val maxStageIndex = intervalDaysByStage.lastIndex
+        val effectiveIntervalDaysByStage = intervalDaysByStage.take(
+            normalizeIntervalStepCount(
+                intervalStepCount = intervalStepCount,
+                maxAllowedStepCount = intervalDaysByStage.size
+            )
+        )
+        val maxStageIndex = effectiveIntervalDaysByStage.lastIndex
         val boundedCurrentStage = currentStageIndex.coerceIn(0, maxStageIndex)
 
         val nextStageIndex = when (rating) {
@@ -30,7 +37,7 @@ class ReviewSchedulerV1(
             ReviewRating.EASY -> (boundedCurrentStage + 2).coerceAtMost(maxStageIndex)
         }
 
-        val intervalDays = intervalDaysByStage[nextStageIndex]
+        val intervalDays = effectiveIntervalDaysByStage[nextStageIndex]
         val nextDueAt = Instant.ofEpochMilli(reviewedAtEpochMillis)
             .plus(intervalDays.toLong(), ChronoUnit.DAYS)
             .toEpochMilli()
@@ -49,6 +56,21 @@ class ReviewSchedulerV1(
      */
     companion object {
         val DEFAULT_INTERVAL_DAYS_BY_STAGE: List<Int> = listOf(1, 2, 4, 7, 15, 30, 90, 180)
+        const val MIN_INTERVAL_STEP_COUNT: Int = 1
+        const val DEFAULT_INTERVAL_STEP_COUNT: Int = 8
+        const val MAX_INTERVAL_STEP_COUNT: Int = 8
+
+        /**
+         * 卡组只允许裁剪默认序列长度而不允许自定义天数，是为了先满足“短期卡组不需要拉满 8 段”
+         * 的诉求，同时继续复用同一套已验证的间隔曲线。
+         */
+        fun normalizeIntervalStepCount(
+            intervalStepCount: Int,
+            maxAllowedStepCount: Int = MAX_INTERVAL_STEP_COUNT
+        ): Int = intervalStepCount.coerceIn(
+            minimumValue = MIN_INTERVAL_STEP_COUNT,
+            maximumValue = maxAllowedStepCount.coerceAtMost(MAX_INTERVAL_STEP_COUNT)
+        )
     }
 }
 

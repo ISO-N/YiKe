@@ -3,6 +3,7 @@ package com.kariscode.yike.data.local.db.entity
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
+import androidx.room.ColumnInfo
 
 /**
  * 将 Room Entity 与 domain 模型分离的原因是：数据库字段需要为查询/索引服务，
@@ -19,6 +20,8 @@ data class DeckEntity(
     @PrimaryKey val id: String,
     val name: String,
     val description: String,
+    @ColumnInfo(defaultValue = "8")
+    val intervalStepCount: Int,
     val archived: Boolean,
     val sortOrder: Int,
     val createdAt: Long,

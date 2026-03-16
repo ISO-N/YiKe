@@ -54,10 +54,13 @@ class OfflineReviewRepository(
             val currentEntity = questionDao.findById(questionId)
                 ?: error("问题不存在，无法提交评分。")
             val currentQuestion = RoomMappers.run { currentEntity.toDomain() }
+            val intervalStepCount = questionDao.findDeckIntervalStepCountByQuestionId(questionId)
+                ?: ReviewSchedulerV1.DEFAULT_INTERVAL_STEP_COUNT
             val scheduleResult = reviewScheduler.scheduleNext(
                 currentStageIndex = currentQuestion.stageIndex,
                 rating = rating,
-                reviewedAtEpochMillis = reviewedAtEpochMillis
+                reviewedAtEpochMillis = reviewedAtEpochMillis,
+                intervalStepCount = intervalStepCount
             )
 
             val updatedQuestion = currentQuestion.copy(
