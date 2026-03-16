@@ -60,6 +60,7 @@
 - 卡组 ID
 - 名称
 - 描述（若有）
+- 间隔序列次数
 - 创建/更新时间
 - 归档状态
 
@@ -144,7 +145,7 @@ yike-backup-20260314-213000.json
   "settings": {
     "dailyReminderEnabled": true,
     "dailyReminderTime": "20:30",
-    "schemaVersion": 1
+    "schemaVersion": 2
   },
   "decks": [],
   "cards": [],
@@ -167,13 +168,14 @@ yike-backup-20260314-213000.json
   "settings": {
     "dailyReminderEnabled": true,
     "dailyReminderTime": "20:30",
-    "schemaVersion": 1
+    "schemaVersion": 2
   },
   "decks": [
     {
       "id": "deck_1",
       "name": "高等数学",
       "description": "",
+      "intervalStepCount": 4,
       "createdAt": "2026-03-14T20:00:00+08:00",
       "updatedAt": "2026-03-14T20:00:00+08:00",
       "archived": false
@@ -435,6 +437,7 @@ yike-backup-20260314-213000.json
 当前实现提供的行为约束：
 
 - 导出支持空数据与非空数据集，并始终生成包含 `app/settings/decks/cards/questions/reviewRecords` 的 JSON 文件
+- `BackupDeck.intervalStepCount` 进入导出文件；恢复旧文件缺失该字段时默认回退到 8 段
 - 恢复前先做版本、必填字段、引用关系、评分枚举和阶段合法性校验
 - 恢复采用全量覆盖；数据库写入在事务内完成，设置写入失败时会执行补偿回滚
 - 恢复完成后会根据恢复后的设置重新调度每日提醒
