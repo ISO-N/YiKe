@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.kariscode.yike.core.coroutine.parallel
 import com.kariscode.yike.core.message.ErrorMessages
 import com.kariscode.yike.core.time.TimeProvider
+import com.kariscode.yike.core.viewmodel.launchResult
 import com.kariscode.yike.core.viewmodel.typedViewModelFactory
 import com.kariscode.yike.domain.model.DeckSummary
 import com.kariscode.yike.domain.model.TodayReviewSummary
@@ -59,8 +60,8 @@ class HomeViewModel(
      */
     fun refresh() {
         _uiState.update { it.copy(isLoading = true, errorMessage = null) }
-        viewModelScope.launch {
-            runCatching {
+        launchResult(
+            action = {
                 val now = timeProvider.nowEpochMillis()
                 parallel(
                     first = { questionRepository.getTodayReviewSummary(now) },
@@ -71,7 +72,8 @@ class HomeViewModel(
                         )
                     }
                 )
-            }.onSuccess { (summary, recentDecks) ->
+            },
+            onSuccess = { (summary, recentDecks) ->
                 _uiState.update {
                     it.copy(
                         isLoading = false,
@@ -80,7 +82,8 @@ class HomeViewModel(
                         errorMessage = null
                     )
                 }
-            }.onFailure { throwable ->
+            },
+            onFailure = { throwable ->
                 _uiState.update {
                     it.copy(
                         isLoading = false,
@@ -90,7 +93,7 @@ class HomeViewModel(
                     )
                 }
             }
-        }
+        )
     }
 
     companion object {

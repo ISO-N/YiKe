@@ -4,8 +4,9 @@ import android.os.Build
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.kariscode.yike.core.viewmodel.typedViewModelFactory
 import com.kariscode.yike.core.message.ErrorMessages
+import com.kariscode.yike.core.viewmodel.launchResult
+import com.kariscode.yike.core.viewmodel.typedViewModelFactory
 import com.kariscode.yike.data.reminder.ReminderScheduler
 import com.kariscode.yike.domain.model.AppSettings
 import com.kariscode.yike.domain.repository.AppSettingsRepository
@@ -161,25 +162,25 @@ class SettingsViewModel(
         successMessage: String,
         action: suspend () -> Unit
     ) {
-        viewModelScope.launch {
-            runCatching { action() }
-                .onSuccess {
-                    _uiState.update {
-                        it.copy(
-                            message = successMessage,
-                            errorMessage = null
-                        )
-                    }
+        launchResult(
+            action = action,
+            onSuccess = {
+                _uiState.update {
+                    it.copy(
+                        message = successMessage,
+                        errorMessage = null
+                    )
                 }
-                .onFailure {
-                    _uiState.update {
-                        it.copy(
-                            message = null,
-                            errorMessage = ErrorMessages.SETTINGS_SAVE_FAILED
-                        )
-                    }
+            },
+            onFailure = {
+                _uiState.update {
+                    it.copy(
+                        message = null,
+                        errorMessage = ErrorMessages.SETTINGS_SAVE_FAILED
+                    )
                 }
-        }
+            }
+        )
     }
 
     /**

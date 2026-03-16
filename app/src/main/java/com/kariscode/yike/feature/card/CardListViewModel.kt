@@ -7,6 +7,7 @@ import com.kariscode.yike.core.id.EntityIds
 import com.kariscode.yike.core.message.ErrorMessages
 import com.kariscode.yike.core.message.SuccessMessages
 import com.kariscode.yike.core.time.TimeProvider
+import com.kariscode.yike.core.viewmodel.launchResult
 import com.kariscode.yike.core.viewmodel.typedViewModelFactory
 import com.kariscode.yike.domain.model.Card
 import com.kariscode.yike.domain.model.CardSummary
@@ -223,8 +224,8 @@ class CardListViewModel(
             return
         }
 
-        viewModelScope.launch {
-            runCatching {
+        launchResult(
+            action = {
                 val now = timeProvider.nowEpochMillis()
                 val card = Card(
                     id = editor.cardId ?: EntityIds.newCardId(),
@@ -237,12 +238,14 @@ class CardListViewModel(
                     updatedAt = now
                 )
                 cardRepository.upsert(card)
-            }.onSuccess {
+            },
+            onSuccess = {
                 _uiState.update { it.copy(editor = null, message = SuccessMessages.SAVED, errorMessage = null) }
-            }.onFailure {
+            },
+            onFailure = {
                 _uiState.update { it.copy(message = null, errorMessage = ErrorMessages.SAVE_FAILED) }
             }
-        }
+        )
     }
 
     /**
@@ -310,12 +313,12 @@ class CardListViewModel(
         errorMessage: String,
         action: suspend () -> Unit
     ) {
-        viewModelScope.launch {
-            runCatching { action() }
-                .onFailure {
-                    _uiState.update { it.copy(message = null, errorMessage = errorMessage) }
-                }
-        }
+        launchResult(
+            action = action,
+            onFailure = {
+                _uiState.update { it.copy(message = null, errorMessage = errorMessage) }
+            }
+        )
     }
 
     /**
@@ -324,8 +327,8 @@ class CardListViewModel(
      */
     private fun refreshMasterySummary() {
         masterySummaryJob?.cancel()
-        masterySummaryJob = viewModelScope.launch {
-            runCatching {
+        masterySummaryJob = launchResult(
+            action = {
                 val questions = studyInsightsRepository.searchQuestionContexts(
                     filters = QuestionQueryFilters(
                         deckId = deckId,
@@ -342,12 +345,14 @@ class CardListViewModel(
                     familiarCount = masteryCounts[QuestionMasteryLevel.FAMILIAR]?.size ?: 0,
                     masteredCount = masteryCounts[QuestionMasteryLevel.MASTERED]?.size ?: 0
                 )
-            }.onSuccess { summary ->
+            },
+            onSuccess = { summary ->
                 _uiState.update { it.copy(masterySummary = summary) }
-            }.onFailure {
+            },
+            onFailure = {
                 _uiState.update { it.copy(masterySummary = null) }
             }
-        }
+        )
     }
 
     /**

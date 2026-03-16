@@ -7,6 +7,7 @@ import com.kariscode.yike.core.id.EntityIds
 import com.kariscode.yike.core.message.ErrorMessages
 import com.kariscode.yike.core.message.SuccessMessages
 import com.kariscode.yike.core.time.TimeProvider
+import com.kariscode.yike.core.viewmodel.launchResult
 import com.kariscode.yike.core.viewmodel.typedViewModelFactory
 import com.kariscode.yike.domain.model.Deck
 import com.kariscode.yike.domain.model.DeckSummary
@@ -144,8 +145,8 @@ class DeckListViewModel(
             return
         }
 
-        viewModelScope.launch {
-            runCatching {
+        launchResult(
+            action = {
                 val now = timeProvider.nowEpochMillis()
                 // Room 的 upsert 会自动处理"不存在则插入，存在则更新"的逻辑
                 // 直接构建对象并 upsert，无需先查询
@@ -159,12 +160,14 @@ class DeckListViewModel(
                     updatedAt = now
                 )
                 deckRepository.upsert(deck)
-            }.onSuccess {
+            },
+            onSuccess = {
                 _uiState.update { it.copy(editor = null, message = SuccessMessages.SAVED, errorMessage = null) }
-            }.onFailure {
+            },
+            onFailure = {
                 _uiState.update { it.copy(message = null, errorMessage = ErrorMessages.SAVE_FAILED) }
             }
-        }
+        )
     }
 
     /**
@@ -232,12 +235,12 @@ class DeckListViewModel(
         errorMessage: String,
         action: suspend () -> Unit
     ) {
-        viewModelScope.launch {
-            runCatching { action() }
-                .onFailure {
-                    _uiState.update { it.copy(message = null, errorMessage = errorMessage) }
-                }
-        }
+        launchResult(
+            action = action,
+            onFailure = {
+                _uiState.update { it.copy(message = null, errorMessage = errorMessage) }
+            }
+        )
     }
 
     companion object {

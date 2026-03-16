@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.kariscode.yike.core.message.ErrorMessages
 import com.kariscode.yike.core.message.SuccessMessages
+import com.kariscode.yike.core.viewmodel.launchResult
 import com.kariscode.yike.core.viewmodel.typedViewModelFactory
 import com.kariscode.yike.data.backup.BackupService
 import com.kariscode.yike.data.reminder.ReminderScheduler
@@ -94,11 +95,12 @@ class BackupRestoreViewModel(
      */
     fun onExportUriSelected(uri: Uri?) {
         if (uri == null) return
-        viewModelScope.launch {
-            _uiState.update { it.copy(isExporting = true, message = null, errorMessage = null) }
-            runCatching {
+        _uiState.update { it.copy(isExporting = true, message = null, errorMessage = null) }
+        launchResult(
+            action = {
                 backupService.exportToUri(uri)
-            }.onSuccess {
+            },
+            onSuccess = {
                 _uiState.update {
                     it.copy(
                         isExporting = false,
@@ -106,7 +108,8 @@ class BackupRestoreViewModel(
                         errorMessage = null
                     )
                 }
-            }.onFailure {
+            },
+            onFailure = {
                 _uiState.update {
                     it.copy(
                         isExporting = false,
@@ -115,7 +118,7 @@ class BackupRestoreViewModel(
                     )
                 }
             }
-        }
+        )
     }
 
     /**
@@ -153,19 +156,20 @@ class BackupRestoreViewModel(
      */
     fun onConfirmRestore() {
         val uri = _uiState.value.pendingRestoreUri ?: return
-        viewModelScope.launch {
-            _uiState.update {
-                it.copy(
-                    isImporting = true,
-                    message = null,
-                    errorMessage = null,
-                    pendingRestoreUri = null
-                )
-            }
-            runCatching {
+        _uiState.update {
+            it.copy(
+                isImporting = true,
+                message = null,
+                errorMessage = null,
+                pendingRestoreUri = null
+            )
+        }
+        launchResult(
+            action = {
                 backupService.restoreFromUri(uri)
                 reminderScheduler.syncReminderFromRepository()
-            }.onSuccess {
+            },
+            onSuccess = {
                 _uiState.update {
                     it.copy(
                         isImporting = false,
@@ -173,7 +177,8 @@ class BackupRestoreViewModel(
                         errorMessage = null
                     )
                 }
-            }.onFailure { throwable ->
+            },
+            onFailure = { throwable ->
                 _uiState.update {
                     it.copy(
                         isImporting = false,
@@ -182,7 +187,7 @@ class BackupRestoreViewModel(
                     )
                 }
             }
-        }
+        )
     }
 
     companion object {

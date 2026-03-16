@@ -7,6 +7,7 @@ import com.kariscode.yike.core.coroutine.parallel
 import com.kariscode.yike.core.message.ErrorMessages
 import com.kariscode.yike.core.time.TimeConstants
 import com.kariscode.yike.core.time.TimeProvider
+import com.kariscode.yike.core.viewmodel.launchResult
 import com.kariscode.yike.core.viewmodel.typedViewModelFactory
 import com.kariscode.yike.domain.model.ReviewAnalyticsSnapshot
 import com.kariscode.yike.domain.repository.StudyInsightsRepository
@@ -118,17 +119,19 @@ class AnalyticsViewModel(
     fun refresh() {
         _uiState.update { it.copy(isLoading = true, errorMessage = null) }
         refreshJob?.cancel()
-        refreshJob = viewModelScope.launch {
-            runCatching {
+        refreshJob = launchResult(
+            action = {
                 val startEpochMillis = _uiState.value.selectedRange.toStartEpochMillis(timeProvider.nowEpochMillis())
-                val (analytics, timestamps) = parallel(
+                parallel(
                     first = { studyInsightsRepository.getReviewAnalytics(startEpochMillis = startEpochMillis) },
                     second = { studyInsightsRepository.listReviewTimestamps(startEpochMillis = startEpochMillis) }
                 )
-                buildUiState(analytics, timestamps)
-            }.onSuccess { state ->
+            },
+            onSuccess = { (analytics, timestamps) ->
+                val state = buildUiState(analytics, timestamps)
                 _uiState.value = state
-            }.onFailure { throwable ->
+            },
+            onFailure = { throwable ->
                 _uiState.update {
                     it.copy(
                         isLoading = false,
@@ -136,7 +139,7 @@ class AnalyticsViewModel(
                     )
                 }
             }
-        }
+        )
     }
 
     /**
