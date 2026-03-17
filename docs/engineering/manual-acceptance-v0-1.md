@@ -4,11 +4,17 @@
 
 本清单用于在自动化测试之外，确认忆刻首版的关键主路径在真实设备上可理解、可恢复、可长期自用。
 
-## 1.1 当前验证记录（2026-03-15）
+## 1.1 历史验证记录（2026-03-15）
 
-- 已执行 `./gradlew.bat testDebugUnitTest`
-- 已执行 `./gradlew.bat connectedDebugAndroidTest`
-- 已通过连接设备 `RMX3852 / Android 16` 完成自动化 UI 与集成测试运行
+- 该记录仅代表 2026-03-15 当时的设备侧回归结果，不代表当前 HEAD 已自动满足以下全部手动项。
+- 当时已执行 `.\gradlew.bat testDebugUnitTest`
+- 当时已执行 `.\gradlew.bat connectedDebugAndroidTest`
+- 当时已通过连接设备 `RMX3852 / Android 16` 完成自动化 UI 与集成测试运行
+
+## 1.2 当前使用方式（2026-03-17）
+
+- 当前建议先执行 `.\scripts\verify-testing.ps1`
+- 若本轮改动涉及设备行为，再执行 `.\scripts\verify-testing.ps1 -Connected`
 - 以下手动验收项仍应由开发者或产品在真实点击路径中逐项勾选，不应由自动化结果直接替代
 
 ---
@@ -69,7 +75,7 @@
 
 ## 7. 回归建议
 
-- [ ] 运行 `./gradlew.bat testDebugUnitTest`
-- [ ] 运行 `./gradlew.bat assembleDebugAndroidTest`
+- [ ] 运行 `.\scripts\verify-testing.ps1`
+- [ ] 如本轮涉及设备行为，运行 `.\scripts\verify-testing.ps1 -Connected`
 - [ ] 在至少一台 Android 13+ 设备上完成提醒与权限相关验收
 - [ ] 在至少一台存在历史数据的设备上完成导出 -> 清空 -> 恢复 -> 再次复习的完整回归
