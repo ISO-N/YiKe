@@ -54,6 +54,8 @@
 - `BackupRestoreViewModel`
 - `BackupService`
 - `LanSyncChangeApplier`
+- `LanSyncNsdService`
+- `LanSyncRepositoryImpl`
 - `ReminderScheduler`
 
 ### 3.3 androidTest
@@ -126,9 +128,14 @@
   - `feature/analytics/AnalyticsViewModelTest.kt`
   - `feature/recyclebin/RecycleBinViewModelTest.kt`
   - `feature/deck/DeckListViewModelTest.kt`
+  - `data/repository/OfflineDeckRepositoryTest.kt`
   - `data/settings/DataStoreAppSettingsRepositoryTest.kt`
   - `data/sync/LanSyncConflictResolverTest.kt`
   - `data/sync/LanSyncChangeApplierTest.kt`
+  - `data/sync/LanSyncHttpClientTest.kt`
+  - `data/sync/LanSyncHttpServerTest.kt`
+  - `data/sync/LanSyncNsdServiceTest.kt`
+  - `data/sync/LanSyncRepositoryImplTest.kt`
   - `feature/sync/LanSyncViewModelTest.kt`
 - androidTest
   - `androidTest/data/local/db/YikeDatabaseIntegrationTest.kt`
