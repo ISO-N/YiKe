@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModelProvider
 import com.kariscode.yike.core.coroutine.parallel
 import com.kariscode.yike.core.coroutine.parallel3
 import com.kariscode.yike.core.message.ErrorMessages
+import com.kariscode.yike.core.message.userMessageOr
 import com.kariscode.yike.core.time.TimeProvider
 import com.kariscode.yike.core.viewmodel.launchResult
 import com.kariscode.yike.core.viewmodel.typedViewModelFactory
@@ -90,7 +91,7 @@ class QuestionSearchViewModel(
                 _uiState.update {
                     it.copy(
                         isLoading = false,
-                        errorMessage = throwable.message ?: ErrorMessages.SEARCH_LOAD_FAILED
+                        errorMessage = throwable.userMessageOr(ErrorMessages.SEARCH_LOAD_FAILED)
                     )
                 }
             }
@@ -132,7 +133,7 @@ class QuestionSearchViewModel(
                     it.withDeckSelection(
                         deckId = deckId,
                         cards = emptyList(),
-                        errorMessage = throwable.message ?: ErrorMessages.SEARCH_LOAD_FAILED
+                        errorMessage = throwable.userMessageOr(ErrorMessages.SEARCH_LOAD_FAILED)
                     )
                 }
             }
@@ -194,7 +195,7 @@ class QuestionSearchViewModel(
                     it.copy(
                         isLoading = false,
                         results = emptyList(),
-                        errorMessage = throwable.message ?: ErrorMessages.SEARCH_FAILED
+                        errorMessage = throwable.userMessageOr(ErrorMessages.SEARCH_FAILED)
                     )
                 }
             }
@@ -230,37 +231,16 @@ class QuestionSearchViewModel(
     }
 
     /**
-     * 元数据回写统一处理，是为了让刷新完成后的选中卡片保留规则只维护一处。
-     */
-    private fun applySearchMetadata(metadata: SearchMetadata) {
-        _uiState.update {
-            it.copy(
-                isLoading = false,
-                availableTags = metadata.tags,
-                deckOptions = metadata.decks,
-                cardOptions = metadata.cards,
-                selectedCardId = preserveSelectedCardId(metadata.cards),
-                errorMessage = null
-            )
-        }
-    }
-
-    /**
-     * 首次进入与手动刷新同时回写元数据和结果，是为了避免先等元数据、再等搜索结果的串行等待。
+     * 元数据回写收敛成状态扩展，是为了让手动刷新和后续局部元数据更新共享同一套卡片保留规则。
      */
     private fun applyRefreshResult(
         metadata: SearchMetadata,
         results: List<QuestionSearchResultUiModel>
     ) {
         _uiState.update {
-            it.copy(
-                isLoading = false,
-                availableTags = metadata.tags,
-                deckOptions = metadata.decks,
-                cardOptions = metadata.cards,
-                selectedCardId = preserveSelectedCardId(metadata.cards),
-                results = results,
-                errorMessage = null
+            it.withMetadata(
+                metadata = metadata,
+                results = results
             )
         }
     }
@@ -282,11 +262,25 @@ class QuestionSearchViewModel(
     }
 
     /**
-     * 只有当前卡片仍存在于新的候选列表里时才保留选中值，是为了避免 UI 隐藏掉一个无效筛选但查询仍悄悄生效。
+     * 元数据与结果通常在同一轮刷新里一起回写，
+     * 状态扩展可以让“保留合法 cardId”与“清空旧错误”始终保持同一步完成。
      */
-    private fun preserveSelectedCardId(cards: List<SearchCardOption>): String? {
-        val selectedCardId = _uiState.value.selectedCardId ?: return null
-        return selectedCardId.takeIf { candidateId -> cards.any { card -> card.id == candidateId } }
+    private fun QuestionSearchUiState.withMetadata(
+        metadata: SearchMetadata,
+        results: List<QuestionSearchResultUiModel> = this.results
+    ): QuestionSearchUiState {
+        val preservedCardId = selectedCardId?.takeIf { candidateId ->
+            metadata.cards.any { card -> card.id == candidateId }
+        }
+        return copy(
+            isLoading = false,
+            availableTags = metadata.tags,
+            deckOptions = metadata.decks,
+            cardOptions = metadata.cards,
+            selectedCardId = preservedCardId,
+            results = results,
+            errorMessage = null
+        )
     }
 
     /**

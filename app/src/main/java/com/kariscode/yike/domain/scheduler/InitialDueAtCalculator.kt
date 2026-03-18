@@ -1,7 +1,6 @@
 package com.kariscode.yike.domain.scheduler
 
-import java.time.Instant
-import java.time.LocalDate
+import com.kariscode.yike.core.time.toLocalDate
 import java.time.LocalTime
 import java.time.ZoneId
 
@@ -20,9 +19,7 @@ object InitialDueAtCalculator {
         reminderMinute: Int,
         zoneId: ZoneId = ZoneId.systemDefault()
     ): Long {
-        val nowInstant = Instant.ofEpochMilli(nowEpochMillis)
-        val today = LocalDate.ofInstant(nowInstant, zoneId)
-        val targetDate = today.plusDays(1)
+        val targetDate = nowEpochMillis.toLocalDate(zoneId).plusDays(1)
 
         val safeTime = runCatching { LocalTime.of(reminderHour, reminderMinute) }
             .getOrElse { LocalTime.MIDNIGHT }

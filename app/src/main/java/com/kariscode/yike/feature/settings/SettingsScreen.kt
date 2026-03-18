@@ -6,15 +6,11 @@ import android.content.pm.PackageManager
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -28,6 +24,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kariscode.yike.BuildConfig
 import com.kariscode.yike.app.LocalAppContainer
 import com.kariscode.yike.domain.model.ThemeMode
+import com.kariscode.yike.navigation.YikeNavigator
 import com.kariscode.yike.ui.component.CollectFlowEffect
 import com.kariscode.yike.ui.component.YikeBadge
 import com.kariscode.yike.ui.component.YikeListItemCard
@@ -35,6 +32,7 @@ import com.kariscode.yike.ui.component.YikeOperationFeedback
 import com.kariscode.yike.ui.component.YikePrimaryDestination
 import com.kariscode.yike.ui.component.YikePrimaryScaffold
 import com.kariscode.yike.ui.component.YikeScrollableColumn
+import com.kariscode.yike.ui.component.YikeScrollableRow
 import com.kariscode.yike.ui.component.YikeSecondaryButton
 import com.kariscode.yike.ui.component.YikeStateBanner
 import com.kariscode.yike.ui.format.formatLocalDateTime
@@ -46,9 +44,7 @@ import com.kariscode.yike.ui.theme.LocalYikeSpacing
  */
 @Composable
 fun SettingsScreen(
-    onOpenBackupRestore: () -> Unit,
-    onOpenLanSync: () -> Unit,
-    onOpenRecycleBin: () -> Unit,
+    navigator: YikeNavigator,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -73,8 +69,8 @@ fun SettingsScreen(
 
     CollectFlowEffect(effectFlow = viewModel.effects) { effect ->
         when (effect) {
-            SettingsEffect.OpenBackupRestore -> onOpenBackupRestore()
-            SettingsEffect.OpenLanSync -> onOpenLanSync()
+            SettingsEffect.OpenBackupRestore -> navigator.openBackupRestore()
+            SettingsEffect.OpenLanSync -> navigator.openLanSync()
             SettingsEffect.RequestNotificationPermission -> permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
     }
@@ -105,7 +101,7 @@ fun SettingsScreen(
             onThemeModeChange = viewModel::onThemeModeChange,
             onOpenBackupRestore = viewModel::onBackupRestoreClick,
             onOpenLanSync = viewModel::onLanSyncClick,
-            onOpenRecycleBin = onOpenRecycleBin,
+            onOpenRecycleBin = navigator::openRecycleBin,
             modifier = modifier,
             contentPadding = padding
         )
@@ -128,7 +124,10 @@ private fun SettingsContent(
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues = PaddingValues()
 ) {
-    YikeScrollableColumn(modifier = modifier) {
+    YikeScrollableColumn(
+        modifier = modifier,
+        contentPadding = contentPadding
+    ) {
         if (uiState.isLoading) {
             YikeStateBanner(
                 title = "正在读取设置",
@@ -159,7 +158,6 @@ private fun SettingsContent(
             onOpenLanSync = onOpenLanSync,
             onOpenRecycleBin = onOpenRecycleBin
         )
-        Spacer(modifier = Modifier.height(contentPadding.calculateBottomPadding()))
     }
 }
 
@@ -304,12 +302,7 @@ private fun ThemeModeFilterRow(
     selectedMode: ThemeMode,
     onThemeModeChange: (ThemeMode) -> Unit
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .horizontalScroll(rememberScrollState()),
-        horizontalArrangement = Arrangement.spacedBy(LocalYikeSpacing.current.sm)
-    ) {
+    YikeScrollableRow(modifier = Modifier.fillMaxWidth()) {
         ThemeMode.entries.forEach { mode ->
             FilterChip(
                 selected = selectedMode == mode,

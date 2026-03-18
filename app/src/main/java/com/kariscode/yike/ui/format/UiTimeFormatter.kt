@@ -1,7 +1,8 @@
 package com.kariscode.yike.ui.format
 
+import com.kariscode.yike.core.time.toInstant
+import com.kariscode.yike.core.time.toLocalDateTime
 import com.kariscode.yike.core.time.TimeTextFormatter
-import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
@@ -10,9 +11,8 @@ import java.time.format.DateTimeFormatter
  * 后续若要改展示格式时也只需要调整一个位置。
  */
 fun formatLocalDateTime(epochMillis: Long, zoneId: ZoneId = ZoneId.systemDefault()): String =
-    Instant.ofEpochMilli(epochMillis)
-        .atZone(zoneId)
-        .toLocalDateTime()
+    epochMillis
+        .toLocalDateTime(zoneId)
         .toString()
 
 /**
@@ -30,7 +30,8 @@ object UiDateTimeFormatters {
  * 避免页面各自重复写 `Instant -> ZoneId -> Formatter` 的模板。
  */
 fun formatPreviewDateTime(epochMillis: Long, zoneId: ZoneId = ZoneId.systemDefault()): String =
-    Instant.ofEpochMilli(epochMillis)
+    epochMillis
+        .toInstant()
         .atZone(zoneId)
         .format(UiDateTimeFormatters.PREVIEW_DATE)
 

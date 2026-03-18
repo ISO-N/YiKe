@@ -2,8 +2,8 @@ package com.kariscode.yike.feature.analytics
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
@@ -11,6 +11,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kariscode.yike.app.LocalAppContainer
 import com.kariscode.yike.core.message.ErrorMessages
+import com.kariscode.yike.navigation.YikeNavigator
 import com.kariscode.yike.ui.component.YikeFlowScaffold
 import com.kariscode.yike.ui.component.YikePrimaryButton
 import com.kariscode.yike.ui.component.YikeSecondaryButton
@@ -24,9 +25,7 @@ import com.kariscode.yike.ui.theme.LocalYikeSpacing
  */
 @Composable
 fun AnalyticsScreen(
-    onBack: () -> Unit,
-    onOpenPreview: () -> Unit,
-    onOpenSearch: () -> Unit,
+    navigator: YikeNavigator,
     modifier: Modifier = Modifier
 ) {
     val container = LocalAppContainer.current
@@ -41,15 +40,16 @@ fun AnalyticsScreen(
     YikeFlowScaffold(
         title = "复习统计",
         subtitle = "用连续学习、评分分布和遗忘率判断当前学习节奏是否健康。",
-        navigationAction = backNavigationAction(onBack)
+        navigationAction = backNavigationAction(navigator::back)
     ) { padding ->
         AnalyticsContent(
             uiState = uiState,
             onRetry = viewModel::refresh,
             onRangeSelected = viewModel::onRangeSelected,
-            onOpenPreview = onOpenPreview,
-            onOpenSearch = onOpenSearch,
-            modifier = modifier.padding(padding)
+            onOpenPreview = navigator::openTodayPreview,
+            onOpenSearch = { navigator.openQuestionSearch() },
+            modifier = modifier,
+            contentPadding = padding
         )
     }
 }
@@ -64,10 +64,14 @@ private fun AnalyticsContent(
     onRangeSelected: (AnalyticsRange) -> Unit,
     onOpenPreview: () -> Unit,
     onOpenSearch: () -> Unit,
+    contentPadding: PaddingValues = PaddingValues(),
     modifier: Modifier = Modifier
 ) {
     val spacing = LocalYikeSpacing.current
-    YikeScrollableColumn(modifier = modifier) {
+    YikeScrollableColumn(
+        modifier = modifier,
+        contentPadding = contentPadding
+    ) {
         when {
             uiState.isLoading -> {
                 YikeStateBanner(

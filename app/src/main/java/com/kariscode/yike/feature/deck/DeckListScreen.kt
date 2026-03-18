@@ -1,14 +1,9 @@
 package com.kariscode.yike.feature.deck
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -21,6 +16,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kariscode.yike.app.LocalAppContainer
 import com.kariscode.yike.core.message.ErrorMessages
 import com.kariscode.yike.domain.model.DeckSummary
+import com.kariscode.yike.navigation.YikeNavigator
 import com.kariscode.yike.ui.component.YikeBadge
 import com.kariscode.yike.ui.component.YikeFab
 import com.kariscode.yike.ui.component.YikeHeroCard
@@ -31,6 +27,7 @@ import com.kariscode.yike.ui.component.YikePrimaryButton
 import com.kariscode.yike.ui.component.YikePrimaryDestination
 import com.kariscode.yike.ui.component.YikePrimaryScaffold
 import com.kariscode.yike.ui.component.YikeScrollableColumn
+import com.kariscode.yike.ui.component.YikeScrollableRow
 import com.kariscode.yike.ui.component.YikeSecondaryButton
 import com.kariscode.yike.ui.component.YikeStateBanner
 import com.kariscode.yike.ui.component.YikeTextMetadataDialog
@@ -42,7 +39,7 @@ import com.kariscode.yike.ui.theme.LocalYikeSpacing
  */
 @Composable
 fun DeckListScreen(
-    onOpenDeck: (deckId: String) -> Unit,
+    navigator: YikeNavigator,
     modifier: Modifier = Modifier
 ) {
     val container = LocalAppContainer.current
@@ -69,7 +66,7 @@ fun DeckListScreen(
         DeckListContent(
             uiState = uiState,
             onCreateDeck = viewModel::onCreateDeckClick,
-            onOpenDeck = onOpenDeck,
+            navigator = navigator,
             onKeywordChange = viewModel::onKeywordChange,
             onNameChange = viewModel::onDraftNameChange,
             onDescriptionChange = viewModel::onDraftDescriptionChange,
@@ -92,7 +89,7 @@ fun DeckListScreen(
 private fun DeckListContent(
     uiState: DeckListUiState,
     onCreateDeck: () -> Unit,
-    onOpenDeck: (deckId: String) -> Unit,
+    navigator: YikeNavigator,
     onKeywordChange: (String) -> Unit,
     onNameChange: (String) -> Unit,
     onDescriptionChange: (String) -> Unit,
@@ -112,7 +109,10 @@ private fun DeckListContent(
             item.deck.description.contains(keyword, ignoreCase = true) ||
             item.deck.tags.any { tag -> tag.contains(keyword, ignoreCase = true) }
     }
-    YikeScrollableColumn(modifier = modifier) {
+    YikeScrollableColumn(
+        modifier = modifier,
+        contentPadding = contentPadding
+    ) {
         DeckOverviewSection(items = visibleItems)
         DeckSearchSection(
             keyword = uiState.keyword,
@@ -158,7 +158,7 @@ private fun DeckListContent(
                 visibleItems.forEach { item ->
                     DeckSummaryCard(
                         item = item,
-                        onOpen = { onOpenDeck(item.deck.id) },
+                        onOpen = { navigator.openCardList(item.deck.id) },
                         onEdit = { onEditDeck(item) },
                         onArchive = { onToggleArchive(item) }
                     )
@@ -170,7 +170,6 @@ private fun DeckListContent(
             successMessage = uiState.message,
             errorMessage = null
         )
-        Spacer(modifier = Modifier.height(contentPadding.calculateBottomPadding()))
     }
 
     uiState.editor?.let { editor ->
@@ -316,10 +315,7 @@ private fun DeckSearchSection(
  */
 @Composable
 private fun DeckTagRow(tags: List<String>) {
-    Row(
-        modifier = Modifier.horizontalScroll(rememberScrollState()),
-        horizontalArrangement = Arrangement.spacedBy(LocalYikeSpacing.current.sm)
-    ) {
+    YikeScrollableRow {
         tags.forEach { tag ->
             YikeBadge(text = tag)
         }

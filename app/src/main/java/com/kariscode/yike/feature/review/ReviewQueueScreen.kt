@@ -2,6 +2,7 @@ package com.kariscode.yike.feature.review
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
@@ -10,6 +11,7 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kariscode.yike.app.LocalAppContainer
+import com.kariscode.yike.navigation.YikeNavigator
 import com.kariscode.yike.ui.component.CollectFlowEffect
 import com.kariscode.yike.ui.component.backNavigationAction
 import com.kariscode.yike.ui.component.YikeFlowScaffold
@@ -23,9 +25,7 @@ import com.kariscode.yike.ui.theme.LocalYikeSpacing
  */
 @Composable
 fun ReviewQueueScreen(
-    onBack: () -> Unit,
-    onOpenNextCard: (cardId: String) -> Unit,
-    onBackToHome: () -> Unit,
+    navigator: YikeNavigator,
     modifier: Modifier = Modifier
 ) {
     val container = LocalAppContainer.current
@@ -39,21 +39,22 @@ fun ReviewQueueScreen(
 
     CollectFlowEffect(effectFlow = viewModel.effects) { effect ->
         when (effect) {
-            is ReviewQueueEffect.NavigateToCard -> onOpenNextCard(effect.cardId)
-            ReviewQueueEffect.BackToHomeCompleted -> onBackToHome()
+            is ReviewQueueEffect.NavigateToCard -> navigator.openReviewCard(effect.cardId)
+            ReviewQueueEffect.BackToHomeCompleted -> navigator.backToHome()
         }
     }
 
     YikeFlowScaffold(
         title = "准备开始复习",
         subtitle = "我们会先为你选择今天最该处理的那张卡片。",
-        navigationAction = backNavigationAction(onBack)
+        navigationAction = backNavigationAction(navigator::back)
     ) { padding ->
         ReviewQueueContent(
             uiState = uiState,
             onRetry = viewModel::loadNext,
-            onBackToHome = onBackToHome,
-            modifier = modifier.padding(padding)
+            onBackToHome = navigator::backToHome,
+            modifier = modifier,
+            contentPadding = padding
         )
     }
 }
@@ -66,11 +67,12 @@ private fun ReviewQueueContent(
     uiState: ReviewQueueUiState,
     onRetry: () -> Unit,
     onBackToHome: () -> Unit,
+    contentPadding: PaddingValues = PaddingValues(),
     modifier: Modifier = Modifier
 ) {
     val spacing = LocalYikeSpacing.current
     Column(
-        modifier = modifier,
+        modifier = modifier.padding(contentPadding),
         verticalArrangement = Arrangement.spacedBy(spacing.lg)
     ) {
         when {

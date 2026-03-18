@@ -3,6 +3,7 @@ package com.kariscode.yike.feature.review
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.kariscode.yike.core.message.ErrorMessages
+import com.kariscode.yike.core.message.userMessageOr
 import com.kariscode.yike.core.time.TimeProvider
 import com.kariscode.yike.core.viewmodel.launchResult
 import com.kariscode.yike.core.viewmodel.typedViewModelFactory
@@ -70,7 +71,12 @@ class ReviewQueueViewModel(
                 else _effects.tryEmit(ReviewQueueEffect.NavigateToCard(nextCardId))
             },
             onFailure = { throwable ->
-                _uiState.update { it.copy(isLoading = false, errorMessage = throwable.message ?: ErrorMessages.REVIEW_LOAD_FAILED) }
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        errorMessage = throwable.userMessageOr(ErrorMessages.REVIEW_LOAD_FAILED)
+                    )
+                }
             }
         )
     }

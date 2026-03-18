@@ -6,7 +6,9 @@ import androidx.lifecycle.viewModelScope
 import com.kariscode.yike.core.id.EntityIds
 import com.kariscode.yike.core.message.ErrorMessages
 import com.kariscode.yike.core.message.SuccessMessages
+import com.kariscode.yike.core.message.userMessageOr
 import com.kariscode.yike.core.time.TimeProvider
+import com.kariscode.yike.core.viewmodel.launchMutation
 import com.kariscode.yike.core.viewmodel.launchResult
 import com.kariscode.yike.core.viewmodel.typedViewModelFactory
 import com.kariscode.yike.feature.common.TextMetadataDraft
@@ -145,7 +147,7 @@ class CardListViewModel(
                     it.copy(
                         isLoading = shouldKeepLoading(),
                         message = null,
-                        errorMessage = throwable.message ?: ErrorMessages.LOAD_FAILED
+                        errorMessage = throwable.userMessageOr(ErrorMessages.LOAD_FAILED)
                     )
                 }
             }
@@ -214,7 +216,7 @@ class CardListViewModel(
             return
         }
 
-        launchResult(
+        launchMutation(
             action = {
                 val now = timeProvider.nowEpochMillis()
                 val card = Card(
@@ -303,7 +305,7 @@ class CardListViewModel(
         errorMessage: String,
         action: suspend () -> Unit
     ) {
-        launchResult(
+        launchMutation(
             action = action,
             onFailure = {
                 _uiState.update { it.copy(message = null, errorMessage = errorMessage) }

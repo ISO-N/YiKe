@@ -2,9 +2,9 @@ package com.kariscode.yike.feature.editor
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -13,6 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kariscode.yike.app.LocalAppContainer
+import com.kariscode.yike.navigation.YikeNavigator
 import com.kariscode.yike.ui.component.backNavigationAction
 import com.kariscode.yike.ui.component.YikeBadge
 import com.kariscode.yike.ui.component.YikeFlowScaffold
@@ -31,7 +32,7 @@ import com.kariscode.yike.ui.theme.LocalYikeSpacing
 fun QuestionEditorScreen(
     cardId: String,
     deckId: String?,
-    onBack: () -> Unit,
+    navigator: YikeNavigator,
     modifier: Modifier = Modifier
 ) {
     val container = LocalAppContainer.current
@@ -50,7 +51,7 @@ fun QuestionEditorScreen(
     YikeFlowScaffold(
         title = "编辑卡片",
         subtitle = "先把卡片信息写清楚，再逐条维护问题和答案。",
-        navigationAction = backNavigationAction(onBack),
+        navigationAction = backNavigationAction(navigator::back),
         actionText = if (uiState.isSaving) "保存中" else "保存",
         onActionClick = if (uiState.isSaving) null else viewModel::onSaveClick
     ) { padding ->
@@ -63,7 +64,8 @@ fun QuestionEditorScreen(
             onPromptChange = viewModel::onQuestionPromptChange,
             onAnswerChange = viewModel::onQuestionAnswerChange,
             onDeleteQuestion = viewModel::onDeleteQuestionClick,
-            modifier = modifier.padding(padding)
+            modifier = modifier,
+            contentPadding = padding
         )
     }
 }
@@ -81,10 +83,14 @@ private fun QuestionEditorContent(
     onPromptChange: (String, String) -> Unit,
     onAnswerChange: (String, String) -> Unit,
     onDeleteQuestion: (String) -> Unit,
+    contentPadding: PaddingValues = PaddingValues(),
     modifier: Modifier = Modifier
 ) {
     val spacing = LocalYikeSpacing.current
-    YikeScrollableColumn(modifier = modifier) {
+    YikeScrollableColumn(
+        modifier = modifier,
+        contentPadding = contentPadding
+    ) {
         when {
             uiState.isLoading -> {
                 YikeStateBanner(

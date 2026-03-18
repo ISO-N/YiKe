@@ -13,11 +13,9 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -30,25 +28,30 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kariscode.yike.app.LocalAppContainer
 import com.kariscode.yike.domain.model.LanSyncConflictChoice
+import com.kariscode.yike.domain.model.LanSyncFailureReason
 import com.kariscode.yike.domain.model.LanSyncPeer
 import com.kariscode.yike.domain.model.LanSyncPreview
 import com.kariscode.yike.domain.model.LanSyncStage
+import com.kariscode.yike.domain.model.LanSyncTrustState
+import com.kariscode.yike.navigation.YikeNavigator
 import com.kariscode.yike.ui.component.YikeFlowScaffold
 import com.kariscode.yike.ui.component.YikeListItemCard
 import com.kariscode.yike.ui.component.YikeOperationFeedback
 import com.kariscode.yike.ui.component.YikePrimaryButton
 import com.kariscode.yike.ui.component.YikeScrollableColumn
+import com.kariscode.yike.ui.component.YikeSingleInputDialog
 import com.kariscode.yike.ui.component.YikeSecondaryButton
 import com.kariscode.yike.ui.component.YikeStateBanner
 import com.kariscode.yike.ui.component.YikeWarningCard
 import com.kariscode.yike.ui.component.backNavigationAction
+import com.kariscode.yike.ui.theme.LocalYikeSpacing
 
 /**
  * 局域网同步页独立成高风险流程页，是为了把配对、预览和冲突确认这些全局操作与普通设置项隔离开。
  */
 @Composable
 fun LanSyncScreen(
-    onBack: () -> Unit,
+    navigator: YikeNavigator,
     modifier: Modifier = Modifier
 ) {
     val container = LocalAppContainer.current
@@ -85,7 +88,7 @@ fun LanSyncScreen(
     YikeFlowScaffold(
         title = "局域网同步",
         subtitle = "在同一 Wi-Fi 下发现设备，配对后同步学习数据。",
-        navigationAction = backNavigationAction(onClick = onBack)
+        navigationAction = backNavigationAction(onClick = navigator::back)
     ) { padding ->
         LanSyncContent(
             uiState = uiState,
@@ -158,12 +161,8 @@ private fun LanSyncContent(
     contentPadding: PaddingValues = PaddingValues()
 ) {
     YikeScrollableColumn(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(
-                top = contentPadding.calculateTopPadding(),
-                bottom = contentPadding.calculateBottomPadding()
-            )
+        modifier = modifier.fillMaxSize(),
+        contentPadding = contentPadding
     ) {
         YikeWarningCard(
             title = "同步前先确认",
@@ -231,6 +230,8 @@ private fun SessionSection(
     onStopSession: () -> Unit,
     onCancelActiveSync: () -> Unit
 ) {
+    val spacing = LocalYikeSpacing.current
+    val stage = uiState.session.progress.stage
     when {
         !hasNearbyWifiPermission -> {
             YikeStateBanner(
@@ -260,29 +261,28 @@ private fun SessionSection(
 
         else -> {
             YikeStateBanner(
-                title = stageTitle(uiState.session.progress.stage),
+                title = stageTitle(stage),
                 description = uiState.session.progress.message
             ) {
-                if (uiState.session.progress.stage != LanSyncStage.IDLE) {
+                if (stage != LanSyncStage.IDLE) {
                     LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
                 }
-                Spacer(modifier = Modifier.height(com.kariscode.yike.ui.theme.LocalYikeSpacing.current.sm))
+                Spacer(modifier = Modifier.height(spacing.sm))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(com.kariscode.yike.ui.theme.LocalYikeSpacing.current.sm)
+                    horizontalArrangement = Arrangement.spacedBy(spacing.sm)
                 ) {
                     YikeSecondaryButton(
                         text = "停止发现",
                         onClick = onStopSession,
                         modifier = Modifier.weight(1f),
-                        enabled = uiState.session.progress.stage != LanSyncStage.APPLYING
+                        enabled = stage != LanSyncStage.APPLYING
                     )
                     YikeSecondaryButton(
                         text = "取消同步",
                         onClick = onCancelActiveSync,
                         modifier = Modifier.weight(1f),
-                        enabled = uiState.session.progress.stage == LanSyncStage.TRANSFERRING ||
-                            uiState.session.progress.stage == LanSyncStage.PREVIEWING
+                        enabled = stage == LanSyncStage.TRANSFERRING || stage == LanSyncStage.PREVIEWING
                     )
                 }
             }
@@ -322,7 +322,7 @@ private fun DeviceListSection(
                     supporting = "信任：${peer.trustState.name} · 状态：${peer.health.name}"
                 ) {
                     YikePrimaryButton(
-                        text = if (peer.trustState == com.kariscode.yike.domain.model.LanSyncTrustState.UNTRUSTED) {
+                        text = if (peer.trustState == LanSyncTrustState.UNTRUSTED) {
                             "输入配对码"
                         } else {
                             "查看同步内容"
@@ -347,23 +347,14 @@ private fun PairingDialog(
     onDismiss: () -> Unit,
     onConfirm: () -> Unit
 ) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(text = "输入 ${peer.displayName} 的配对码") },
-        text = {
-            OutlinedTextField(
-                value = pairingCode,
-                onValueChange = onPairingCodeChange,
-                modifier = Modifier.fillMaxWidth(),
-                label = { Text(text = "6 位配对码") }
-            )
-        },
-        confirmButton = {
-            YikePrimaryButton(text = "继续预览", onClick = onConfirm)
-        },
-        dismissButton = {
-            YikeSecondaryButton(text = "取消", onClick = onDismiss)
-        }
+    YikeSingleInputDialog(
+        title = "输入 ${peer.displayName} 的配对码",
+        label = "6 位配对码",
+        value = pairingCode,
+        onValueChange = onPairingCodeChange,
+        confirmText = "继续预览",
+        onDismiss = onDismiss,
+        onConfirm = onConfirm
     )
 }
 
@@ -376,11 +367,12 @@ private fun PreviewDialog(
     onDismiss: () -> Unit,
     onConfirm: () -> Unit
 ) {
+    val spacing = LocalYikeSpacing.current
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(text = "同步预览") },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(com.kariscode.yike.ui.theme.LocalYikeSpacing.current.sm)) {
+            Column(verticalArrangement = Arrangement.spacedBy(spacing.sm)) {
                 Text(text = "设备：${preview.peer.displayName}")
                 Text(text = "本机待上传：${preview.localChangeCount}")
                 Text(text = "远端待下载：${preview.remoteChangeCount}")
@@ -414,11 +406,12 @@ private fun ConflictDialog(
     onConfirm: () -> Unit
 ) {
     val preview = uiState.pendingPreview ?: return
+    val spacing = LocalYikeSpacing.current
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(text = "确认冲突决议") },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(com.kariscode.yike.ui.theme.LocalYikeSpacing.current.sm)) {
+            Column(verticalArrangement = Arrangement.spacedBy(spacing.sm)) {
                 preview.conflicts.forEach { conflict ->
                     val key = "${conflict.entityType.name}:${conflict.entityId}"
                     Text(text = "${conflict.summary} · ${conflict.reason}")
@@ -479,23 +472,14 @@ private fun LocalNameDialog(
     onDismiss: () -> Unit,
     onConfirm: () -> Unit
 ) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(text = "修改本机设备名") },
-        text = {
-            OutlinedTextField(
-                value = value,
-                onValueChange = onValueChange,
-                modifier = Modifier.fillMaxWidth(),
-                label = { Text(text = "设备名") }
-            )
-        },
-        confirmButton = {
-            YikePrimaryButton(text = "保存", onClick = onConfirm)
-        },
-        dismissButton = {
-            YikeSecondaryButton(text = "取消", onClick = onDismiss)
-        }
+    YikeSingleInputDialog(
+        title = "修改本机设备名",
+        label = "设备名",
+        value = value,
+        onValueChange = onValueChange,
+        confirmText = "保存",
+        onDismiss = onDismiss,
+        onConfirm = onConfirm
     )
 }
 
@@ -517,14 +501,14 @@ private fun stageTitle(stage: LanSyncStage): String = when (stage) {
 /**
  * 失败原因映射保持克制，是为了让用户先知道下一步该做什么，而不是看到过多底层网络术语。
  */
-private fun failureMessage(reason: com.kariscode.yike.domain.model.LanSyncFailureReason): String = when (reason) {
-    com.kariscode.yike.domain.model.LanSyncFailureReason.DISCOVERY_FAILED -> "设备发现失败，请确认处于同一 Wi-Fi。"
-    com.kariscode.yike.domain.model.LanSyncFailureReason.PAIRING_FAILED -> "配对失败，请确认配对码是否正确。"
-    com.kariscode.yike.domain.model.LanSyncFailureReason.PROTOCOL_MISMATCH -> "对方设备版本不兼容，请先升级。"
-    com.kariscode.yike.domain.model.LanSyncFailureReason.AUTH_FAILED -> "设备认证失败，请重新配对。"
-    com.kariscode.yike.domain.model.LanSyncFailureReason.NETWORK_TIMEOUT -> "网络超时，请稍后重试。"
-    com.kariscode.yike.domain.model.LanSyncFailureReason.HASH_MISMATCH -> "数据校验失败，请重新同步。"
-    com.kariscode.yike.domain.model.LanSyncFailureReason.APPLY_FAILED -> "应用远端变更失败，请稍后重试。"
-    com.kariscode.yike.domain.model.LanSyncFailureReason.CANCELLED -> "同步已取消。"
-    com.kariscode.yike.domain.model.LanSyncFailureReason.UNKNOWN -> "局域网同步失败，请稍后重试。"
+private fun failureMessage(reason: LanSyncFailureReason): String = when (reason) {
+    LanSyncFailureReason.DISCOVERY_FAILED -> "设备发现失败，请确认处于同一 Wi-Fi。"
+    LanSyncFailureReason.PAIRING_FAILED -> "配对失败，请确认配对码是否正确。"
+    LanSyncFailureReason.PROTOCOL_MISMATCH -> "对方设备版本不兼容，请先升级。"
+    LanSyncFailureReason.AUTH_FAILED -> "设备认证失败，请重新配对。"
+    LanSyncFailureReason.NETWORK_TIMEOUT -> "网络超时，请稍后重试。"
+    LanSyncFailureReason.HASH_MISMATCH -> "数据校验失败，请重新同步。"
+    LanSyncFailureReason.APPLY_FAILED -> "应用远端变更失败，请稍后重试。"
+    LanSyncFailureReason.CANCELLED -> "同步已取消。"
+    LanSyncFailureReason.UNKNOWN -> "局域网同步失败，请稍后重试。"
 }

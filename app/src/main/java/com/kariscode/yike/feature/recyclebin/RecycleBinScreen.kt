@@ -3,10 +3,7 @@ package com.kariscode.yike.feature.recyclebin
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
@@ -15,6 +12,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kariscode.yike.app.LocalAppContainer
 import com.kariscode.yike.domain.model.ArchivedCardSummary
 import com.kariscode.yike.domain.model.DeckSummary
+import com.kariscode.yike.navigation.YikeNavigator
 import com.kariscode.yike.ui.component.YikeDangerButton
 import com.kariscode.yike.ui.component.YikeDangerConfirmationDialog
 import com.kariscode.yike.ui.component.YikeFlowScaffold
@@ -33,7 +31,7 @@ import com.kariscode.yike.ui.theme.LocalYikeSpacing
  */
 @Composable
 fun RecycleBinScreen(
-    onBack: () -> Unit,
+    navigator: YikeNavigator,
     modifier: Modifier = Modifier
 ) {
     val container = LocalAppContainer.current
@@ -49,7 +47,7 @@ fun RecycleBinScreen(
     YikeFlowScaffold(
         title = "已归档内容",
         subtitle = "这里集中保留归档内容，恢复后会重新回到原来的列表里。",
-        navigationAction = backNavigationAction(onBack)
+        navigationAction = backNavigationAction(navigator::back)
     ) { padding ->
         RecycleBinContent(
             uiState = uiState,
@@ -59,7 +57,7 @@ fun RecycleBinScreen(
             onDeleteCard = viewModel::onDeleteCardClick,
             onDismissDelete = viewModel::onDismissDelete,
             onConfirmDelete = viewModel::onConfirmDelete,
-            modifier = modifier.padding(padding),
+            modifier = modifier,
             contentPadding = padding
         )
     }
@@ -81,7 +79,10 @@ private fun RecycleBinContent(
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues = PaddingValues()
 ) {
-    YikeScrollableColumn(modifier = modifier) {
+    YikeScrollableColumn(
+        modifier = modifier,
+        contentPadding = contentPadding
+    ) {
         RecycleBinOverviewSection(uiState = uiState)
 
         when {
@@ -119,7 +120,6 @@ private fun RecycleBinContent(
             successTitle = "已归档内容已更新",
             errorTitle = "已归档内容操作失败"
         )
-        Spacer(modifier = Modifier.height(contentPadding.calculateBottomPadding()))
     }
 
     uiState.pendingDelete?.let { target ->

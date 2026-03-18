@@ -3,9 +3,9 @@ package com.kariscode.yike.feature.review
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -14,6 +14,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kariscode.yike.app.LocalAppContainer
 import com.kariscode.yike.domain.model.ReviewRating
+import com.kariscode.yike.navigation.YikeNavigator
 import com.kariscode.yike.ui.component.CollectFlowEffect
 import com.kariscode.yike.ui.component.YikeBadge
 import com.kariscode.yike.ui.component.YikeDangerConfirmationDialog
@@ -36,8 +37,7 @@ import com.kariscode.yike.ui.component.backNavigationAction
 @Composable
 fun ReviewCardScreen(
     cardId: String,
-    onExit: () -> Unit,
-    onNextCard: () -> Unit,
+    navigator: YikeNavigator,
     modifier: Modifier = Modifier
 ) {
     val container = LocalAppContainer.current
@@ -55,8 +55,8 @@ fun ReviewCardScreen(
 
     CollectFlowEffect(effectFlow = viewModel.effects) { effect ->
         when (effect) {
-            ReviewCardEffect.NavigateHome -> onExit()
-            ReviewCardEffect.NavigateToQueue -> onNextCard()
+            ReviewCardEffect.NavigateHome -> navigator.backToHome()
+            ReviewCardEffect.NavigateToQueue -> navigator.openReviewQueue()
         }
     }
 
@@ -75,7 +75,8 @@ fun ReviewCardScreen(
             onRetryLoad = viewModel::loadSession,
             onContinueNextCard = viewModel::onContinueNextCardClick,
             onBackHome = viewModel::onBackHomeClick,
-            modifier = modifier.padding(padding)
+            modifier = modifier,
+            contentPadding = padding
         )
     }
 
@@ -102,10 +103,14 @@ fun ReviewCardContent(
     onRetryLoad: () -> Unit,
     onContinueNextCard: () -> Unit,
     onBackHome: () -> Unit,
+    contentPadding: PaddingValues = PaddingValues(),
     modifier: Modifier = Modifier
 ) {
     val spacing = LocalYikeSpacing.current
-    YikeScrollableColumn(modifier = modifier) {
+    YikeScrollableColumn(
+        modifier = modifier,
+        contentPadding = contentPadding
+    ) {
         when {
             uiState.isLoading -> {
                 YikeStateBanner(

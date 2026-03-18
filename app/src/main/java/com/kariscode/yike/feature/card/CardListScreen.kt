@@ -2,9 +2,9 @@ package com.kariscode.yike.feature.card
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -15,6 +15,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kariscode.yike.app.LocalAppContainer
 import com.kariscode.yike.core.message.ErrorMessages
 import com.kariscode.yike.domain.model.CardSummary
+import com.kariscode.yike.navigation.YikeNavigator
 import com.kariscode.yike.ui.component.backNavigationAction
 import com.kariscode.yike.ui.component.YikeBadge
 import com.kariscode.yike.ui.component.YikeFab
@@ -37,10 +38,7 @@ import com.kariscode.yike.ui.theme.LocalYikeSpacing
 @Composable
 fun CardListScreen(
     deckId: String,
-    onBack: () -> Unit,
-    onOpenTodayPreview: () -> Unit,
-    onOpenSearch: (cardId: String?) -> Unit,
-    onEditCard: (cardId: String) -> Unit,
+    navigator: YikeNavigator,
     modifier: Modifier = Modifier
 ) {
     val container = LocalAppContainer.current
@@ -58,14 +56,13 @@ fun CardListScreen(
     YikeFlowScaffold(
         title = uiState.deckName ?: "卡片列表",
         subtitle = "按章节或知识块拆分卡片，能让复习时更容易进入上下文。",
-        navigationAction = backNavigationAction(onBack)
+        navigationAction = backNavigationAction(navigator::back)
     ) { padding ->
         CardListContent(
+            deckId = deckId,
             uiState = uiState,
+            navigator = navigator,
             onCreateCard = viewModel::onCreateCardClick,
-            onOpenTodayPreview = onOpenTodayPreview,
-            onOpenSearch = onOpenSearch,
-            onOpenEditor = onEditCard,
             onTitleChange = viewModel::onDraftTitleChange,
             onDescriptionChange = viewModel::onDraftDescriptionChange,
             onDismissEditor = viewModel::onDismissEditor,
@@ -75,7 +72,8 @@ fun CardListScreen(
             onDelete = viewModel::onDeleteCardClick,
             onDismissDelete = viewModel::onDismissDelete,
             onConfirmDelete = viewModel::onConfirmDelete,
-            modifier = modifier.padding(padding)
+            modifier = modifier,
+            contentPadding = padding
         )
     }
 }
@@ -85,11 +83,10 @@ fun CardListScreen(
  */
 @Composable
 private fun CardListContent(
+    deckId: String,
     uiState: CardListUiState,
+    navigator: YikeNavigator,
     onCreateCard: () -> Unit,
-    onOpenTodayPreview: () -> Unit,
-    onOpenSearch: (cardId: String?) -> Unit,
-    onOpenEditor: (cardId: String) -> Unit,
     onTitleChange: (String) -> Unit,
     onDescriptionChange: (String) -> Unit,
     onDismissEditor: () -> Unit,
@@ -99,14 +96,25 @@ private fun CardListContent(
     onDelete: (CardSummary) -> Unit,
     onDismissDelete: () -> Unit,
     onConfirmDelete: () -> Unit,
+    contentPadding: PaddingValues = PaddingValues(),
     modifier: Modifier = Modifier
 ) {
-    YikeScrollableColumn(modifier = modifier) {
+    val openTodayPreview: () -> Unit = navigator::openTodayPreview
+    val openSearch: (String?) -> Unit = { cardId ->
+        navigator.openQuestionSearch(deckId = deckId, cardId = cardId)
+    }
+    val openEditor: (String) -> Unit = { cardId ->
+        navigator.openQuestionEditor(cardId = cardId, deckId = deckId)
+    }
+    YikeScrollableColumn(
+        modifier = modifier,
+        contentPadding = contentPadding
+    ) {
         CardOverviewSection(
             items = uiState.items,
             onCreateCard = onCreateCard,
-            onOpenTodayPreview = onOpenTodayPreview,
-            onOpenSearch = { onOpenSearch(null) }
+            onOpenTodayPreview = openTodayPreview,
+            onOpenSearch = { openSearch(null) }
         )
         uiState.masterySummary?.let { summary ->
             CardMasterySection(summary = summary)
@@ -144,8 +152,8 @@ private fun CardListContent(
                 uiState.items.forEach { item ->
                     CardSummaryCard(
                         item = item,
-                        onOpenEditor = { onOpenEditor(item.card.id) },
-                        onOpenSearch = { onOpenSearch(item.card.id) },
+                        onOpenEditor = { openEditor(item.card.id) },
+                        onOpenSearch = { openSearch(item.card.id) },
                         onEditMeta = { onEditCardMeta(item) },
                         onArchive = { onArchive(item) },
                         onDelete = { onDelete(item) }

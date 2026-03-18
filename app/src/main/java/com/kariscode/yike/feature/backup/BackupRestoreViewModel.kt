@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.kariscode.yike.core.message.ErrorMessages
 import com.kariscode.yike.core.message.SuccessMessages
+import com.kariscode.yike.core.message.userMessageOr
 import com.kariscode.yike.core.viewmodel.launchResult
 import com.kariscode.yike.core.viewmodel.typedViewModelFactory
 import com.kariscode.yike.data.backup.BackupOperations
@@ -183,7 +184,7 @@ class BackupRestoreViewModel(
                     it.copy(
                         isImporting = false,
                         message = null,
-                        errorMessage = throwable.message ?: ErrorMessages.BACKUP_RESTORE_FAILED
+                        errorMessage = throwable.userMessageOr(ErrorMessages.BACKUP_RESTORE_FAILED)
                     )
                 }
             }

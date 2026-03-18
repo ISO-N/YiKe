@@ -1,7 +1,7 @@
 package com.kariscode.yike.domain.scheduler
 
+import com.kariscode.yike.core.time.toInstant
 import com.kariscode.yike.domain.model.ReviewRating
-import java.time.Instant
 import java.time.temporal.ChronoUnit
 
 /**
@@ -38,7 +38,8 @@ class ReviewSchedulerV1(
         }
 
         val intervalDays = effectiveIntervalDaysByStage[nextStageIndex]
-        val nextDueAt = Instant.ofEpochMilli(reviewedAtEpochMillis)
+        val nextDueAt = reviewedAtEpochMillis
+            .toInstant()
             .plus(intervalDays.toLong(), ChronoUnit.DAYS)
             .toEpochMilli()
 
