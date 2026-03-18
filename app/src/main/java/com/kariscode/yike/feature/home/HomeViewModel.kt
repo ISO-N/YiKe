@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.kariscode.yike.core.coroutine.parallel
 import com.kariscode.yike.core.message.ErrorMessages
+import com.kariscode.yike.core.message.userMessageOr
 import com.kariscode.yike.core.time.TimeProvider
 import com.kariscode.yike.core.viewmodel.launchResult
 import com.kariscode.yike.core.viewmodel.typedViewModelFactory
@@ -89,7 +90,7 @@ class HomeViewModel(
                         isLoading = false,
                         summary = null,
                         recentDecks = emptyList(),
-                        errorMessage = throwable.message ?: ErrorMessages.HOME_LOAD_FAILED
+                        errorMessage = throwable.userMessageOr(ErrorMessages.HOME_LOAD_FAILED)
                     )
                 }
             }

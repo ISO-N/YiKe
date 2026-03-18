@@ -1,5 +1,6 @@
 package com.kariscode.yike.data.backup
 
+import com.kariscode.yike.core.time.toInstant
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -20,7 +21,7 @@ object BackupJson {
      * 统一写出带时区偏移的时间字符串，能让备份文件既可读又能在恢复时稳定回到 epoch millis。
      */
     fun formatEpochMillis(epochMillis: Long, zoneId: ZoneId = ZoneId.systemDefault()): String =
-        formatter.format(Instant.ofEpochMilli(epochMillis).atZone(zoneId))
+        formatter.format(epochMillis.toInstant().atZone(zoneId))
 
     /**
      * 统一解析时间字符串，可把“时间字段非法”交给校验器集中处理而不是在各个恢复分支里分散 try/catch。

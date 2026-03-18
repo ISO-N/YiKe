@@ -5,13 +5,14 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.kariscode.yike.core.coroutine.parallel
 import com.kariscode.yike.core.message.ErrorMessages
+import com.kariscode.yike.core.message.userMessageOr
 import com.kariscode.yike.core.time.TimeConstants
 import com.kariscode.yike.core.time.TimeProvider
+import com.kariscode.yike.core.time.toLocalDate
 import com.kariscode.yike.core.viewmodel.launchResult
 import com.kariscode.yike.core.viewmodel.typedViewModelFactory
 import com.kariscode.yike.domain.model.ReviewAnalyticsSnapshot
 import com.kariscode.yike.domain.repository.StudyInsightsRepository
-import java.time.Instant
 import java.time.ZoneId
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -135,7 +136,7 @@ class AnalyticsViewModel(
                 _uiState.update {
                     it.copy(
                         isLoading = false,
-                        errorMessage = throwable.message ?: ErrorMessages.ANALYTICS_LOAD_FAILED
+                        errorMessage = throwable.userMessageOr(ErrorMessages.ANALYTICS_LOAD_FAILED)
                     )
                 }
             }
@@ -176,10 +177,10 @@ class AnalyticsViewModel(
      */
     private fun calculateStreakDays(timestamps: List<Long>): Int {
         val reviewedDates = timestamps
-            .map { Instant.ofEpochMilli(it).atZone(zoneId).toLocalDate() }
+            .map { it.toLocalDate(zoneId) }
             .toSet()
         val latestDate = reviewedDates.maxOrNull() ?: return 0
-        val today = Instant.ofEpochMilli(timeProvider.nowEpochMillis()).atZone(zoneId).toLocalDate()
+        val today = timeProvider.nowEpochMillis().toLocalDate(zoneId)
         if (latestDate.isBefore(today.minusDays(1))) return 0
 
         var streak = 0

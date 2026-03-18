@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModelProvider
 import com.kariscode.yike.core.coroutine.parallel
 import com.kariscode.yike.core.coroutine.parallel3
 import com.kariscode.yike.core.message.ErrorMessages
+import com.kariscode.yike.core.message.userMessageOr
 import com.kariscode.yike.core.time.TimeProvider
 import com.kariscode.yike.core.viewmodel.launchResult
 import com.kariscode.yike.core.viewmodel.typedViewModelFactory
@@ -90,7 +91,7 @@ class QuestionSearchViewModel(
                 _uiState.update {
                     it.copy(
                         isLoading = false,
-                        errorMessage = throwable.message ?: ErrorMessages.SEARCH_LOAD_FAILED
+                        errorMessage = throwable.userMessageOr(ErrorMessages.SEARCH_LOAD_FAILED)
                     )
                 }
             }
@@ -132,7 +133,7 @@ class QuestionSearchViewModel(
                     it.withDeckSelection(
                         deckId = deckId,
                         cards = emptyList(),
-                        errorMessage = throwable.message ?: ErrorMessages.SEARCH_LOAD_FAILED
+                        errorMessage = throwable.userMessageOr(ErrorMessages.SEARCH_LOAD_FAILED)
                     )
                 }
             }
@@ -194,7 +195,7 @@ class QuestionSearchViewModel(
                     it.copy(
                         isLoading = false,
                         results = emptyList(),
-                        errorMessage = throwable.message ?: ErrorMessages.SEARCH_FAILED
+                        errorMessage = throwable.userMessageOr(ErrorMessages.SEARCH_FAILED)
                     )
                 }
             }

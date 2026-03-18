@@ -1,7 +1,6 @@
 package com.kariscode.yike.domain.reminder
 
-import java.time.Instant
-import java.time.LocalDate
+import com.kariscode.yike.core.time.toLocalDate
 import java.time.LocalTime
 import java.time.ZoneId
 
@@ -20,8 +19,7 @@ object ReminderTimeCalculator {
         reminderMinute: Int,
         zoneId: ZoneId = ZoneId.systemDefault()
     ): Long {
-        val nowInstant = Instant.ofEpochMilli(nowEpochMillis)
-        val today = LocalDate.ofInstant(nowInstant, zoneId)
+        val today = nowEpochMillis.toLocalDate(zoneId)
         val reminderTime = runCatching { LocalTime.of(reminderHour, reminderMinute) }
             .getOrElse { LocalTime.of(20, 0) }
 

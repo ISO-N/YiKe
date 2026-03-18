@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.kariscode.yike.core.id.EntityIds
 import com.kariscode.yike.core.message.ErrorMessages
 import com.kariscode.yike.core.message.SuccessMessages
+import com.kariscode.yike.core.message.userMessageOr
 import com.kariscode.yike.core.time.TimeProvider
 import com.kariscode.yike.core.viewmodel.launchMutation
 import com.kariscode.yike.core.viewmodel.launchResult
@@ -146,7 +147,7 @@ class CardListViewModel(
                     it.copy(
                         isLoading = shouldKeepLoading(),
                         message = null,
-                        errorMessage = throwable.message ?: ErrorMessages.LOAD_FAILED
+                        errorMessage = throwable.userMessageOr(ErrorMessages.LOAD_FAILED)
                     )
                 }
             }
