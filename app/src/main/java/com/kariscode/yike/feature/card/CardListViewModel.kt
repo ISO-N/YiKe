@@ -8,14 +8,12 @@ import com.kariscode.yike.core.message.ErrorMessages
 import com.kariscode.yike.core.message.SuccessMessages
 import com.kariscode.yike.core.message.userMessageOr
 import com.kariscode.yike.core.time.TimeProvider
-import com.kariscode.yike.core.viewmodel.launchMutation
-import com.kariscode.yike.core.viewmodel.launchResult
+import com.kariscode.yike.core.viewmodel.launchStateMutation
+import com.kariscode.yike.core.viewmodel.launchStateResult
 import com.kariscode.yike.core.viewmodel.typedViewModelFactory
 import com.kariscode.yike.feature.common.TextMetadataDraft
 import com.kariscode.yike.domain.model.Card
 import com.kariscode.yike.domain.model.CardSummary
-import com.kariscode.yike.domain.model.QuestionMasteryCalculator
-import com.kariscode.yike.domain.model.QuestionMasteryLevel
 import com.kariscode.yike.domain.model.QuestionQueryFilters
 import com.kariscode.yike.domain.model.QuestionStatus
 import com.kariscode.yike.domain.repository.CardRepository
@@ -69,20 +67,11 @@ class CardListViewModel(
     private val timeProvider: TimeProvider
 ) : ViewModel() {
     /**
-     * 首屏是否真正完成，需要 deck 元数据和卡片首个发射都到位后再统一关闭 loading，
-     * 这样改成单订阅后仍能保持页面初始化反馈稳定。
-     */
-    private var initialDeckLoaded: Boolean = false
-
-    /**
-     * 列表订阅首次返回前保持 loading，可避免在删除首屏双读后让页面过早进入空列表态。
-     */
-    private var initialCardsLoaded: Boolean = false
-
-    /**
      * 熟练度摘要用独立 Job 收口，是为了在列表连续发射时只保留最后一次统计，避免无意义叠加查询。
      */
     private var masterySummaryJob: Job? = null
+    private var lastMasterySummarySignature: String? = null
+    private var loadingTracker = CardListLoadingTracker()
 
     private val _uiState = MutableStateFlow(
         CardListUiState(
@@ -114,20 +103,21 @@ class CardListViewModel(
     private suspend fun loadDeckMetadata() {
         runCatching { deckRepository.findById(deckId) }
             .onSuccess { deck ->
-                initialDeckLoaded = true
-                _uiState.update {
-                    it.copy(
+                loadingTracker = loadingTracker.markDeckLoaded()
+                _uiState.update { state ->
+                    CardListStateReducer.deckLoaded(
+                        state = state,
                         deckName = deck?.name,
-                        isLoading = shouldKeepLoading()
+                        loadingTracker = loadingTracker
                     )
                 }
             }
             .onFailure {
-                initialDeckLoaded = true
-                _uiState.update {
-                    it.copy(
-                        isLoading = shouldKeepLoading(),
-                        message = null,
+                loadingTracker = loadingTracker.markDeckLoaded()
+                _uiState.update { state ->
+                    CardListStateReducer.loadFailed(
+                        state = state,
+                        loadingTracker = loadingTracker,
                         errorMessage = ErrorMessages.LOAD_FAILED
                     )
                 }
@@ -142,25 +132,25 @@ class CardListViewModel(
         cardRepository.observeActiveCardSummaries(deckId, now)
             .distinctUntilChanged()
             .catch { throwable ->
-                initialCardsLoaded = true
-                _uiState.update {
-                    it.copy(
-                        isLoading = shouldKeepLoading(),
-                        message = null,
+                loadingTracker = loadingTracker.markCardsLoaded()
+                _uiState.update { state ->
+                    CardListStateReducer.loadFailed(
+                        state = state,
+                        loadingTracker = loadingTracker,
                         errorMessage = throwable.userMessageOr(ErrorMessages.LOAD_FAILED)
                     )
                 }
             }
             .collect { items ->
-                initialCardsLoaded = true
-                _uiState.update {
-                    it.copy(
-                        isLoading = shouldKeepLoading(),
+                loadingTracker = loadingTracker.markCardsLoaded()
+                _uiState.update { state ->
+                    CardListStateReducer.itemsLoaded(
+                        state = state,
                         items = items,
-                        errorMessage = null
+                        loadingTracker = loadingTracker
                     )
                 }
-                refreshMasterySummary()
+                maybeRefreshMasterySummary(items)
             }
     }
 
@@ -202,7 +192,7 @@ class CardListViewModel(
      * 关闭编辑器直接丢弃草稿，明确“未保存不落库”的交互语义。
      */
     fun onDismissEditor() {
-        _uiState.update { it.copy(editor = null, errorMessage = null) }
+        _uiState.update(CardListStateReducer::dismissEditor)
     }
 
     /**
@@ -212,11 +202,16 @@ class CardListViewModel(
         val editor = _uiState.value.editor ?: return
         val trimmedTitle = editor.primaryValue.trim()
         if (trimmedTitle.isBlank()) {
-            _uiState.update { it.copy(editor = editor.withValidationMessage(ErrorMessages.TITLE_REQUIRED)) }
+            _uiState.update { state ->
+                CardListStateReducer.updateEditor(state) {
+                    it.withValidationMessage(ErrorMessages.TITLE_REQUIRED)
+                }
+            }
             return
         }
 
-        launchMutation(
+        launchStateMutation(
+            state = _uiState,
             action = {
                 val now = timeProvider.nowEpochMillis()
                 val card = Card(
@@ -231,12 +226,8 @@ class CardListViewModel(
                 )
                 cardRepository.upsert(card)
             },
-            onSuccess = {
-                _uiState.update { it.copy(editor = null, message = SuccessMessages.SAVED, errorMessage = null) }
-            },
-            onFailure = {
-                _uiState.update { it.copy(message = null, errorMessage = ErrorMessages.SAVE_FAILED) }
-            }
+            onSuccess = CardListStateReducer::saveSucceeded,
+            onFailure = { state, _ -> CardListStateReducer.mutationFailed(state, ErrorMessages.SAVE_FAILED) }
         )
     }
 
@@ -254,14 +245,14 @@ class CardListViewModel(
      * 删除需要先进入确认态，避免在列表交互中误触造成不可逆的数据丢失。
      */
     fun onDeleteCardClick(item: CardSummary) {
-        _uiState.update { it.copy(pendingDelete = item, errorMessage = null) }
+        _uiState.update { state -> CardListStateReducer.showDeleteConfirmation(state, item) }
     }
 
     /**
      * 退出确认态可以避免误触删除，符合高风险操作需要二次确认的原则。
      */
     fun onDismissDelete() {
-        _uiState.update { it.copy(pendingDelete = null, errorMessage = null) }
+        _uiState.update(CardListStateReducer::dismissDelete)
     }
 
     /**
@@ -271,7 +262,7 @@ class CardListViewModel(
         val pending = _uiState.value.pendingDelete ?: return
         executeMutation(errorMessage = ErrorMessages.DELETE_FAILED) {
             cardRepository.delete(pending.card.id)
-            _uiState.update { it.copy(pendingDelete = null, message = SuccessMessages.DELETED, errorMessage = null) }
+            _uiState.update(CardListStateReducer::deleteSucceeded)
         }
     }
 
@@ -279,23 +270,14 @@ class CardListViewModel(
      * 打开编辑器时统一清空旧反馈，是为了让创建和编辑都从同一个干净状态开始。
      */
     private fun openEditor(editor: TextMetadataDraft) {
-        _uiState.update {
-            it.copy(
-                editor = editor,
-                message = null,
-                errorMessage = null
-            )
-        }
+        _uiState.update { state -> CardListStateReducer.openEditor(state, editor) }
     }
 
     /**
      * 草稿更新收口后，标题与描述的输入路径就不需要各自重复 editor 判空模板。
      */
     private fun updateEditor(transform: (TextMetadataDraft) -> TextMetadataDraft) {
-        _uiState.update { state ->
-            val editor = state.editor ?: return@update state
-            state.copy(editor = transform(editor))
-        }
+        _uiState.update { state -> CardListStateReducer.updateEditor(state, transform) }
     }
 
     /**
@@ -305,21 +287,21 @@ class CardListViewModel(
         errorMessage: String,
         action: suspend () -> Unit
     ) {
-        launchMutation(
+        launchStateMutation(
+            state = _uiState,
             action = action,
-            onFailure = {
-                _uiState.update { it.copy(message = null, errorMessage = errorMessage) }
-            }
+            onFailure = { state, _ -> CardListStateReducer.mutationFailed(state, errorMessage) }
         )
     }
 
     /**
      * 熟练度摘要基于真实问题集合即时计算，是为了遵守”不写回数据库，只按字段推导”的 P0 约束。
-     * 使用 groupBy 避免对每个问题重复计算熟练度。
+     * 计算下沉到纯组装器后，ViewModel 只保留查询触发与结果回写职责。
      */
     private fun refreshMasterySummary() {
         masterySummaryJob?.cancel()
-        masterySummaryJob = launchResult(
+        masterySummaryJob = launchStateResult(
+            state = _uiState,
             action = {
                 val questions = studyInsightsRepository.searchQuestionContexts(
                     filters = QuestionQueryFilters(
@@ -327,30 +309,38 @@ class CardListViewModel(
                         status = QuestionStatus.ACTIVE
                     )
                 )
-                val masteryCounts = questions.groupBy { context ->
-                    QuestionMasteryCalculator.snapshot(context.question).level
-                }
-                DeckMasterySummary(
-                    totalQuestions = questions.size,
-                    newCount = masteryCounts[QuestionMasteryLevel.NEW]?.size ?: 0,
-                    learningCount = masteryCounts[QuestionMasteryLevel.LEARNING]?.size ?: 0,
-                    familiarCount = masteryCounts[QuestionMasteryLevel.FAMILIAR]?.size ?: 0,
-                    masteredCount = masteryCounts[QuestionMasteryLevel.MASTERED]?.size ?: 0
-                )
+                DeckMasterySummaryCalculator.calculate(questions)
             },
-            onSuccess = { summary ->
-                _uiState.update { it.copy(masterySummary = summary) }
-            },
-            onFailure = {
-                _uiState.update { it.copy(masterySummary = null) }
-            }
+            onSuccess = CardListStateReducer::masteryLoaded,
+            onFailure = { state, _ -> CardListStateReducer.masteryLoadFailed(state) }
         )
     }
 
     /**
-     * 首屏 loading 只依赖两个初始化步骤的完成信号，是为了让后续实时更新不再反复切换加载态。
+     * 熟练度统计依赖问题集合而不是卡片展示文案，
+     * 因此只有“会影响问题集合与复习态”的签名变化时才重算，
+     * 这样既能避免仅编辑卡片标题时触发无意义检索，也能确保复习评分后摘要不会卡在旧分布。
      */
-    private fun shouldKeepLoading(): Boolean = !(initialDeckLoaded && initialCardsLoaded)
+    private fun maybeRefreshMasterySummary(items: List<CardSummary>) {
+        val currentSignature = buildMasterySummarySignature(items)
+        if (currentSignature == lastMasterySummarySignature) {
+            return
+        }
+        lastMasterySummarySignature = currentSignature
+        refreshMasterySummary()
+    }
+
+    /**
+     * 签名只保留会影响熟练度统计的字段，是为了把“是否需要重算”判断保持轻量且可解释。
+     *
+     * `dueQuestionCount` 必须包含在内，是为了让复习评分导致 dueAt 前移/后移时能触发重算，
+     * 否则“题目数量不变但熟练度分布已变化”的场景会卡住摘要。
+     */
+    private fun buildMasterySummarySignature(items: List<CardSummary>): String = items
+        .sortedBy { it.card.id }
+        .joinToString(separator = "|") { summary ->
+            "${summary.card.id}:${summary.questionCount}:${summary.dueQuestionCount}"
+        }
 
     companion object {
         /**

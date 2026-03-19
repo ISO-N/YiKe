@@ -88,10 +88,11 @@ class OfflineCardRepository(
                 entity.toDomain()
             }
             cardDao.setArchived(cardId = cardId, archived = archived, updatedAt = updatedAt)
-            val updatedCard = current?.copy(archived = archived, updatedAt = updatedAt)
-            if (updatedCard != null) {
-                syncChangeRecorder.recordCardUpsert(updatedCard)
-            }
+            RepositorySyncSupport.recordUpdatedSnapshot(
+                current = current,
+                buildUpdated = { card -> card.copy(archived = archived, updatedAt = updatedAt) },
+                recordUpsert = syncChangeRecorder::recordCardUpsert
+            )
             Unit
         }
 
@@ -104,11 +105,15 @@ class OfflineCardRepository(
             entity.toDomain()
         }
         cardDao.deleteById(cardId)
-        syncChangeRecorder.recordDelete(
+        RepositorySyncSupport.recordDeleteFromSnapshot(
+            syncChangeRecorder = syncChangeRecorder,
             entityType = SyncEntityType.CARD,
             entityId = cardId,
-            summary = current?.title ?: cardId,
-            modifiedAt = current?.updatedAt ?: timeProvider.nowEpochMillis()
+            current = current,
+            fallbackSummary = cardId,
+            fallbackModifiedAt = timeProvider.nowEpochMillis(),
+            summaryOf = { card -> card.title },
+            modifiedAtOf = { card -> card.updatedAt }
         )
         Unit
     }

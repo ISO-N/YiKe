@@ -101,11 +101,15 @@ class OfflineQuestionRepository(
             entity.toDomain()
         }
         questionDao.deleteById(questionId)
-        syncChangeRecorder.recordDelete(
+        RepositorySyncSupport.recordDeleteFromSnapshot(
+            syncChangeRecorder = syncChangeRecorder,
             entityType = SyncEntityType.QUESTION,
             entityId = questionId,
-            summary = current?.prompt?.take(48) ?: questionId,
-            modifiedAt = current?.updatedAt ?: timeProvider.nowEpochMillis()
+            current = current,
+            fallbackSummary = questionId,
+            fallbackModifiedAt = timeProvider.nowEpochMillis(),
+            summaryOf = { question -> question.prompt.take(48) },
+            modifiedAtOf = { question -> question.updatedAt }
         )
         Unit
     }
@@ -120,11 +124,15 @@ class OfflineQuestionRepository(
         }
         questionDao.deleteByIds(questionIds)
         currentQuestions.forEach { question ->
-            syncChangeRecorder.recordDelete(
+            RepositorySyncSupport.recordDeleteFromSnapshot(
+                syncChangeRecorder = syncChangeRecorder,
                 entityType = SyncEntityType.QUESTION,
                 entityId = question.id,
-                summary = question.prompt.take(48),
-                modifiedAt = question.updatedAt
+                current = question,
+                fallbackSummary = question.id,
+                fallbackModifiedAt = question.updatedAt,
+                summaryOf = { model -> model.prompt.take(48) },
+                modifiedAtOf = { model -> model.updatedAt }
             )
         }
         Unit

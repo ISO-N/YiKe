@@ -8,10 +8,10 @@ import com.kariscode.yike.core.message.ErrorMessages
 import com.kariscode.yike.core.message.userMessageOr
 import com.kariscode.yike.core.time.TimeProvider
 import com.kariscode.yike.core.viewmodel.launchResult
+import com.kariscode.yike.core.viewmodel.launchStateResult
+import com.kariscode.yike.core.viewmodel.restartStateResult
 import com.kariscode.yike.core.viewmodel.typedViewModelFactory
-import com.kariscode.yike.domain.model.QuestionMasteryCalculator
 import com.kariscode.yike.domain.model.QuestionMasteryLevel
-import com.kariscode.yike.domain.model.QuestionQueryFilters
 import com.kariscode.yike.domain.model.QuestionStatus
 import com.kariscode.yike.domain.repository.CardRepository
 import com.kariscode.yike.domain.repository.DeckRepository
@@ -34,16 +34,6 @@ class QuestionSearchViewModel(
     private val cardRepository: CardRepository,
     private val timeProvider: TimeProvider
 ) : ViewModel() {
-    /**
-     * 标签、卡组和当前卡组下的卡片候选本质上属于同一轮筛选元数据快照，
-     * 打包后可以让刷新逻辑只维护一套成功/失败分支，而不是散落多段并发结果拼装代码。
-     */
-    private data class SearchMetadata(
-        val tags: List<String>,
-        val decks: List<SearchDeckOption>,
-        val cards: List<SearchCardOption>
-    )
-
     private val _uiState = MutableStateFlow(
         QuestionSearchUiState(
             isLoading = true,
@@ -75,8 +65,8 @@ class QuestionSearchViewModel(
      * 主动刷新会同步重取标签和卡组，是为了避免内容维护后返回搜索页仍看到过期筛选项。
      */
     fun refresh() {
-        _uiState.update { it.copy(isLoading = true, errorMessage = null) }
-        launchResult(
+        launchStateResult(
+            state = _uiState,
             action = {
                 val snapshot = _uiState.value
                 parallel(
@@ -84,16 +74,19 @@ class QuestionSearchViewModel(
                     second = { searchQuestions(snapshot) }
                 )
             },
-            onSuccess = { (metadata, results) ->
-                applyRefreshResult(metadata = metadata, results = results)
+            onStart = { it.copy(isLoading = true, errorMessage = null) },
+            onSuccess = { state, (metadata, results) ->
+                QuestionSearchStateFactory.withMetadata(
+                    state = state,
+                    metadata = metadata,
+                    results = results
+                )
             },
-            onFailure = { throwable ->
-                _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        errorMessage = throwable.userMessageOr(ErrorMessages.SEARCH_LOAD_FAILED)
-                    )
-                }
+            onFailure = { state, throwable ->
+                state.copy(
+                    isLoading = false,
+                    errorMessage = throwable.userMessageOr(ErrorMessages.SEARCH_LOAD_FAILED)
+                )
             }
         )
     }
@@ -126,11 +119,19 @@ class QuestionSearchViewModel(
         launchResult(
             action = { loadCardsForDeck(deckId) },
             onSuccess = { cards ->
-                updateSearchFilters { it.withDeckSelection(deckId = deckId, cards = cards, errorMessage = null) }
+                updateSearchFilters {
+                    QuestionSearchStateFactory.withDeckSelection(
+                        state = it,
+                        deckId = deckId,
+                        cards = cards,
+                        errorMessage = null
+                    )
+                }
             },
             onFailure = { throwable ->
                 _uiState.update {
-                    it.withDeckSelection(
+                    QuestionSearchStateFactory.withDeckSelection(
+                        state = it,
                         deckId = deckId,
                         cards = emptyList(),
                         errorMessage = throwable.userMessageOr(ErrorMessages.SEARCH_LOAD_FAILED)
@@ -176,28 +177,25 @@ class QuestionSearchViewModel(
      * 搜索任务使用可取消作业包装，是为了避免快速连续输入时旧结果反向覆盖新状态。
      */
     private fun search() {
-        searchJob?.cancel()
         val snapshot = _uiState.value
-        _uiState.update { it.copy(isLoading = true, errorMessage = null) }
-        searchJob = launchResult(
+        searchJob = restartStateResult(
+            state = _uiState,
+            previousJob = searchJob,
             action = { searchQuestions(snapshot) },
-            onSuccess = { results ->
-                _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        results = results,
-                        errorMessage = null
-                    )
-                }
+            onStart = { it.copy(isLoading = true, errorMessage = null) },
+            onSuccess = { state, results ->
+                state.copy(
+                    isLoading = false,
+                    results = results,
+                    errorMessage = null
+                )
             },
-            onFailure = { throwable ->
-                _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        results = emptyList(),
-                        errorMessage = throwable.userMessageOr(ErrorMessages.SEARCH_FAILED)
-                    )
-                }
+            onFailure = { state, throwable ->
+                state.copy(
+                    isLoading = false,
+                    results = emptyList(),
+                    errorMessage = throwable.userMessageOr(ErrorMessages.SEARCH_FAILED)
+                )
             }
         )
     }
@@ -231,55 +229,16 @@ class QuestionSearchViewModel(
     }
 
     /**
-     * 元数据回写收敛成状态扩展，是为了让手动刷新和后续局部元数据更新共享同一套卡片保留规则。
-     */
-    private fun applyRefreshResult(
-        metadata: SearchMetadata,
-        results: List<QuestionSearchResultUiModel>
-    ) {
-        _uiState.update {
-            it.withMetadata(
-                metadata = metadata,
-                results = results
-            )
-        }
-    }
-
-    /**
      * 搜索条件先快照后执行，能避免协程运行中 UI 再次改筛选时把半旧半新的条件拼到同一轮查询里。
      */
     private suspend fun searchQuestions(snapshot: QuestionSearchUiState): List<QuestionSearchResultUiModel> {
         val now = timeProvider.nowEpochMillis()
-        return studyInsightsRepository.searchQuestionContexts(
-            filters = snapshot.toQueryFilters()
-        ).map { context ->
-            QuestionSearchResultUiModel(
-                context = context,
-                mastery = QuestionMasteryCalculator.snapshot(context.question),
-                isDue = context.question.status == QuestionStatus.ACTIVE && context.question.dueAt <= now
-            )
-        }
-    }
-
-    /**
-     * 元数据与结果通常在同一轮刷新里一起回写，
-     * 状态扩展可以让“保留合法 cardId”与“清空旧错误”始终保持同一步完成。
-     */
-    private fun QuestionSearchUiState.withMetadata(
-        metadata: SearchMetadata,
-        results: List<QuestionSearchResultUiModel> = this.results
-    ): QuestionSearchUiState {
-        val preservedCardId = selectedCardId?.takeIf { candidateId ->
-            metadata.cards.any { card -> card.id == candidateId }
-        }
-        return copy(
-            isLoading = false,
-            availableTags = metadata.tags,
-            deckOptions = metadata.decks,
-            cardOptions = metadata.cards,
-            selectedCardId = preservedCardId,
-            results = results,
-            errorMessage = null
+        val questionContexts = studyInsightsRepository.searchQuestionContexts(
+            filters = QuestionSearchStateFactory.toQueryFilters(snapshot)
+        )
+        return QuestionSearchStateFactory.buildResults(
+            questionContexts = questionContexts,
+            nowEpochMillis = now
         )
     }
 
@@ -293,32 +252,6 @@ class QuestionSearchViewModel(
         _uiState.update(transform)
         search()
     }
-
-    /**
-     * 卡组切换后的卡片候选与错误清理总是成组变化，收成扩展后能避免成功/失败分支继续复制同一份字段模板。
-     */
-    private fun QuestionSearchUiState.withDeckSelection(
-        deckId: String?,
-        cards: List<SearchCardOption>,
-        errorMessage: String?
-    ): QuestionSearchUiState = copy(
-        selectedDeckId = deckId,
-        selectedCardId = null,
-        cardOptions = cards,
-        errorMessage = errorMessage
-    )
-
-    /**
-     * 查询条件由状态快照直接导出，是为了让新增筛选字段时只改一个映射入口，避免搜索与刷新口径漂移。
-     */
-    private fun QuestionSearchUiState.toQueryFilters(): QuestionQueryFilters = QuestionQueryFilters(
-        keyword = keyword,
-        tag = selectedTag,
-        status = selectedStatus,
-        deckId = selectedDeckId,
-        cardId = selectedCardId,
-        masteryLevel = selectedMasteryLevel
-    )
 
     companion object {
         /**

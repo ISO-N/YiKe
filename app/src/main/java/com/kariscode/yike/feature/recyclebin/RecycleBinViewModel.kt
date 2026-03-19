@@ -7,7 +7,7 @@ import com.kariscode.yike.core.message.ErrorMessages
 import com.kariscode.yike.core.message.SuccessMessages
 import com.kariscode.yike.core.message.userMessageOr
 import com.kariscode.yike.core.time.TimeProvider
-import com.kariscode.yike.core.viewmodel.launchMutation
+import com.kariscode.yike.core.viewmodel.launchStateMutation
 import com.kariscode.yike.core.viewmodel.typedViewModelFactory
 import com.kariscode.yike.domain.model.ArchivedCardSummary
 import com.kariscode.yike.domain.model.DeckSummary
@@ -100,7 +100,10 @@ class RecycleBinViewModel(
      * 恢复卡组本质上是撤销归档，这样原有卡组页无需新增一套专门的导入路径。
      */
     fun onRestoreDeckClick(item: DeckSummary) {
-        executeMutation(errorMessage = ErrorMessages.UPDATE_FAILED, successMessage = "卡组已恢复") {
+        executeMutation(
+            errorMessage = ErrorMessages.UPDATE_FAILED,
+            successMessage = SuccessMessages.RESTORED_DECK
+        ) {
             deckRepository.setArchived(
                 deckId = item.deck.id,
                 archived = false,
@@ -113,7 +116,10 @@ class RecycleBinViewModel(
      * 恢复卡片同样复用 archived 字段切换，可保证卡片页和检索页继续沿用既有过滤规则。
      */
     fun onRestoreCardClick(item: ArchivedCardSummary) {
-        executeMutation(errorMessage = ErrorMessages.UPDATE_FAILED, successMessage = "卡片已恢复") {
+        executeMutation(
+            errorMessage = ErrorMessages.UPDATE_FAILED,
+            successMessage = SuccessMessages.RESTORED_CARD
+        ) {
             cardRepository.setArchived(
                 cardId = item.card.id,
                 archived = false,
@@ -175,24 +181,21 @@ class RecycleBinViewModel(
         successMessage: String,
         action: suspend () -> Unit
     ) {
-        launchMutation(
+        launchStateMutation(
+            state = _uiState,
             action = action,
             onSuccess = {
-                _uiState.update {
-                    it.copy(
-                        pendingDelete = null,
-                        message = successMessage,
-                        errorMessage = null
-                    )
-                }
+                it.copy(
+                    pendingDelete = null,
+                    message = successMessage,
+                    errorMessage = null
+                )
             },
-            onFailure = {
-                _uiState.update {
-                    it.copy(
-                        message = null,
-                        errorMessage = errorMessage
-                    )
-                }
+            onFailure = { state, _ ->
+                state.copy(
+                    message = null,
+                    errorMessage = errorMessage
+                )
             }
         )
     }
