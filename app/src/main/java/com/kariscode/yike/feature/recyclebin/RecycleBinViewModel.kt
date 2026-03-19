@@ -7,7 +7,7 @@ import com.kariscode.yike.core.message.ErrorMessages
 import com.kariscode.yike.core.message.SuccessMessages
 import com.kariscode.yike.core.message.userMessageOr
 import com.kariscode.yike.core.time.TimeProvider
-import com.kariscode.yike.core.viewmodel.launchMutation
+import com.kariscode.yike.core.viewmodel.launchStateMutation
 import com.kariscode.yike.core.viewmodel.typedViewModelFactory
 import com.kariscode.yike.domain.model.ArchivedCardSummary
 import com.kariscode.yike.domain.model.DeckSummary
@@ -175,24 +175,21 @@ class RecycleBinViewModel(
         successMessage: String,
         action: suspend () -> Unit
     ) {
-        launchMutation(
+        launchStateMutation(
+            state = _uiState,
             action = action,
             onSuccess = {
-                _uiState.update {
-                    it.copy(
-                        pendingDelete = null,
-                        message = successMessage,
-                        errorMessage = null
-                    )
-                }
+                it.copy(
+                    pendingDelete = null,
+                    message = successMessage,
+                    errorMessage = null
+                )
             },
-            onFailure = {
-                _uiState.update {
-                    it.copy(
-                        message = null,
-                        errorMessage = errorMessage
-                    )
-                }
+            onFailure = { state, _ ->
+                state.copy(
+                    message = null,
+                    errorMessage = errorMessage
+                )
             }
         )
     }

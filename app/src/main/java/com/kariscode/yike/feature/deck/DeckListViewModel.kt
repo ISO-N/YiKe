@@ -8,8 +8,8 @@ import com.kariscode.yike.core.message.ErrorMessages
 import com.kariscode.yike.core.message.SuccessMessages
 import com.kariscode.yike.core.message.userMessageOr
 import com.kariscode.yike.core.time.TimeProvider
-import com.kariscode.yike.core.viewmodel.launchMutation
-import com.kariscode.yike.core.viewmodel.launchResult
+import com.kariscode.yike.core.viewmodel.launchStateMutation
+import com.kariscode.yike.core.viewmodel.launchStateResult
 import com.kariscode.yike.core.viewmodel.typedViewModelFactory
 import com.kariscode.yike.domain.model.Deck
 import com.kariscode.yike.domain.model.DeckSummary
@@ -187,7 +187,8 @@ class DeckListViewModel(
             return
         }
 
-        launchMutation(
+        launchStateMutation(
+            state = _uiState,
             action = {
                 val now = timeProvider.nowEpochMillis()
                 val normalizedTags = normalizeTags(editor.tags)
@@ -206,12 +207,8 @@ class DeckListViewModel(
                 )
                 deckRepository.upsert(deck)
             },
-            onSuccess = {
-                _uiState.update { it.copy(editor = null, message = SuccessMessages.SAVED, errorMessage = null) }
-            },
-            onFailure = {
-                _uiState.update { it.copy(message = null, errorMessage = ErrorMessages.SAVE_FAILED) }
-            }
+            onSuccess = { it.copy(editor = null, message = SuccessMessages.SAVED, errorMessage = null) },
+            onFailure = { state, _ -> state.copy(message = null, errorMessage = ErrorMessages.SAVE_FAILED) }
         )
     }
 
@@ -219,20 +216,19 @@ class DeckListViewModel(
      * 题库标签补全单独读取，是为了让卡组标签能复用用户已经在问题层建立的分类词汇。
      */
     private fun refreshAvailableTags() {
-        launchResult(
+        launchStateResult(
+            state = _uiState,
             action = { studyInsightsRepository.listAvailableTags(limit = 12) },
-            onSuccess = { tags ->
+            onSuccess = { state, tags ->
                 insightTags = normalizeTags(tags)
-                _uiState.update { state ->
-                    state.copy(
-                        availableTags = mergeAvailableTags(
-                            items = state.items,
-                            insightTags = insightTags
-                        )
+                state.copy(
+                    availableTags = mergeAvailableTags(
+                        items = state.items,
+                        insightTags = insightTags
                     )
-                }
+                )
             },
-            onFailure = { Unit }
+            onFailure = { state, _ -> state }
         )
     }
 
@@ -240,7 +236,8 @@ class DeckListViewModel(
      * 卡组页只保留归档入口，是为了把“暂时移出默认列表、需要时再恢复”的语义收敛成单一路径。
      */
     fun onToggleArchiveClick(item: DeckSummary) {
-        launchMutation(
+        launchStateMutation(
+            state = _uiState,
             action = {
                 deckRepository.setArchived(
                     deckId = item.deck.id,
@@ -249,16 +246,12 @@ class DeckListViewModel(
                 )
             },
             onSuccess = {
-                _uiState.update {
-                    it.copy(
-                        message = if (item.deck.archived) "已恢复到卡组列表" else "已归档，可在已归档内容中恢复",
-                        errorMessage = null
-                    )
-                }
+                it.copy(
+                    message = if (item.deck.archived) "已恢复到卡组列表" else "已归档，可在已归档内容中恢复",
+                    errorMessage = null
+                )
             },
-            onFailure = {
-                _uiState.update { it.copy(message = null, errorMessage = ErrorMessages.UPDATE_FAILED) }
-            }
+            onFailure = { state, _ -> state.copy(message = null, errorMessage = ErrorMessages.UPDATE_FAILED) }
         )
     }
 

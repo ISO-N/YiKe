@@ -8,14 +8,12 @@ import com.kariscode.yike.core.message.ErrorMessages
 import com.kariscode.yike.core.message.SuccessMessages
 import com.kariscode.yike.core.message.userMessageOr
 import com.kariscode.yike.core.time.TimeProvider
-import com.kariscode.yike.core.viewmodel.launchMutation
-import com.kariscode.yike.core.viewmodel.launchResult
+import com.kariscode.yike.core.viewmodel.launchStateMutation
+import com.kariscode.yike.core.viewmodel.launchStateResult
 import com.kariscode.yike.core.viewmodel.typedViewModelFactory
 import com.kariscode.yike.feature.common.TextMetadataDraft
 import com.kariscode.yike.domain.model.Card
 import com.kariscode.yike.domain.model.CardSummary
-import com.kariscode.yike.domain.model.QuestionMasteryCalculator
-import com.kariscode.yike.domain.model.QuestionMasteryLevel
 import com.kariscode.yike.domain.model.QuestionQueryFilters
 import com.kariscode.yike.domain.model.QuestionStatus
 import com.kariscode.yike.domain.repository.CardRepository
@@ -216,7 +214,8 @@ class CardListViewModel(
             return
         }
 
-        launchMutation(
+        launchStateMutation(
+            state = _uiState,
             action = {
                 val now = timeProvider.nowEpochMillis()
                 val card = Card(
@@ -231,12 +230,8 @@ class CardListViewModel(
                 )
                 cardRepository.upsert(card)
             },
-            onSuccess = {
-                _uiState.update { it.copy(editor = null, message = SuccessMessages.SAVED, errorMessage = null) }
-            },
-            onFailure = {
-                _uiState.update { it.copy(message = null, errorMessage = ErrorMessages.SAVE_FAILED) }
-            }
+            onSuccess = { it.copy(editor = null, message = SuccessMessages.SAVED, errorMessage = null) },
+            onFailure = { state, _ -> state.copy(message = null, errorMessage = ErrorMessages.SAVE_FAILED) }
         )
     }
 
@@ -305,21 +300,21 @@ class CardListViewModel(
         errorMessage: String,
         action: suspend () -> Unit
     ) {
-        launchMutation(
+        launchStateMutation(
+            state = _uiState,
             action = action,
-            onFailure = {
-                _uiState.update { it.copy(message = null, errorMessage = errorMessage) }
-            }
+            onFailure = { state, _ -> state.copy(message = null, errorMessage = errorMessage) }
         )
     }
 
     /**
      * 熟练度摘要基于真实问题集合即时计算，是为了遵守”不写回数据库，只按字段推导”的 P0 约束。
-     * 使用 groupBy 避免对每个问题重复计算熟练度。
+     * 计算下沉到纯组装器后，ViewModel 只保留查询触发与结果回写职责。
      */
     private fun refreshMasterySummary() {
         masterySummaryJob?.cancel()
-        masterySummaryJob = launchResult(
+        masterySummaryJob = launchStateResult(
+            state = _uiState,
             action = {
                 val questions = studyInsightsRepository.searchQuestionContexts(
                     filters = QuestionQueryFilters(
@@ -327,23 +322,10 @@ class CardListViewModel(
                         status = QuestionStatus.ACTIVE
                     )
                 )
-                val masteryCounts = questions.groupBy { context ->
-                    QuestionMasteryCalculator.snapshot(context.question).level
-                }
-                DeckMasterySummary(
-                    totalQuestions = questions.size,
-                    newCount = masteryCounts[QuestionMasteryLevel.NEW]?.size ?: 0,
-                    learningCount = masteryCounts[QuestionMasteryLevel.LEARNING]?.size ?: 0,
-                    familiarCount = masteryCounts[QuestionMasteryLevel.FAMILIAR]?.size ?: 0,
-                    masteredCount = masteryCounts[QuestionMasteryLevel.MASTERED]?.size ?: 0
-                )
+                DeckMasterySummaryCalculator.calculate(questions)
             },
-            onSuccess = { summary ->
-                _uiState.update { it.copy(masterySummary = summary) }
-            },
-            onFailure = {
-                _uiState.update { it.copy(masterySummary = null) }
-            }
+            onSuccess = { state, summary -> state.copy(masterySummary = summary) },
+            onFailure = { state, _ -> state.copy(masterySummary = null) }
         )
     }
 

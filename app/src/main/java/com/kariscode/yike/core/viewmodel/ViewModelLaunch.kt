@@ -3,6 +3,8 @@ package com.kariscode.yike.core.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 /**
@@ -30,5 +32,46 @@ inline fun ViewModel.launchMutation(
 ): Job = launchResult(
     action = action,
     onSuccess = { onSuccess() },
+    onFailure = onFailure
+)
+
+/**
+ * 很多页面在启动异步任务时都会走“先更新状态，再根据结果回写状态”的骨架，
+ * 因此提供面向 StateFlow 的结果入口可以减少 ViewModel 内反复编排 update 模板。
+ */
+inline fun <State, T> ViewModel.launchStateResult(
+    state: MutableStateFlow<State>,
+    crossinline action: suspend () -> T,
+    crossinline onStart: (State) -> State = { it },
+    crossinline onSuccess: (State, T) -> State,
+    crossinline onFailure: (State, Throwable) -> State
+): Job {
+    state.update(onStart)
+    return launchResult(
+        action = action,
+        onSuccess = { result ->
+            state.update { current -> onSuccess(current, result) }
+        },
+        onFailure = { throwable ->
+            state.update { current -> onFailure(current, throwable) }
+        }
+    )
+}
+
+/**
+ * 只关心“是否完成”的写操作也经常需要配合状态机回写，
+ * 单独提供 mutation 版本可以让列表页和表单页直接复用同一套成功/失败骨架。
+ */
+inline fun <State> ViewModel.launchStateMutation(
+    state: MutableStateFlow<State>,
+    crossinline action: suspend () -> Unit,
+    crossinline onStart: (State) -> State = { it },
+    crossinline onSuccess: (State) -> State = { it },
+    crossinline onFailure: (State, Throwable) -> State
+): Job = launchStateResult(
+    state = state,
+    action = action,
+    onStart = onStart,
+    onSuccess = { current, _ -> onSuccess(current) },
     onFailure = onFailure
 )

@@ -100,10 +100,11 @@ class OfflineDeckRepository(
                 entity.toDomain()
             }
             deckDao.setArchived(deckId = deckId, archived = archived, updatedAt = updatedAt)
-            val updatedDeck = current?.copy(archived = archived, updatedAt = updatedAt)
-            if (updatedDeck != null) {
-                syncChangeRecorder.recordDeckUpsert(updatedDeck)
-            }
+            RepositorySyncSupport.recordUpdatedSnapshot(
+                current = current,
+                buildUpdated = { deck -> deck.copy(archived = archived, updatedAt = updatedAt) },
+                recordUpsert = syncChangeRecorder::recordDeckUpsert
+            )
             Unit
         }
 
@@ -116,11 +117,15 @@ class OfflineDeckRepository(
             entity.toDomain()
         }
         deckDao.deleteById(deckId)
-        syncChangeRecorder.recordDelete(
+        RepositorySyncSupport.recordDeleteFromSnapshot(
+            syncChangeRecorder = syncChangeRecorder,
             entityType = SyncEntityType.DECK,
             entityId = deckId,
-            summary = current?.name ?: deckId,
-            modifiedAt = current?.updatedAt ?: timeProvider.nowEpochMillis()
+            current = current,
+            fallbackSummary = deckId,
+            fallbackModifiedAt = timeProvider.nowEpochMillis(),
+            summaryOf = { deck -> deck.name },
+            modifiedAtOf = { deck -> deck.updatedAt }
         )
         Unit
     }

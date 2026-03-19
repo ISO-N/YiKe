@@ -10,6 +10,13 @@ import com.kariscode.yike.core.time.TimeProvider
 import com.kariscode.yike.data.backup.BackupService
 import com.kariscode.yike.data.backup.BackupValidator
 import com.kariscode.yike.data.local.db.YikeDatabase
+import com.kariscode.yike.data.local.db.dao.CardDao
+import com.kariscode.yike.data.local.db.dao.DeckDao
+import com.kariscode.yike.data.local.db.dao.QuestionDao
+import com.kariscode.yike.data.local.db.dao.ReviewRecordDao
+import com.kariscode.yike.data.local.db.dao.SyncChangeDao
+import com.kariscode.yike.data.local.db.dao.SyncPeerCursorDao
+import com.kariscode.yike.data.local.db.dao.SyncPeerDao
 import com.kariscode.yike.data.repository.OfflineCardRepository
 import com.kariscode.yike.data.repository.OfflineDeckRepository
 import com.kariscode.yike.data.repository.OfflineQuestionRepository
@@ -43,6 +50,17 @@ class AppContainer(
     private val application: Application
 ) {
     /**
+     * 需要在多处复用的内容 DAO 成组保存，是为了让依赖装配围绕“内容数据访问”这一语义单元展开，
+     * 而不是在多个仓储和服务创建处反复展开一串相同字段。
+     */
+    private data class ContentDataAccess(
+        val deckDao: DeckDao,
+        val cardDao: CardDao,
+        val questionDao: QuestionDao,
+        val reviewRecordDao: ReviewRecordDao
+    )
+
+    /**
      * 内容仓储共享同一组三元依赖，是为了让装配时把“线程、时间与同步 journal”看成同一语义单元，
      * 避免后续新增仓储时漏传其中某一项。
      */
@@ -50,6 +68,16 @@ class AppContainer(
         val dispatchers: AppDispatchers,
         val timeProvider: TimeProvider,
         val syncChangeRecorder: LanSyncChangeRecorder
+    )
+
+    /**
+     * 同步仓储需要同时访问内容 DAO 与同步专属 DAO，成组后可以把局域网同步的基础设施边界表达得更清楚。
+     */
+    private data class SyncInfrastructureDependencies(
+        val syncChangeDao: SyncChangeDao,
+        val syncPeerDao: SyncPeerDao,
+        val syncPeerCursorDao: SyncPeerCursorDao,
+        val contentDataAccess: ContentDataAccess
     )
 
     /**
@@ -88,6 +116,18 @@ class AppContainer(
     private val syncChangeDao by lazy { database.syncChangeDao() }
     private val syncPeerDao by lazy { database.syncPeerDao() }
     private val syncPeerCursorDao by lazy { database.syncPeerCursorDao() }
+
+    /**
+     * 内容 DAO 统一成组后，统计、复习、备份和同步等复合能力就能共享同一份数据访问入口。
+     */
+    private val contentDataAccess: ContentDataAccess by lazy {
+        ContentDataAccess(
+            deckDao = deckDao,
+            cardDao = cardDao,
+            questionDao = questionDao,
+            reviewRecordDao = reviewRecordDao
+        )
+    }
 
     /**
      * 同步加密能力放在容器内共享，是为了让配对、鉴权和本地密钥落盘都围绕同一实现工作。
@@ -154,6 +194,18 @@ class AppContainer(
     }
 
     /**
+     * 同步基础设施分组成块后，局域网同步仓储的构造参数更接近实际职责边界，便于后续继续拆内部协作者。
+     */
+    private val syncInfrastructureDependencies: SyncInfrastructureDependencies by lazy {
+        SyncInfrastructureDependencies(
+            syncChangeDao = syncChangeDao,
+            syncPeerDao = syncPeerDao,
+            syncPeerCursorDao = syncPeerCursorDao,
+            contentDataAccess = contentDataAccess
+        )
+    }
+
+    /**
      * 内容管理仓储统一在此装配，原因是它们共享同一数据库实例，
      * 并且后续首页统计、提醒 Worker 与备份导出都会复用同一套查询口径。
      */
@@ -193,8 +245,8 @@ class AppContainer(
      */
     val studyInsightsRepository: StudyInsightsRepository by lazy {
         OfflineStudyInsightsRepository(
-            questionDao = questionDao,
-            reviewRecordDao = reviewRecordDao,
+            questionDao = contentDataAccess.questionDao,
+            reviewRecordDao = contentDataAccess.reviewRecordDao,
             dispatchers = dispatchers
         )
     }
@@ -205,8 +257,8 @@ class AppContainer(
     val reviewRepository: ReviewRepository by lazy {
         OfflineReviewRepository(
             database = database,
-            questionDao = questionDao,
-            reviewRecordDao = reviewRecordDao,
+            questionDao = contentDataAccess.questionDao,
+            reviewRecordDao = contentDataAccess.reviewRecordDao,
             reviewScheduler = reviewScheduler,
             dispatchers = dispatchers,
             syncChangeRecorder = lanSyncChangeRecorder
@@ -251,10 +303,10 @@ class AppContainer(
         BackupService(
             application = application,
             database = database,
-            deckDao = deckDao,
-            cardDao = cardDao,
-            questionDao = questionDao,
-            reviewRecordDao = reviewRecordDao,
+            deckDao = contentDataAccess.deckDao,
+            cardDao = contentDataAccess.cardDao,
+            questionDao = contentDataAccess.questionDao,
+            reviewRecordDao = contentDataAccess.reviewRecordDao,
             appSettingsRepository = appSettingsRepository,
             backupValidator = BackupValidator(),
             timeProvider = timeProvider,
@@ -266,6 +318,7 @@ class AppContainer(
      * 局域网同步仓储把发现、服务广播与恢复流程聚合起来，能让设置页入口只围绕单一能力工作。
      */
     val lanSyncRepository: LanSyncRepository by lazy {
+        val syncDependencies = syncInfrastructureDependencies
         LanSyncRepositoryImpl(
             context = application,
             database = database,
@@ -277,13 +330,13 @@ class AppContainer(
             crypto = lanSyncCrypto,
             sharedSecretProtector = lanSyncSharedSecretProtector,
             portAllocator = lanSyncPortAllocator,
-            syncChangeDao = syncChangeDao,
-            syncPeerDao = syncPeerDao,
-            syncPeerCursorDao = syncPeerCursorDao,
-            deckDao = deckDao,
-            cardDao = cardDao,
-            questionDao = questionDao,
-            reviewRecordDao = reviewRecordDao
+            syncChangeDao = syncDependencies.syncChangeDao,
+            syncPeerDao = syncDependencies.syncPeerDao,
+            syncPeerCursorDao = syncDependencies.syncPeerCursorDao,
+            deckDao = syncDependencies.contentDataAccess.deckDao,
+            cardDao = syncDependencies.contentDataAccess.cardDao,
+            questionDao = syncDependencies.contentDataAccess.questionDao,
+            reviewRecordDao = syncDependencies.contentDataAccess.reviewRecordDao
         )
     }
 
