@@ -2,7 +2,6 @@ package com.kariscode.yike.feature.review
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.viewModelScope
 import com.kariscode.yike.core.coroutine.parallel
 import com.kariscode.yike.core.message.ErrorMessages
 import com.kariscode.yike.core.message.userMessageOr
@@ -10,9 +9,11 @@ import com.kariscode.yike.core.time.TimeProvider
 import com.kariscode.yike.core.viewmodel.launchResult
 import com.kariscode.yike.core.viewmodel.typedViewModelFactory
 import com.kariscode.yike.domain.error.CardNotFoundException
+import com.kariscode.yike.domain.model.Question
 import com.kariscode.yike.domain.model.ReviewRating
 import com.kariscode.yike.domain.repository.CardRepository
 import com.kariscode.yike.domain.repository.ReviewRepository
+import com.kariscode.yike.domain.scheduler.ReviewSchedulerV1
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -20,7 +21,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.launch
 
 /**
  * 复习页状态显式建模为“加载/答题/提交/完成/退出确认”，
@@ -48,7 +48,10 @@ data class ReviewQuestionUiModel(
     val questionId: String,
     val prompt: String,
     val answerText: String,
-    val stageIndex: Int
+    val stageIndex: Int,
+    val overdueBadgeText: String?,
+    val overdueHintText: String?,
+    val needsReinforcement: Boolean
 )
 
 /**
@@ -69,6 +72,11 @@ class ReviewCardViewModel(
     private val reviewRepository: ReviewRepository,
     private val timeProvider: TimeProvider
 ) : ViewModel() {
+    /**
+     * 复习前提示与实际评分共用同一调度器，是为了让“界面解释”和“真正落库”保持同一口径。
+     */
+    private val overduePreviewScheduler = ReviewSchedulerV1()
+
     private val _uiState = MutableStateFlow(
         ReviewCardUiState(
             cardId = cardId,
@@ -124,15 +132,14 @@ class ReviewCardViewModel(
                 if (dueQuestions.isEmpty()) {
                     _effects.tryEmit(ReviewCardEffect.NavigateToQueue)
                 } else {
+                    val presentedAt = timeProvider.nowEpochMillis()
                     pendingQuestions = dueQuestions.map { question ->
-                        ReviewQuestionUiModel(
-                            questionId = question.id,
-                            prompt = question.prompt,
-                            answerText = question.answer.ifBlank { "无答案" },
-                            stageIndex = question.stageIndex
+                        question.toReviewQuestionUiModel(
+                            scheduler = overduePreviewScheduler,
+                            nowEpochMillis = presentedAt
                         )
                     }
-                    questionPresentedAtEpochMillis = timeProvider.nowEpochMillis()
+                    questionPresentedAtEpochMillis = presentedAt
                     _uiState.update {
                         it.copy(
                             cardTitle = cardTitle,
@@ -286,4 +293,36 @@ class ReviewCardViewModel(
             )
         }
     }
+}
+
+/**
+ * 复习题目在进入页面时就完成过期提示组装，是为了让 Composable 只专注展示而不重复推导调度语义。
+ */
+private fun Question.toReviewQuestionUiModel(
+    scheduler: ReviewSchedulerV1,
+    nowEpochMillis: Long
+): ReviewQuestionUiModel {
+    val overdueAssessment = scheduler.assessOverdueState(
+        currentStageIndex = stageIndex,
+        dueAtEpochMillis = dueAt,
+        reviewedAtEpochMillis = nowEpochMillis
+    )
+    val overdueBadgeText = overdueAssessment.overdueDays
+        .takeIf { overdueDays -> overdueDays > 0 }
+        ?.let { overdueDays -> "已过期 ${overdueDays} 天" }
+    val overdueHintText = when {
+        overdueBadgeText == null -> null
+        overdueAssessment.hasDecay -> "已偏离原计划较久，这次会先按重新巩固处理。"
+        else -> "虽然已经过期，但尚未偏离完整周期，这次仍按当前阶段处理。"
+    }
+
+    return ReviewQuestionUiModel(
+        questionId = id,
+        prompt = prompt,
+        answerText = answer.ifBlank { "无答案" },
+        stageIndex = stageIndex,
+        overdueBadgeText = overdueBadgeText,
+        overdueHintText = overdueHintText,
+        needsReinforcement = overdueAssessment.hasDecay
+    )
 }

@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -201,11 +202,26 @@ private fun QuestionPromptSection(
     question: ReviewQuestionUiModel
 ) {
     YikeSurfaceCard {
-        YikeHeaderBlock(
-            eyebrow = "问题",
-            title = "先在脑中组织答案",
-            subtitle = "阶段 ${question.stageIndex}"
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            YikeHeaderBlock(
+                eyebrow = "问题",
+                title = "先在脑中组织答案",
+                subtitle = buildQuestionSubtitle(question)
+            )
+            question.overdueBadgeText?.let { badgeText ->
+                YikeBadge(text = if (question.needsReinforcement) "重新巩固" else badgeText)
+            }
+        }
+        question.overdueHintText?.let { hintText ->
+            Text(
+                text = hintText,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
         Text(text = question.prompt)
     }
 }
@@ -340,4 +356,15 @@ private fun buildReviewSubtitle(uiState: ReviewCardUiState): String = when {
     uiState.isCompleted -> "这张卡片已经完成，可以继续下一张。"
     uiState.currentQuestion != null -> "第 ${uiState.completedCount + 1} 题，共 ${uiState.totalCount} 题"
     else -> "正在准备当前卡片的复习内容。"
+}
+
+/**
+ * 题面副标题吸收过期标签，是为了让用户在答题前就理解这题当前处于怎样的记忆状态。
+ */
+private fun buildQuestionSubtitle(question: ReviewQuestionUiModel): String = buildString {
+    append("阶段 ${question.stageIndex}")
+    question.overdueBadgeText?.let { badgeText ->
+        append(" · ")
+        append(badgeText)
+    }
 }

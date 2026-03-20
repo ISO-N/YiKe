@@ -130,9 +130,11 @@
 
 评分后：
 
-1. 先得到新的 `stageIndex`
-2. 根据阶段数组取出对应天数
-3. `newDueAt = 当前复习时间 + intervalDays`
+1. 先读取当前 `stageIndex` 对应的计划间隔
+2. 若题目已经过期，根据“过期时长 / 计划间隔”的比例决定是否先衰减阶段
+3. 再基于衰减后的阶段应用评分规则，得到新的 `stageIndex`
+4. 根据新阶段取出对应天数
+5. `newDueAt = 当前复习时间 + intervalDays`
 
 示例：
 
@@ -142,7 +144,26 @@
 - 间隔 = 2 天
 - 新 dueAt = 当前时间 + 2 天
 
-### 7.2 时间精度建议
+### 7.2 过期比例衰减
+
+当题目已经过期时，系统不会直接把当前阶段视为完全可信，而是会先做一次“阶段衰减”。
+
+定义：
+
+- `plannedIntervalDays`：当前阶段对应的计划间隔
+- `overdueDays`：`max(0, reviewedAt - dueAt)` 换算后的过期天数
+- `overdueRatio`：`overdueDays / plannedIntervalDays`
+
+默认规则：
+
+- `overdueRatio < 1.0`：不衰减
+- `>= 1.0 && < 2.0`：降 1 级
+- `>= 2.0 && < 4.0`：降 2 级
+- `>= 4.0`：若当前阶段较高，则直接回到低阶段重新巩固
+
+这个设计的目的不是惩罚用户，而是修正“长期过期后阶段高估真实记忆水平”的问题。
+
+### 7.3 时间精度建议
 
 第一版建议 dueAt 存储为完整时间戳，而不只是日期。
 
@@ -226,6 +247,7 @@
 ### 示例 2：掌握稳定后遗忘
 
 - 当前 stage = 4（15 天）
+- 题目已过期 20 天，先衰减到 stage = 3
 - 用户评分：AGAIN（完全不会）
 - 新 stage = 0
 - lapseCount + 1
@@ -254,15 +276,29 @@ fun scheduleNext(
     currentStage: Int,
     rating: Rating,
     now: Instant,
+    dueAt: Instant?,
     intervals: List<Int> = listOf(1, 2, 4, 7, 15, 30, 90, 180)
 ): ScheduleResult {
     val maxStage = intervals.lastIndex
+    val boundedStage = currentStage.coerceIn(0, maxStage)
+    val plannedIntervalDays = intervals[boundedStage]
+    val overdueDays = dueAt?.let { due ->
+        max(0, DAYS.between(due, now))
+    } ?: 0
+    val overdueRatio = overdueDays.toDouble() / plannedIntervalDays.toDouble()
+    val effectiveStage = when {
+        overdueRatio < 1.0 -> boundedStage
+        overdueRatio < 2.0 -> maxOf(boundedStage - 1, 0)
+        overdueRatio < 4.0 -> maxOf(boundedStage - 2, 0)
+        boundedStage >= 3 -> 0
+        else -> minOf(boundedStage, 1)
+    }
 
     val nextStage = when (rating) {
         Rating.AGAIN -> 0
-        Rating.HARD -> maxOf(currentStage - 1, 0)
-        Rating.GOOD -> minOf(currentStage + 1, maxStage)
-        Rating.EASY -> minOf(currentStage + 2, maxStage)
+        Rating.HARD -> maxOf(effectiveStage - 1, 0)
+        Rating.GOOD -> minOf(effectiveStage + 1, maxStage)
+        Rating.EASY -> minOf(effectiveStage + 2, maxStage)
     }
 
     val intervalDays = intervals[nextStage]
