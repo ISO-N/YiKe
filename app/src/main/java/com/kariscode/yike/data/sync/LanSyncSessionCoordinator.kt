@@ -12,6 +12,7 @@ import kotlinx.coroutines.isActive
 internal class LanSyncSessionCoordinator(
     private val runtime: LanSyncSessionRuntime,
     private val localProfileStore: LanSyncLocalProfileStore,
+    private val journalSeeder: LanSyncJournalSeeder,
     private val nsdService: LanSyncDiscoveryService,
     private val httpServer: LanSyncTransportServer,
     private val refreshPeers: suspend (List<LanSyncDiscoveredService>) -> Unit,
@@ -24,6 +25,7 @@ internal class LanSyncSessionCoordinator(
         if (runtime.sessionState.value.isSessionActive) {
             return
         }
+        journalSeeder.seedMissingChanges()
         runtime.activateSession(localProfileStore.loadProfile())
         httpServer.start()
         nsdService.registerService(

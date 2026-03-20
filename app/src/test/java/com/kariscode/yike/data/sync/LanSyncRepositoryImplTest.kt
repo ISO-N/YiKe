@@ -8,6 +8,10 @@ import androidx.work.WorkManager
 import androidx.work.testing.WorkManagerTestInitHelper
 import com.kariscode.yike.core.dispatchers.AppDispatchers
 import com.kariscode.yike.data.local.db.YikeDatabase
+import com.kariscode.yike.data.local.db.entity.CardEntity
+import com.kariscode.yike.data.local.db.entity.DeckEntity
+import com.kariscode.yike.data.local.db.entity.QuestionEntity
+import com.kariscode.yike.data.local.db.entity.ReviewRecordEntity
 import com.kariscode.yike.data.local.db.entity.SyncChangeEntity
 import com.kariscode.yike.data.local.db.entity.SyncPeerCursorEntity
 import com.kariscode.yike.data.local.db.entity.SyncPeerEntity
@@ -186,12 +190,91 @@ class LanSyncRepositoryImplTest {
         val trustedPeer = database.syncPeerDao().findById("peer_pair")
         val cursor = database.syncPeerCursorDao().findById("peer_pair")
         assertTrue(preview.isFirstPairing)
-        assertEquals(1, preview.localChangeCount)
+        assertEquals(2, preview.localChangeCount)
         assertEquals(1, preview.remoteChangeCount)
         assertEquals(1, preview.conflicts.size)
         assertEquals(1, transportClient.pairCalls.size)
         assertNotNull(trustedPeer)
         assertNotNull(cursor)
+
+        repository.stopSession()
+    }
+
+    /**
+     * 启动会话前补齐历史快照到 journal，
+     * 是为了让首次启用同步能力前就已存在的真实数据也能进入预览与双向同步。
+     */
+    @Test
+    fun startSession_seedsMissingJournalFromExistingSnapshot() = runTest {
+        database.deckDao().upsert(
+            DeckEntity(
+                id = "deck_existing",
+                name = "已有卡组",
+                description = "",
+                tagsJson = "[]",
+                intervalStepCount = 8,
+                archived = false,
+                sortOrder = 0,
+                createdAt = 1L,
+                updatedAt = 2L
+            )
+        )
+        database.cardDao().upsert(
+            CardEntity(
+                id = "card_existing",
+                deckId = "deck_existing",
+                title = "已有卡片",
+                description = "",
+                archived = false,
+                sortOrder = 0,
+                createdAt = 1L,
+                updatedAt = 2L
+            )
+        )
+        database.questionDao().upsertAll(
+            listOf(
+                QuestionEntity(
+                    id = "question_existing",
+                    cardId = "card_existing",
+                    prompt = "已有问题",
+                    answer = "已有答案",
+                    tagsJson = "[]",
+                    status = "ACTIVE",
+                    stageIndex = 0,
+                    dueAt = 3L,
+                    lastReviewedAt = null,
+                    reviewCount = 0,
+                    lapseCount = 0,
+                    createdAt = 1L,
+                    updatedAt = 2L
+                )
+            )
+        )
+        database.reviewRecordDao().insert(
+            ReviewRecordEntity(
+                id = "review_existing",
+                questionId = "question_existing",
+                rating = "GOOD",
+                oldStageIndex = 0,
+                newStageIndex = 1,
+                oldDueAt = 3L,
+                newDueAt = 4L,
+                reviewedAt = 5L,
+                responseTimeMs = 600L,
+                note = ""
+            )
+        )
+
+        repository.startSession()
+        advanceUntilIdle()
+
+        val changes = database.syncChangeDao().listAfter(afterSeq = 0L)
+
+        assertTrue(changes.any { change -> change.entityType == SyncEntityType.SETTINGS.name })
+        assertTrue(changes.any { change -> change.entityType == SyncEntityType.DECK.name && change.entityId == "deck_existing" })
+        assertTrue(changes.any { change -> change.entityType == SyncEntityType.CARD.name && change.entityId == "card_existing" })
+        assertTrue(changes.any { change -> change.entityType == SyncEntityType.QUESTION.name && change.entityId == "question_existing" })
+        assertTrue(changes.any { change -> change.entityType == SyncEntityType.REVIEW_RECORD.name && change.entityId == "review_existing" })
 
         repository.stopSession()
     }
@@ -275,7 +358,10 @@ class LanSyncRepositoryImplTest {
         val decks = database.deckDao().listAll()
 
         assertEquals(LanSyncStage.COMPLETED, state.progress.stage)
-        assertEquals(listOf("deck_local"), transportClient.pushCalls.single().changes.map { it.entityId })
+        assertEquals(
+            listOf("app_settings", "deck_local"),
+            transportClient.pushCalls.single().changes.map { it.entityId }.sorted()
+        )
         assertEquals(1, transportClient.ackCalls.size)
         assertEquals(8L, transportClient.ackCalls.single().remoteSeqApplied)
         assertEquals(1L, cursor!!.lastLocalSeqAckedByPeer)

@@ -97,9 +97,24 @@ class LanSyncRepositoryImpl(
         onPushChanges = syncExecutor::handlePushChanges,
         onAck = syncExecutor::handleAck
     )
+    private val journalSeeder = LanSyncJournalSeeder(
+        database = database,
+        appSettingsRepository = appSettingsRepository,
+        deckDao = deckDao,
+        cardDao = cardDao,
+        questionDao = questionDao,
+        reviewRecordDao = reviewRecordDao,
+        syncChangeDao = syncChangeDao,
+        syncChangeRecorder = LanSyncChangeRecorder(
+            syncChangeDao = syncChangeDao,
+            crypto = crypto
+        ),
+        crypto = crypto
+    )
     private val sessionCoordinator = LanSyncSessionCoordinator(
         runtime = runtime,
         localProfileStore = localProfileStore,
+        journalSeeder = journalSeeder,
         nsdService = nsdService,
         httpServer = httpServer,
         refreshPeers = peerDiscoveryCoordinator::refreshPeers,
