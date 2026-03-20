@@ -307,6 +307,7 @@ yike-backup-20260314-213000.json
 - 首次连接必须输入 6 位配对码建立信任
 - 已信任设备之间通过持久共享密钥做应用层 AES-GCM 加密
 - 同步基于本地 change journal 与双 cursor 做双向增量
+- 会话启动前会把当前本地快照补齐到缺失的 journal 中，避免历史已存在数据首次预览时全部显示为 0
 - `Deck/Card/Question/SyncedAppSettings` 进入冲突检测
 - `ReviewRecord` 作为追加型事件自动并集合并
 - 真正执行前必须先生成预览；有冲突时必须显式确认决议
