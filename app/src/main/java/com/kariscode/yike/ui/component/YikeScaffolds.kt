@@ -1,7 +1,5 @@
 package com.kariscode.yike.ui.component
 
-import android.graphics.RenderEffect
-import android.graphics.Shader
 import android.os.Build
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -39,14 +37,11 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.BlurEffect
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TileMode
-import androidx.compose.ui.graphics.asComposeRenderEffect
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.layer.GraphicsLayer
 import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.graphics.rememberGraphicsLayer
@@ -165,15 +160,8 @@ fun YikePrimaryNavigationChrome(
 ) {
     val navigationBarPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     val navigationBottomOffset = navigationBarPadding + 2.dp
-    val bottomGlassHeight = navigationBottomOffset + 92.dp
 
     Box(modifier = modifier.fillMaxSize()) {
-        YikeBottomGlassLayer(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .fillMaxWidth()
-                .height(bottomGlassHeight)
-        )
         YikeBottomNavigation(
             currentDestination = currentDestination,
             onNavigate = onNavigate,
@@ -183,30 +171,6 @@ fun YikePrimaryNavigationChrome(
                 .padding(bottom = navigationBottomOffset)
         )
     }
-}
-
-/**
- * 底部玻璃层从导航顶部延伸到屏幕底部，是为了让悬浮导航与内容区之间有明确介质，
- * 同时在滚动时保留“内容在下、导航在上”的层次感，而不是直接硬切一块纯色底板。
- */
-@Composable
-private fun YikeBottomGlassLayer(
-    modifier: Modifier = Modifier
-) {
-    Box(
-        modifier = modifier
-            .yikeGlassBlur(radius = 28f)
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(
-                        MaterialTheme.colorScheme.background.copy(alpha = 0f),
-                        MaterialTheme.colorScheme.surface.copy(alpha = 0.38f),
-                        MaterialTheme.colorScheme.surface.copy(alpha = 0.62f),
-                        MaterialTheme.colorScheme.surface.copy(alpha = 0.8f)
-                    )
-                )
-            )
-    )
 }
 
 /**
@@ -225,8 +189,6 @@ private fun YikeBottomNavigation(
         color = Color.Transparent,
         modifier = modifier
             .fillMaxWidth()
-            .clip(navigationShape)
-            .yikeGlassBlur(radius = 22f)
             .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.58f))
             .border(
                 width = 1.dp,
@@ -260,23 +222,6 @@ private fun YikeBottomNavigation(
                 }
             }
         }
-    }
-}
-
-/**
- * 玻璃模糊统一封装成 Modifier，是为了让一级页后续若再引入浮层，也能复用同一套退化策略，
- * 而不是把 API 版本判断散落在每个调用点里。
- */
-private fun Modifier.yikeGlassBlur(
-    radius: Float
-): Modifier {
-    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
-        return this
-    }
-    return graphicsLayer {
-        renderEffect = RenderEffect
-            .createBlurEffect(radius, radius, Shader.TileMode.DECAL)
-            .asComposeRenderEffect()
     }
 }
 
