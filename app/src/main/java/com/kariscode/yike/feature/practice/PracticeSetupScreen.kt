@@ -85,6 +85,7 @@ private fun PracticeSetupContent(
 ) {
     val spacing = LocalYikeSpacing.current
     var deckSectionExpanded by rememberSaveable { mutableStateOf(false) }
+    var cardSectionExpanded by rememberSaveable { mutableStateOf(false) }
     var questionSectionExpanded by rememberSaveable { mutableStateOf(false) }
     LazyColumn(
         modifier = modifier,
@@ -164,7 +165,9 @@ private fun PracticeSetupContent(
                 item {
                     PracticeCardSection(
                         cardOptions = uiState.cardOptions,
-                        onCardToggle = onCardToggle
+                        onCardToggle = onCardToggle,
+                        expanded = cardSectionExpanded,
+                        onExpandedChange = { cardSectionExpanded = it }
                     )
                 }
                 item {

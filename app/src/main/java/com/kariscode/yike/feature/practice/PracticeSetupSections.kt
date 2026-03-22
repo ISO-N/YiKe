@@ -127,37 +127,41 @@ fun PracticeDeckSection(
 @Composable
 fun PracticeCardSection(
     cardOptions: List<PracticeCardOptionUiModel>,
-    onCardToggle: (String) -> Unit
+    onCardToggle: (String) -> Unit,
+    expanded: Boolean,
+    onExpandedChange: (Boolean) -> Unit
 ) {
     val spacing = LocalYikeSpacing.current
     Column(verticalArrangement = Arrangement.spacedBy(spacing.lg)) {
-        YikeSurfaceCard {
-            YikeHeaderBlock(
-                eyebrow = "Step 2",
-                title = "按卡片进一步缩圈",
-                subtitle = "不选卡片时，默认练习当前卡组范围下的全部题目。"
-            )
-            Row(horizontalArrangement = Arrangement.spacedBy(spacing.sm)) {
+        PracticeExpandableSectionCard(
+            eyebrow = "Step 2",
+            title = "按卡片进一步缩圈",
+            subtitle = "不选卡片时，默认练习当前卡组范围下的全部题目。",
+            summaryBadges = {
                 YikeBadge(text = "${cardOptions.size} 张卡片")
-            }
-        }
-        if (cardOptions.isEmpty()) {
-            YikeStateBanner(
-                title = "当前没有可选卡片",
-                description = "先选中至少一个有题目的卡组，或回到卡组页补充内容。"
-            )
-        } else {
-            cardOptions.forEach { option ->
-                YikeListItemCard(
-                    title = option.cardTitle,
-                    summary = "${option.deckName} · ${option.questionCount} 个问题",
-                    supporting = if (option.isSelected) "本卡片已加入练习范围。" else "适合做专项巩固或章节回顾。"
-                ) {
-                    YikeSecondaryButton(
-                        text = if (option.isSelected) "取消卡片" else "选择本卡",
-                        onClick = { onCardToggle(option.cardId) },
-                        modifier = Modifier.fillMaxWidth()
-                    )
+            },
+            expanded = expanded,
+            onExpandedChange = onExpandedChange
+        )
+        if (expanded) {
+            if (cardOptions.isEmpty()) {
+                YikeStateBanner(
+                    title = "当前没有可选卡片",
+                    description = "先选中至少一个有题目的卡组，或回到卡组页补充内容。"
+                )
+            } else {
+                cardOptions.forEach { option ->
+                    YikeListItemCard(
+                        title = option.cardTitle,
+                        summary = "${option.deckName} · ${option.questionCount} 个问题",
+                        supporting = if (option.isSelected) "本卡片已加入练习范围。" else "适合做专项巩固或章节回顾。"
+                    ) {
+                        YikeSecondaryButton(
+                            text = if (option.isSelected) "取消卡片" else "选择本卡",
+                            onClick = { onCardToggle(option.cardId) },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
                 }
             }
         }
