@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -86,31 +87,35 @@ fun PracticeEmptyStateSection(
 @Composable
 fun PracticeDeckSection(
     deckOptions: List<PracticeDeckOptionUiModel>,
-    onDeckToggle: (String) -> Unit
+    onDeckToggle: (String) -> Unit,
+    expanded: Boolean,
+    onExpandedChange: (Boolean) -> Unit
 ) {
     val spacing = LocalYikeSpacing.current
     Column(verticalArrangement = Arrangement.spacedBy(spacing.lg)) {
-        YikeSurfaceCard {
-            YikeHeaderBlock(
-                eyebrow = "Step 1",
-                title = "选择卡组范围",
-                subtitle = "不选卡组时默认包含全部 active 且未归档的内容。"
-            )
-            Row(horizontalArrangement = Arrangement.spacedBy(spacing.sm)) {
+        PracticeExpandableSectionCard(
+            eyebrow = "Step 1",
+            title = "选择卡组范围",
+            subtitle = "不选卡组时默认包含全部 active 且未归档的内容。",
+            summaryBadges = {
                 YikeBadge(text = "${deckOptions.size} 个卡组")
-            }
-        }
-        deckOptions.forEach { option ->
-            YikeListItemCard(
-                title = option.deckName,
-                summary = "${option.cardCount} 张卡片 · ${option.questionCount} 个问题",
-                supporting = if (option.isSelected) "已加入本次练习范围。" else "点一下即可把整组内容纳入练习。"
-            ) {
-                YikeSecondaryButton(
-                    text = if (option.isSelected) "取消选择" else "加入练习",
-                    onClick = { onDeckToggle(option.deckId) },
-                    modifier = Modifier.fillMaxWidth()
-                )
+            },
+            expanded = expanded,
+            onExpandedChange = onExpandedChange
+        )
+        if (expanded) {
+            deckOptions.forEach { option ->
+                YikeListItemCard(
+                    title = option.deckName,
+                    summary = "${option.cardCount} 张卡片 · ${option.questionCount} 个问题",
+                    supporting = if (option.isSelected) "已加入本次练习范围。" else "点一下即可把整组内容纳入练习。"
+                ) {
+                    YikeSecondaryButton(
+                        text = if (option.isSelected) "取消选择" else "加入练习",
+                        onClick = { onDeckToggle(option.deckId) },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
             }
         }
     }
@@ -166,31 +171,76 @@ fun PracticeCardSection(
 fun PracticeQuestionSectionHeader(
     uiState: PracticeSetupUiState,
     onSelectAllQuestions: () -> Unit,
-    onClearQuestionSelection: () -> Unit
+    onClearQuestionSelection: () -> Unit,
+    expanded: Boolean,
+    onExpandedChange: (Boolean) -> Unit
+) {
+    val spacing = LocalYikeSpacing.current
+    Column(verticalArrangement = Arrangement.spacedBy(spacing.lg)) {
+        PracticeExpandableSectionCard(
+            eyebrow = "Step 3",
+            title = "题目级手选",
+            subtitle = "默认全选当前范围。若只想刷局部题集，可以在这里继续排除。",
+            summaryBadges = {
+                YikeBadge(text = "当前 ${uiState.effectiveQuestionCount} 题")
+                YikeBadge(text = if (uiState.selectedQuestionIds == null) "全选" else "已手选")
+            },
+            expanded = expanded,
+            onExpandedChange = onExpandedChange
+        )
+        if (expanded) {
+            YikeSurfaceCard {
+                Row(horizontalArrangement = Arrangement.spacedBy(spacing.sm)) {
+                    YikeSecondaryButton(
+                        text = "恢复全选",
+                        onClick = onSelectAllQuestions,
+                        modifier = Modifier.weight(1f)
+                    )
+                    YikeSecondaryButton(
+                        text = "清空题目",
+                        onClick = onClearQuestionSelection,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * 可折叠段落把标题、摘要和展开动作收在同一张卡里，是为了让设置页先展示结构，再按需放出长列表。
+ */
+@Composable
+private fun PracticeExpandableSectionCard(
+    eyebrow: String,
+    title: String,
+    subtitle: String,
+    expanded: Boolean,
+    onExpandedChange: (Boolean) -> Unit,
+    summaryBadges: @Composable (() -> Unit)? = null
 ) {
     val spacing = LocalYikeSpacing.current
     YikeSurfaceCard {
         YikeHeaderBlock(
-            eyebrow = "Step 3",
-            title = "题目级手选",
-            subtitle = "默认全选当前范围。若只想刷局部题集，可以在这里继续排除。"
+            eyebrow = eyebrow,
+            title = title,
+            subtitle = subtitle
         )
-        Row(horizontalArrangement = Arrangement.spacedBy(spacing.sm)) {
-            YikeBadge(text = "当前 ${uiState.effectiveQuestionCount} 题")
-            YikeBadge(text = if (uiState.selectedQuestionIds == null) "全选" else "已手选")
+        if (summaryBadges != null) {
+            Row(horizontalArrangement = Arrangement.spacedBy(spacing.sm)) {
+                summaryBadges()
+            }
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(spacing.sm)) {
-            YikeSecondaryButton(
-                text = "恢复全选",
-                onClick = onSelectAllQuestions,
-                modifier = Modifier.weight(1f)
-            )
-            YikeSecondaryButton(
-                text = "清空题目",
-                onClick = onClearQuestionSelection,
-                modifier = Modifier.weight(1f)
-            )
-        }
+        Text(
+            text = if (expanded) "已展开，可直接调整这一段内容。" else "默认收起，点展开后再调整这一段内容。",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        YikeSecondaryButton(
+            text = if (expanded) "收起" else "展开",
+            onClick = { onExpandedChange(!expanded) },
+            modifier = Modifier.fillMaxWidth()
+        )
     }
 }
 
