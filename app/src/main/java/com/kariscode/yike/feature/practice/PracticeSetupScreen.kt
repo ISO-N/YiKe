@@ -84,7 +84,7 @@ private fun PracticeSetupContent(
     LazyColumn(
         modifier = modifier,
         contentPadding = contentPadding,
-        verticalArrangement = Arrangement.spacedBy(spacing.lg)
+        verticalArrangement = Arrangement.spacedBy(spacing.xl)
     ) {
         item {
             PracticeHeroSection(
