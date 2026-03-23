@@ -140,6 +140,71 @@ internal fun Application.configureWebConsoleRoutes(
             call.respond(handler.getDashboard())
         }
 
+        get("/api/web-console/v1/study/workspace") {
+            if (call.requireSession(handler) == null) return@get
+            call.respond(handler.getStudyWorkspace(call.requireSessionId()))
+        }
+
+        get("/api/web-console/v1/study/session") {
+            if (call.requireSession(handler) == null) return@get
+            val payload = handler.getStudySession(call.requireSessionId())
+            if (payload == null) {
+                call.respond(HttpStatusCode.NoContent)
+                return@get
+            }
+            call.respond(payload)
+        }
+
+        post("/api/web-console/v1/study/review/start") {
+            if (call.requireSession(handler) == null) return@post
+            call.respond(handler.startReviewSession(call.requireSessionId()))
+        }
+
+        post("/api/web-console/v1/study/answer/reveal") {
+            if (call.requireSession(handler) == null) return@post
+            call.respond(handler.revealStudyAnswer(call.requireSessionId()))
+        }
+
+        post("/api/web-console/v1/study/review/rate") {
+            if (call.requireSession(handler) == null) return@post
+            call.respond(
+                handler.submitReviewRating(
+                    sessionId = call.requireSessionId(),
+                    request = call.receive()
+                )
+            )
+        }
+
+        post("/api/web-console/v1/study/review/next-card") {
+            if (call.requireSession(handler) == null) return@post
+            call.respond(handler.continueReviewSession(call.requireSessionId()))
+        }
+
+        post("/api/web-console/v1/study/practice/start") {
+            if (call.requireSession(handler) == null) return@post
+            call.respond(
+                handler.startPracticeSession(
+                    sessionId = call.requireSessionId(),
+                    request = call.receive()
+                )
+            )
+        }
+
+        post("/api/web-console/v1/study/practice/navigate") {
+            if (call.requireSession(handler) == null) return@post
+            call.respond(
+                handler.navigatePracticeSession(
+                    sessionId = call.requireSessionId(),
+                    request = call.receive()
+                )
+            )
+        }
+
+        post("/api/web-console/v1/study/session/end") {
+            if (call.requireSession(handler) == null) return@post
+            call.respond(handler.endStudySession(call.requireSessionId()))
+        }
+
         get("/api/web-console/v1/decks") {
             if (call.requireSession(handler) == null) return@get
             call.respond(handler.listDecks())
@@ -273,6 +338,13 @@ private suspend fun io.ktor.server.application.ApplicationCall.requireSession(
     }
     return session
 }
+
+/**
+ * 学习工作区在通过鉴权后仍需要稳定拿到当前 Cookie 对应的会话 id，
+ * 是为了让业务层把学习进度准确挂回同一个浏览器登录上下文。
+ */
+private fun io.ktor.server.application.ApplicationCall.requireSessionId(): String =
+    request.cookies[SESSION_COOKIE_NAME] ?: error("未登录")
 
 /**
  * 失效会话统一用显式过期 Cookie 覆盖，是为了避免各路由各自处理清理逻辑后出现行为漂移。
