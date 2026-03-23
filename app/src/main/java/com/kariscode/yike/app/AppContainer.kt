@@ -372,6 +372,8 @@ class AppContainer(
             deckRepository = deckRepository,
             cardRepository = cardRepository,
             questionRepository = questionRepository,
+            reviewRepository = reviewRepository,
+            practiceRepository = practiceRepository,
             studyInsightsRepository = studyInsightsRepository,
             appSettingsRepository = appSettingsRepository,
             backupService = backupService,

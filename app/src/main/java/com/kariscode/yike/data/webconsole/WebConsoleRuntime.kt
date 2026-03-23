@@ -15,6 +15,7 @@ internal class WebConsoleRuntime(
     private val timeProvider: TimeProvider
 ) {
     private val sessionExpirations = linkedMapOf<String, Long>()
+    private val studySessions = linkedMapOf<String, WebConsoleStudySession>()
 
     val state = MutableStateFlow(
         WebConsoleState(
@@ -51,6 +52,7 @@ internal class WebConsoleRuntime(
         val issuedAt = timeProvider.nowEpochMillis()
         val accessCode = WebConsoleAccessCodeGenerator.generate()
         sessionExpirations.clear()
+        studySessions.clear()
         state.value = WebConsoleState(
             isRunning = true,
             isStarting = false,
@@ -70,6 +72,7 @@ internal class WebConsoleRuntime(
     @Synchronized
     fun deactivate() {
         sessionExpirations.clear()
+        studySessions.clear()
         state.update { current ->
             current.copy(
                 isRunning = false,
@@ -92,6 +95,7 @@ internal class WebConsoleRuntime(
             return
         }
         sessionExpirations.clear()
+        studySessions.clear()
         state.update { current ->
             current.copy(
                 accessCode = WebConsoleAccessCodeGenerator.generate(),
@@ -107,6 +111,7 @@ internal class WebConsoleRuntime(
     @Synchronized
     fun markFailure(message: String) {
         sessionExpirations.clear()
+        studySessions.clear()
         state.update { current ->
             current.copy(
                 isRunning = false,
@@ -154,7 +159,35 @@ internal class WebConsoleRuntime(
             return
         }
         sessionExpirations.remove(sessionId)
+        studySessions.remove(sessionId)
         refreshSessionCount()
+    }
+
+    /**
+     * 浏览器学习会话挂在登录会话下，是为了让刷新恢复与访问码失效统一共享同一条生命周期边界。
+     */
+    @Synchronized
+    fun getStudySession(sessionId: String): WebConsoleStudySession? {
+        pruneExpiredSessions()
+        return studySessions[sessionId]
+    }
+
+    /**
+     * 学习会话每次变更都整份覆盖写回，是为了让运行时只维护已经规范化完成的稳定快照。
+     */
+    @Synchronized
+    fun putStudySession(sessionId: String, session: WebConsoleStudySession) {
+        pruneExpiredSessions()
+        studySessions[sessionId] = session
+    }
+
+    /**
+     * 学习会话显式结束后立即移除，是为了让浏览器返回工作区时不会误恢复到已放弃的旧进度。
+     */
+    @Synchronized
+    fun clearStudySession(sessionId: String) {
+        pruneExpiredSessions()
+        studySessions.remove(sessionId)
     }
 
     /**
@@ -173,6 +206,7 @@ internal class WebConsoleRuntime(
         while (iterator.hasNext()) {
             val entry = iterator.next()
             if (entry.value < now) {
+                studySessions.remove(entry.key)
                 iterator.remove()
             }
         }

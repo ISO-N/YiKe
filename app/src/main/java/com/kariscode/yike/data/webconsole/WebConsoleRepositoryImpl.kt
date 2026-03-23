@@ -9,18 +9,25 @@ import com.kariscode.yike.data.reminder.ReminderScheduler
 import com.kariscode.yike.domain.model.AppSettings
 import com.kariscode.yike.domain.model.Card
 import com.kariscode.yike.domain.model.Deck
+import com.kariscode.yike.domain.model.PracticeOrderMode
+import com.kariscode.yike.domain.model.PracticeSessionArgs
 import com.kariscode.yike.domain.model.Question
+import com.kariscode.yike.domain.model.QuestionContext
 import com.kariscode.yike.domain.model.QuestionQueryFilters
+import com.kariscode.yike.domain.model.ReviewRating
 import com.kariscode.yike.domain.model.QuestionStatus
 import com.kariscode.yike.domain.model.ThemeMode
 import com.kariscode.yike.domain.model.WebConsoleState
 import com.kariscode.yike.domain.repository.AppSettingsRepository
 import com.kariscode.yike.domain.repository.CardRepository
 import com.kariscode.yike.domain.repository.DeckRepository
+import com.kariscode.yike.domain.repository.PracticeRepository
 import com.kariscode.yike.domain.repository.QuestionRepository
+import com.kariscode.yike.domain.repository.ReviewRepository
 import com.kariscode.yike.domain.repository.StudyInsightsRepository
 import com.kariscode.yike.domain.repository.WebConsoleRepository
 import com.kariscode.yike.domain.scheduler.InitialDueAtCalculator
+import kotlin.random.Random
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
@@ -34,6 +41,8 @@ internal class WebConsoleRepositoryImpl(
     private val deckRepository: DeckRepository,
     private val cardRepository: CardRepository,
     private val questionRepository: QuestionRepository,
+    private val reviewRepository: ReviewRepository,
+    private val practiceRepository: PracticeRepository,
     private val studyInsightsRepository: StudyInsightsRepository,
     private val appSettingsRepository: AppSettingsRepository,
     private val backupService: BackupService,
@@ -130,6 +139,196 @@ internal class WebConsoleRepositoryImpl(
             dueQuestionCount = summary.dueQuestionCount,
             recentDecks = recentDecks
         )
+    }
+
+    /**
+     * 学习工作区概览继续复用正式 due 统计，并补充当前浏览器活动会话摘要，
+     * 是为了让桌面入口同时回答“今天还有多少要复习”和“是否可以恢复刚才的学习”。
+     */
+    override suspend fun getStudyWorkspace(sessionId: String): WebConsoleStudyWorkspacePayload = withContext(dispatchers.io) {
+        val now = timeProvider.nowEpochMillis()
+        val summary = questionRepository.getTodayReviewSummary(nowEpochMillis = now)
+        WebConsoleStudyWorkspacePayload(
+            dueCardCount = summary.dueCardCount,
+            dueQuestionCount = summary.dueQuestionCount,
+            activeSession = runtime.getStudySession(sessionId)?.toStudySessionSummaryPayload()
+        )
+    }
+
+    /**
+     * 学习会话读取只从运行时内存快照恢复，是为了把“刷新恢复”明确限制在当前浏览器与当前服务生命周期内。
+     */
+    override suspend fun getStudySession(sessionId: String): WebConsoleStudySessionPayload? = withContext(dispatchers.io) {
+        runtime.getStudySession(sessionId)?.toStudySessionPayload()
+    }
+
+    /**
+     * 开始今日复习时优先恢复同一浏览器尚未结束的复习会话，
+     * 是为了避免用户刷新后再次点击“开始复习”时意外丢失当前卡片进度。
+     */
+    override suspend fun startReviewSession(sessionId: String): WebConsoleStudySessionPayload = withContext(dispatchers.io) {
+        val existing = runtime.getStudySession(sessionId)
+        if (existing is WebConsoleReviewStudySession && !existing.isCompleted()) {
+            return@withContext existing.toStudySessionPayload()
+        }
+        val now = timeProvider.nowEpochMillis()
+        val dueContexts = studyInsightsRepository.listDueQuestionContexts(nowEpochMillis = now)
+        require(dueContexts.isNotEmpty()) { "今日暂无待复习内容" }
+        val session = WebConsoleReviewStudySession(
+            cards = dueContexts.toReviewCardSnapshots(),
+            currentCardIndex = 0,
+            currentQuestionIndex = 0,
+            questionPresentedAt = now,
+            answerVisible = false,
+            updatedAt = now
+        )
+        runtime.putStudySession(sessionId, session)
+        session.toStudySessionPayload()
+    }
+
+    /**
+     * 显示答案在服务端显式落一次状态，是为了让刷新恢复后仍能知道当前题是否已经进入可评分或可切题阶段。
+     */
+    override suspend fun revealStudyAnswer(sessionId: String): WebConsoleStudySessionPayload = withContext(dispatchers.io) {
+        val now = timeProvider.nowEpochMillis()
+        val updated = when (val session = runtime.getStudySession(sessionId)) {
+            is WebConsoleReviewStudySession -> {
+                require(!session.isCompleted() && !session.isCurrentCardCompleted()) { "当前复习会话没有可显示答案的问题" }
+                require(session.currentQuestionOrNull() != null) { "当前复习会话没有可显示答案的问题" }
+                session.copy(answerVisible = true, updatedAt = now)
+            }
+
+            is WebConsolePracticeStudySession -> {
+                require(session.currentQuestionOrNull() != null) { "当前练习会话没有可显示答案的问题" }
+                session.copy(answerVisible = true, updatedAt = now)
+            }
+
+            null -> throw IllegalStateException("当前没有可恢复的学习会话")
+        }
+        runtime.putStudySession(sessionId, updated)
+        updated.toStudySessionPayload()
+    }
+
+    /**
+     * 网页端复习评分直接委托正式复习仓储，是为了保证浏览器端与手机端继续共享同一套调度与 `ReviewRecord` 语义。
+     */
+    override suspend fun submitReviewRating(
+        sessionId: String,
+        request: WebConsoleReviewRateRequest
+    ): WebConsoleStudySessionPayload = withContext(dispatchers.io) {
+        val session = runtime.getStudySession(sessionId) as? WebConsoleReviewStudySession
+            ?: throw IllegalStateException("当前没有进行中的复习会话")
+        require(session.answerVisible) { "请先显示答案，再提交评分" }
+        require(!session.isCompleted() && !session.isCurrentCardCompleted()) { "当前复习会话没有可评分的问题" }
+        val currentQuestion = session.currentQuestionOrNull()
+            ?: throw IllegalStateException("当前复习会话没有可评分的问题")
+        val now = timeProvider.nowEpochMillis()
+        reviewRepository.submitRating(
+            questionId = currentQuestion.questionId,
+            rating = request.rating.toReviewRating(),
+            reviewedAtEpochMillis = now,
+            responseTimeMs = session.questionPresentedAt
+                ?.let { presentedAt -> (now - presentedAt).coerceAtLeast(0L) }
+        )
+        val updated = session.copy(
+            currentQuestionIndex = session.currentQuestionIndex + 1,
+            questionPresentedAt = null,
+            answerVisible = false,
+            updatedAt = now
+        )
+        runtime.putStudySession(sessionId, updated)
+        updated.toStudySessionPayload()
+    }
+
+    /**
+     * 本卡完成后继续下一张仍由服务端推进索引，是为了让桌面端刷新恢复时继续落在同一张下一卡入口上。
+     */
+    override suspend fun continueReviewSession(sessionId: String): WebConsoleStudySessionPayload = withContext(dispatchers.io) {
+        val session = runtime.getStudySession(sessionId) as? WebConsoleReviewStudySession
+            ?: throw IllegalStateException("当前没有进行中的复习会话")
+        require(!session.isCompleted()) { "今日复习已经完成" }
+        require(session.isCurrentCardCompleted()) { "当前卡片尚未完成，无法继续下一张" }
+        val now = timeProvider.nowEpochMillis()
+        val nextCardIndex = session.currentCardIndex + 1
+        val updated = if (nextCardIndex >= session.cards.size) {
+            session.copy(
+                currentCardIndex = session.cards.size,
+                currentQuestionIndex = 0,
+                questionPresentedAt = null,
+                answerVisible = false,
+                updatedAt = now
+            )
+        } else {
+            session.copy(
+                currentCardIndex = nextCardIndex,
+                currentQuestionIndex = 0,
+                questionPresentedAt = now,
+                answerVisible = false,
+                updatedAt = now
+            )
+        }
+        runtime.putStudySession(sessionId, updated)
+        updated.toStudySessionPayload()
+    }
+
+    /**
+     * 自由练习启动时强制要求显式范围，是为了让网页端空白练习页在服务端边界上就被阻断，而不是交给前端猜测。
+     */
+    override suspend fun startPracticeSession(
+        sessionId: String,
+        request: WebConsolePracticeStartRequest
+    ): WebConsoleStudySessionPayload = withContext(dispatchers.io) {
+        val args = PracticeSessionArgs(
+            deckIds = request.deckIds,
+            cardIds = request.cardIds,
+            questionIds = request.questionIds,
+            orderMode = request.orderMode.toPracticeOrderMode()
+        ).normalized()
+        require(args.hasScopedSelection()) { "请至少选择一个练习范围" }
+        val questions = practiceRepository.listPracticeQuestionContexts(args)
+            .toPracticeQuestionSnapshots(orderMode = args.orderMode, nowEpochMillis = timeProvider.nowEpochMillis())
+        require(questions.items.isNotEmpty()) { "当前范围内没有可练习的问题，请调整范围后重试" }
+        val session = WebConsolePracticeStudySession(
+            orderMode = args.orderMode,
+            sessionSeed = questions.seed,
+            questions = questions.items,
+            currentIndex = 0,
+            answerVisible = false,
+            updatedAt = timeProvider.nowEpochMillis()
+        )
+        runtime.putStudySession(sessionId, session)
+        session.toStudySessionPayload()
+    }
+
+    /**
+     * 练习切题保持纯内存索引移动，是为了从接口层面继续守住“不写入正式复习记录和调度字段”的只读边界。
+     */
+    override suspend fun navigatePracticeSession(
+        sessionId: String,
+        request: WebConsolePracticeNavigateRequest
+    ): WebConsoleStudySessionPayload = withContext(dispatchers.io) {
+        val session = runtime.getStudySession(sessionId) as? WebConsolePracticeStudySession
+            ?: throw IllegalStateException("当前没有进行中的练习会话")
+        val targetIndex = when (request.action.trim().lowercase()) {
+            "previous" -> (session.currentIndex - 1).coerceAtLeast(0)
+            "next" -> (session.currentIndex + 1).coerceAtMost(session.questions.lastIndex)
+            else -> throw IllegalArgumentException("练习切题动作不合法")
+        }
+        val updated = session.copy(
+            currentIndex = targetIndex,
+            answerVisible = false,
+            updatedAt = timeProvider.nowEpochMillis()
+        )
+        runtime.putStudySession(sessionId, updated)
+        updated.toStudySessionPayload()
+    }
+
+    /**
+     * 学习会话显式结束后只清理当前浏览器上下文，是为了避免同一时刻其他浏览器标签页被无差别打断。
+     */
+    override suspend fun endStudySession(sessionId: String): WebConsoleMutationPayload = withContext(dispatchers.io) {
+        runtime.clearStudySession(sessionId)
+        WebConsoleMutationPayload(message = "学习会话已结束")
     }
 
     /**
@@ -376,6 +575,202 @@ internal class WebConsoleRepositoryImpl(
     }
 
     /**
+     * 复习摘要把“当前卡 / 完成态 / 下一步动作”压缩成工作区概览可直接展示的文案，
+     * 是为了让总览卡片无需展开完整题面也能明确表达会话位置。
+     */
+    private fun WebConsoleStudySession.toStudySessionSummaryPayload(): WebConsoleStudySessionSummaryPayload = when (this) {
+        is WebConsoleReviewStudySession -> {
+            val currentCard = currentCardOrNull()
+            when {
+                isCompleted() -> WebConsoleStudySessionSummaryPayload(
+                    type = WebConsoleStudySessionTypes.REVIEW,
+                    title = "今日复习已处理完成",
+                    detail = "本轮共完成 ${cards.size} 张待复习卡片",
+                    actionLabel = "查看结果"
+                )
+
+                isCurrentCardCompleted() -> WebConsoleStudySessionSummaryPayload(
+                    type = WebConsoleStudySessionTypes.REVIEW,
+                    title = "当前卡片已完成",
+                    detail = "${currentCard?.cardTitle ?: "当前卡片"} 已处理完毕，可继续下一张",
+                    actionLabel = "继续复习"
+                )
+
+                else -> WebConsoleStudySessionSummaryPayload(
+                    type = WebConsoleStudySessionTypes.REVIEW,
+                    title = "今日复习进行中",
+                    detail = "${currentCard?.cardTitle ?: "当前卡片"} · 第 ${currentQuestionIndex + 1} / ${currentCard?.questions?.size ?: 0} 题",
+                    actionLabel = "恢复复习"
+                )
+            }
+        }
+
+        is WebConsolePracticeStudySession -> WebConsoleStudySessionSummaryPayload(
+            type = WebConsoleStudySessionTypes.PRACTICE,
+            title = "自由练习进行中",
+            detail = "第 ${currentIndex + 1} / ${questions.size} 题 · ${orderMode.label}",
+            actionLabel = "恢复练习"
+        )
+    }
+
+    /**
+     * 完整会话 payload 的组装集中在仓储内，是为了让前端工作区围绕稳定 DTO 渲染，而不感知运行时快照细节。
+     */
+    private fun WebConsoleStudySession.toStudySessionPayload(): WebConsoleStudySessionPayload = when (this) {
+        is WebConsoleReviewStudySession -> {
+            val currentCard = currentCardOrNull()
+            val currentQuestion = currentQuestionOrNull()
+            val totalQuestionCount = currentCard?.questions?.size ?: 0
+            val completedQuestionCount = when {
+                isCompleted() -> cards.lastOrNull()?.questions?.size ?: 0
+                else -> currentQuestionIndex.coerceAtMost(totalQuestionCount)
+            }
+            WebConsoleStudySessionPayload(
+                type = WebConsoleStudySessionTypes.REVIEW,
+                title = "今日复习",
+                summary = when {
+                    isCompleted() -> "本轮待复习内容已全部处理完成"
+                    isCurrentCardCompleted() -> "${currentCard?.cardTitle ?: "当前卡片"} 已完成，准备继续下一张"
+                    else -> "${currentCard?.cardTitle ?: "当前卡片"} · 第 ${currentQuestionIndex + 1} / $totalQuestionCount 题"
+                },
+                review = WebConsoleReviewStudyPayload(
+                    deckName = currentCard?.deckName,
+                    cardTitle = currentCard?.cardTitle,
+                    cardProgressText = when {
+                        isCompleted() -> "全部完成"
+                        else -> "第 ${currentCardIndex + 1} / ${cards.size} 张卡"
+                    },
+                    questionProgressText = when {
+                        isCompleted() -> "本轮复习完成"
+                        isCurrentCardCompleted() -> "本卡已完成"
+                        else -> "第 ${currentQuestionIndex + 1} / $totalQuestionCount 题"
+                    },
+                    completedQuestionCount = completedQuestionCount,
+                    totalQuestionCount = totalQuestionCount,
+                    answerVisible = answerVisible,
+                    currentQuestion = currentQuestion?.toStudyQuestionPayload(),
+                    isCardCompleted = isCurrentCardCompleted(),
+                    isSessionCompleted = isCompleted(),
+                    nextCardTitle = cards.getOrNull(currentCardIndex + 1)?.cardTitle
+                )
+            )
+        }
+
+        is WebConsolePracticeStudySession -> WebConsoleStudySessionPayload(
+            type = WebConsoleStudySessionTypes.PRACTICE,
+            title = "自由练习",
+            summary = "第 ${currentIndex + 1} / ${questions.size} 题 · ${orderMode.label}",
+            practice = WebConsolePracticeStudyPayload(
+                orderMode = orderMode.storageValue,
+                orderModeLabel = orderMode.label,
+                progressText = "第 ${currentIndex + 1} / ${questions.size} 题",
+                answerVisible = answerVisible,
+                currentQuestion = currentQuestionOrNull()?.toPracticeQuestionPayload(),
+                canGoPrevious = currentIndex > 0,
+                canGoNext = currentIndex < questions.lastIndex,
+                sessionSeed = sessionSeed
+            )
+        )
+    }
+
+    /**
+     * due 题目先按卡片稳定分组，是为了让网页端正式复习继续遵守“按卡片组织、逐题推进”的既有语义。
+     */
+    private fun List<QuestionContext>.toReviewCardSnapshots(): List<WebConsoleReviewCardSnapshot> = buildList {
+        val grouped = linkedMapOf<String, MutableList<QuestionContext>>()
+        for (context in this@toReviewCardSnapshots) {
+            grouped.getOrPut(context.question.cardId) { mutableListOf() }.add(context)
+        }
+        grouped.values.forEach { contexts ->
+            val first = contexts.first()
+            add(
+                WebConsoleReviewCardSnapshot(
+                    deckName = first.deckName,
+                    cardId = first.question.cardId,
+                    cardTitle = first.cardTitle,
+                    questions = contexts.map { context ->
+                        WebConsoleReviewQuestionSnapshot(
+                            questionId = context.question.id,
+                            prompt = context.question.prompt,
+                            answerText = context.question.answer.ifBlank { "无答案" },
+                            stageIndex = context.question.stageIndex
+                        )
+                    }
+                )
+            )
+        }
+    }
+
+    /**
+     * 练习顺序在服务端一次性固化后，
+     * 浏览器刷新恢复和多次上一题/下一题就不会因为重新取数而出现顺序漂移。
+     */
+    private fun List<QuestionContext>.toPracticeQuestionSnapshots(
+        orderMode: PracticeOrderMode,
+        nowEpochMillis: Long
+    ): WebConsoleOrderedPracticeQuestions {
+        val questions = map { context ->
+            WebConsolePracticeQuestionSnapshot(
+                questionId = context.question.id,
+                deckName = context.deckName,
+                cardTitle = context.cardTitle,
+                prompt = context.question.prompt,
+                answerText = context.question.answer.ifBlank { "无答案" }
+            )
+        }
+        if (orderMode != PracticeOrderMode.RANDOM) {
+            return WebConsoleOrderedPracticeQuestions(items = questions, seed = null)
+        }
+        val seed = nowEpochMillis xor questions.joinToString(separator = "|") { question ->
+            question.questionId
+        }.hashCode().toLong()
+        return WebConsoleOrderedPracticeQuestions(
+            items = questions.shuffled(Random(seed)),
+            seed = seed
+        )
+    }
+
+    /**
+     * 评分字符串在服务端显式校验后，
+     * 前端即使传来非法值也能得到明确反馈，而不是悄悄回退到错误分支。
+     */
+    private fun String.toReviewRating(): ReviewRating = ReviewRating.entries.firstOrNull { rating ->
+        rating.name.equals(trim(), ignoreCase = true)
+    } ?: throw IllegalArgumentException("评分参数不合法")
+
+    /**
+     * 顺序模式字符串集中解析，是为了让网页端请求体在协议层就被约束到已知集合。
+     */
+    private fun String.toPracticeOrderMode(): PracticeOrderMode = PracticeOrderMode.entries.firstOrNull { orderMode ->
+        orderMode.storageValue == trim().lowercase()
+    } ?: throw IllegalArgumentException("练习顺序不合法")
+
+    /**
+     * 复习题目 payload 转换留在仓储单点，
+     * 是为了让会话恢复和评分提交后的返回都共享完全一致的题面字段。
+     */
+    private fun WebConsoleReviewQuestionSnapshot.toStudyQuestionPayload(): WebConsoleStudyQuestionPayload =
+        WebConsoleStudyQuestionPayload(
+            questionId = questionId,
+            prompt = prompt,
+            answerText = answerText,
+            stageIndex = stageIndex
+        )
+
+    /**
+     * 练习题目 payload 转换保持在单点，
+     * 是为了避免前端工作区和后续测试各自复制 deck/card 上下文字段拼装。
+     */
+    private fun WebConsolePracticeQuestionSnapshot.toPracticeQuestionPayload(): WebConsolePracticeQuestionPayload =
+        WebConsolePracticeQuestionPayload(
+            questionId = questionId,
+            deckName = deckName,
+            cardTitle = cardTitle,
+            prompt = prompt,
+            answerText = answerText
+        )
+
+    /**
      * 卡组摘要到网页 DTO 的映射集中在单点，是为了避免概览页和卡组页各自拼装不同字段组合。
      */
     private fun com.kariscode.yike.domain.model.DeckSummary.toDeckPayload(): WebConsoleDeckPayload = WebConsoleDeckPayload(
@@ -419,3 +814,12 @@ internal class WebConsoleRepositoryImpl(
         backupLastAt = backupLastAt
     )
 }
+
+/**
+ * 练习题目和随机种子成对返回，
+ * 是为了让随机模式只在一次构建中确定顺序，并把恢复所需的 seed 一并保留下来。
+ */
+private data class WebConsoleOrderedPracticeQuestions(
+    val items: List<WebConsolePracticeQuestionSnapshot>,
+    val seed: Long?
+)

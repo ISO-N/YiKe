@@ -20,6 +20,24 @@ internal interface WebConsoleApiHandler {
     suspend fun logout(sessionId: String?)
     suspend fun resolveSession(sessionId: String, remoteHost: String): WebConsoleSessionPayload?
     suspend fun getDashboard(): WebConsoleDashboardPayload
+    suspend fun getStudyWorkspace(sessionId: String): WebConsoleStudyWorkspacePayload
+    suspend fun getStudySession(sessionId: String): WebConsoleStudySessionPayload?
+    suspend fun startReviewSession(sessionId: String): WebConsoleStudySessionPayload
+    suspend fun revealStudyAnswer(sessionId: String): WebConsoleStudySessionPayload
+    suspend fun submitReviewRating(
+        sessionId: String,
+        request: WebConsoleReviewRateRequest
+    ): WebConsoleStudySessionPayload
+    suspend fun continueReviewSession(sessionId: String): WebConsoleStudySessionPayload
+    suspend fun startPracticeSession(
+        sessionId: String,
+        request: WebConsolePracticeStartRequest
+    ): WebConsoleStudySessionPayload
+    suspend fun navigatePracticeSession(
+        sessionId: String,
+        request: WebConsolePracticeNavigateRequest
+    ): WebConsoleStudySessionPayload
+    suspend fun endStudySession(sessionId: String): WebConsoleMutationPayload
     suspend fun listDecks(): List<WebConsoleDeckPayload>
     suspend fun upsertDeck(request: WebConsoleUpsertDeckRequest): WebConsoleMutationPayload
     suspend fun archiveDeck(deckId: String, archived: Boolean): WebConsoleMutationPayload
