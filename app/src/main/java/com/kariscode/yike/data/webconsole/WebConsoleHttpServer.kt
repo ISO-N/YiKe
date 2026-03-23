@@ -2,6 +2,7 @@ package com.kariscode.yike.data.webconsole
 
 import io.ktor.http.Cookie
 import io.ktor.http.ContentType
+import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.Application
 import io.ktor.server.application.call
@@ -15,6 +16,7 @@ import io.ktor.server.request.receive
 import io.ktor.server.request.path
 import io.ktor.server.response.respond
 import io.ktor.server.response.respondBytes
+import io.ktor.server.response.header
 import io.ktor.server.response.respondText
 import io.ktor.server.routing.get
 import io.ktor.server.routing.post
@@ -193,6 +195,10 @@ internal fun Application.configureWebConsoleRoutes(
         get("/api/web-console/v1/backup/export") {
             if (call.requireSession(handler) == null) return@get
             val payload = handler.exportBackup()
+            call.response.header(
+                HttpHeaders.ContentDisposition,
+                """attachment; filename="${payload.fileName}""""
+            )
             call.respondText(
                 text = payload.content,
                 contentType = ContentType.Application.Json,

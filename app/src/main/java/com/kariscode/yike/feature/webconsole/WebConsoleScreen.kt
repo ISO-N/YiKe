@@ -1,5 +1,7 @@
 package com.kariscode.yike.feature.webconsole
 
+import android.content.ClipData
+import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -74,6 +76,7 @@ private fun WebConsoleContent(
     contentPadding: PaddingValues = PaddingValues()
 ) {
     val spacing = LocalYikeSpacing.current
+    val context = LocalContext.current
     YikeScrollableColumn(
         modifier = modifier,
         contentPadding = contentPadding
@@ -145,6 +148,19 @@ private fun WebConsoleContent(
             supporting = "浏览器首次进入后台时需要先输入这个 6 位访问码。"
         ) {
             Text("在线会话数：${state.activeSessionCount}")
+            YikeSecondaryButton(
+                text = "复制访问码",
+                onClick = {
+                    state.accessCode?.let { accessCode ->
+                        copyTextToClipboard(
+                            text = accessCode,
+                            label = "访问码",
+                            context = context
+                        )
+                    }
+                },
+                enabled = state.accessCode != null
+            )
         }
 
         if (state.addresses.isEmpty()) {
@@ -161,8 +177,32 @@ private fun WebConsoleContent(
                     supporting = "${address.host}:${address.port}"
                 ) {
                     Text(if (address.isRecommended) "推荐优先使用这个地址" else "备用地址")
+                    YikeSecondaryButton(
+                        text = "复制地址",
+                        onClick = {
+                            copyTextToClipboard(
+                                text = address.url,
+                                label = address.label,
+                                context = context
+                            )
+                        }
+                    )
                 }
             }
         }
     }
+}
+
+/**
+ * 复制动作统一封装后，访问码和地址可以复用同一提示语义，避免用户复制成功却没有明确反馈。
+ */
+private fun copyTextToClipboard(
+    text: String,
+    label: String,
+    context: android.content.Context
+) {
+    context.getSystemService(android.content.ClipboardManager::class.java)?.setPrimaryClip(
+        ClipData.newPlainText(label, text)
+    )
+    Toast.makeText(context, "已复制$label", Toast.LENGTH_SHORT).show()
 }

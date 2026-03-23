@@ -42,8 +42,7 @@ loginForm.addEventListener("submit", async (event) => {
         body: JSON.stringify({ code }),
     });
     if (!response.ok) {
-        loginError.hidden = false;
-        loginError.textContent = "访问码不正确，或服务未处于可登录状态。";
+        showLoginError("访问码不正确，或服务未处于可登录状态。");
         return;
     }
     document.querySelector("#access-code").value = "";
@@ -61,7 +60,7 @@ async function bootstrap() {
     }
     loginView.hidden = true;
     appView.hidden = false;
-    sessionSummary.textContent = `端口 ${session.port} · 在线会话 ${session.activeSessionCount}`;
+    sessionSummary.textContent = `${session.displayName} · 端口 ${session.port} · 在线会话 ${session.activeSessionCount}`;
     await refreshAll();
 }
 
@@ -280,15 +279,19 @@ async function exportBackup() {
     const blob = new Blob([text], { type: "application/json" });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
-    link.download = `yike-backup-${Date.now()}.json`;
+    link.download = resolveDownloadFileName(response.headers.get("Content-Disposition"));
     link.click();
     URL.revokeObjectURL(link.href);
+    showMessage("备份文件已开始下载。");
 }
 
-async function logout() {
+async function logout(reason) {
     await fetch("/api/web-console/v1/auth/logout", { method: "POST", credentials: "include" });
     loginView.hidden = false;
     appView.hidden = true;
+    if (reason) {
+        showLoginError(reason);
+    }
 }
 
 function switchSection(section) {
@@ -398,7 +401,7 @@ async function fetchJson(url) {
     const response = await fetch(url, { credentials: "include" });
     if (!response.ok) {
         if (response.status === 401) {
-            await logout();
+            await logout("登录已失效，请重新输入手机上最新的访问码。");
             return null;
         }
         showMessage("请求失败，请稍后重试。", true);
@@ -479,6 +482,16 @@ function renderQuestionItem(item) {
 
 function splitTags(value) {
     return value.split(",").map((item) => item.trim()).filter(Boolean);
+}
+
+function resolveDownloadFileName(contentDisposition) {
+    const matchedFileName = contentDisposition?.match(/filename="([^"]+)"/i)?.[1];
+    return matchedFileName || `yike-backup-${Date.now()}.json`;
+}
+
+function showLoginError(message) {
+    loginError.hidden = false;
+    loginError.textContent = message;
 }
 
 function escapeHtml(value) {

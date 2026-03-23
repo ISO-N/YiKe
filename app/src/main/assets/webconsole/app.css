@@ -71,17 +71,22 @@ textarea {
 }
 
 .login-card {
-    width: min(100%, 420px);
+    width: min(100%, 460px);
     padding: 32px;
 }
 
 .app-shell {
     min-height: 100vh;
+    max-width: 1680px;
+    margin: 0 auto;
     display: grid;
     grid-template-columns: minmax(240px, 280px) minmax(0, 1fr);
 }
 
 .sidebar {
+    position: sticky;
+    top: 0;
+    min-height: 100vh;
     padding: 28px 20px;
     border-right: 1px solid var(--border);
     background: rgba(255, 255, 255, 0.72);
@@ -91,9 +96,10 @@ textarea {
 }
 
 .main-shell {
-    padding: 24px;
+    padding: 28px clamp(20px, 3vw, 36px) 32px;
     display: grid;
     gap: 20px;
+    align-content: start;
 }
 
 .topbar {
@@ -106,6 +112,7 @@ textarea {
 .section {
     display: none;
     gap: 20px;
+    align-content: start;
 }
 
 .section.is-active {
@@ -183,6 +190,7 @@ textarea {
 
 .card {
     padding: 20px;
+    transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
 }
 
 .card-head {
@@ -203,6 +211,7 @@ textarea {
     background: var(--surface);
     border: 1px solid rgba(255, 255, 255, 0.75);
     box-shadow: var(--shadow);
+    transition: transform 180ms ease, box-shadow 180ms ease;
 }
 
 .metric strong {
@@ -226,6 +235,7 @@ textarea {
     border: 1px solid var(--border);
     display: grid;
     gap: 6px;
+    transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
 }
 
 .item.is-selected {
@@ -274,12 +284,49 @@ textarea {
     padding: 18px 4px;
 }
 
+.login-notes {
+    display: grid;
+    gap: 12px;
+}
+
+.login-note {
+    padding: 14px 16px;
+    border-radius: 18px;
+    background: rgba(11, 111, 105, 0.08);
+    border: 1px solid rgba(11, 111, 105, 0.12);
+    display: grid;
+    gap: 4px;
+}
+
+.card:hover,
+.metric:hover,
+.item:hover {
+    transform: translateY(-2px);
+}
+
+.item:hover {
+    border-color: rgba(11, 111, 105, 0.24);
+    box-shadow: 0 18px 36px rgba(21, 38, 37, 0.08);
+}
+
+@media (min-width: 1280px) {
+    .content-grid {
+        grid-template-columns: minmax(260px, 1fr) minmax(260px, 1fr) minmax(320px, 1.1fr);
+    }
+
+    .editor-grid {
+        grid-template-columns: repeat(3, minmax(240px, 1fr));
+    }
+}
+
 @media (max-width: 1024px) {
     .app-shell {
         grid-template-columns: 1fr;
     }
 
     .sidebar {
+        position: static;
+        min-height: auto;
         border-right: 0;
         border-bottom: 1px solid var(--border);
     }
