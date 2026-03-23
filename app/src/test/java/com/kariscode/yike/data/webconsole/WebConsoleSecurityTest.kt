@@ -48,6 +48,48 @@ class WebConsoleSecurityTest {
     }
 
     /**
+     * 访问码轮换必须连同浏览器学习会话一起失效，
+     * 否则用户即使被踢回登录页，旧标签页仍可能错误恢复上一轮学习上下文。
+     */
+    @Test
+    fun rotateAccessCode_clearsStudySessions() {
+        val runtime = WebConsoleRuntime(
+            timeProvider = object : TimeProvider {
+                override fun nowEpochMillis(): Long = 1_000L
+            }
+        )
+        runtime.activate(
+            port = 9440,
+            addresses = emptyList()
+        )
+        val sessionId = runtime.createSession()
+        runtime.putStudySession(
+            sessionId = sessionId,
+            session = WebConsolePracticeStudySession(
+                orderMode = com.kariscode.yike.domain.model.PracticeOrderMode.SEQUENTIAL,
+                sessionSeed = null,
+                questions = listOf(
+                    WebConsolePracticeQuestionSnapshot(
+                        questionId = "question_1",
+                        deckName = "词汇",
+                        cardTitle = "基础",
+                        prompt = "hello",
+                        answerText = "你好"
+                    )
+                ),
+                currentIndex = 0,
+                answerVisible = false,
+                updatedAt = 1_000L
+            )
+        )
+
+        runtime.rotateAccessCode()
+
+        assertEquals(0, runtime.state.value.activeSessionCount)
+        assertEquals(null, runtime.getStudySession(sessionId))
+    }
+
+    /**
      * 来源守卫需要接受常见局域网地址并拒绝公网地址，才能维持“只在本地网络可访问”的产品边界。
      */
     @Test

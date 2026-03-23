@@ -13,7 +13,10 @@ import com.kariscode.yike.domain.model.PracticeSessionArgs
 import com.kariscode.yike.domain.model.Question
 import com.kariscode.yike.domain.model.QuestionContext
 import com.kariscode.yike.domain.model.QuestionQueryFilters
+import com.kariscode.yike.domain.model.ReviewRating
 import com.kariscode.yike.domain.model.ReviewAnalyticsSnapshot
+import com.kariscode.yike.domain.model.ReviewRecord
+import com.kariscode.yike.domain.model.ReviewSubmission
 import com.kariscode.yike.domain.model.ThemeMode
 import com.kariscode.yike.domain.model.TodayReviewSummary
 import com.kariscode.yike.domain.repository.AppSettingsRepository
@@ -22,6 +25,7 @@ import com.kariscode.yike.domain.repository.DeckRepository
 import com.kariscode.yike.domain.repository.QuestionEditorDraftRepository
 import com.kariscode.yike.domain.repository.PracticeRepository
 import com.kariscode.yike.domain.repository.QuestionRepository
+import com.kariscode.yike.domain.repository.ReviewRepository
 import com.kariscode.yike.domain.repository.StudyInsightsRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -317,6 +321,85 @@ open class FakePracticeRepository : PracticeRepository {
         return questionContexts
     }
 }
+
+/**
+ * ReviewRepository 假实现既记录评分提交，也允许测试预设不同卡片的到期题集合，
+ * 是为了让网页后台学习流测试能在不接入真实数据库的前提下锁住正式复习语义复用是否正确。
+ */
+open class FakeReviewRepository : ReviewRepository {
+    val dueQuestionsByCardId = linkedMapOf<String, List<Question>>()
+    val listDueRequests = mutableListOf<Pair<String, Long>>()
+    val submitRequests = mutableListOf<SubmittedReviewRating>()
+    var submitResultFactory: ((SubmittedReviewRating) -> ReviewSubmission)? = null
+
+    /**
+     * 到期题读取会记录 cardId 与时间点，
+     * 是为了让测试可以直接断言网页复习是否围绕正式 due 查询工作。
+     */
+    override suspend fun listDueQuestionsByCard(cardId: String, nowEpochMillis: Long): List<Question> {
+        listDueRequests += cardId to nowEpochMillis
+        return dueQuestionsByCardId[cardId].orEmpty()
+    }
+
+    /**
+     * 评分提交默认回放一个最小成功结果，
+     * 是为了让页面测试既能断言调用参数，也能在需要时替换成更具体的提交结果。
+     */
+    override suspend fun submitRating(
+        questionId: String,
+        rating: ReviewRating,
+        reviewedAtEpochMillis: Long,
+        responseTimeMs: Long?
+    ): ReviewSubmission {
+        val request = SubmittedReviewRating(
+            questionId = questionId,
+            rating = rating,
+            reviewedAtEpochMillis = reviewedAtEpochMillis,
+            responseTimeMs = responseTimeMs
+        )
+        submitRequests += request
+        return submitResultFactory?.invoke(request) ?: ReviewSubmission(
+            updatedQuestion = Question(
+                id = questionId,
+                cardId = "card",
+                prompt = "prompt",
+                answer = "answer",
+                tags = emptyList(),
+                status = com.kariscode.yike.domain.model.QuestionStatus.ACTIVE,
+                stageIndex = 1,
+                dueAt = reviewedAtEpochMillis,
+                lastReviewedAt = reviewedAtEpochMillis,
+                reviewCount = 1,
+                lapseCount = if (rating == ReviewRating.AGAIN) 1 else 0,
+                createdAt = 0L,
+                updatedAt = reviewedAtEpochMillis
+            ),
+            reviewRecord = ReviewRecord(
+                id = "record_$questionId",
+                questionId = questionId,
+                rating = rating,
+                oldStageIndex = 0,
+                newStageIndex = 1,
+                oldDueAt = 0L,
+                newDueAt = reviewedAtEpochMillis,
+                reviewedAt = reviewedAtEpochMillis,
+                responseTimeMs = responseTimeMs,
+                note = ""
+            )
+        )
+    }
+}
+
+/**
+ * 评分提交请求单独成结构体，
+ * 是为了让测试在断言评分档位、时间点和响应时长时保持清晰可读。
+ */
+data class SubmittedReviewRating(
+    val questionId: String,
+    val rating: ReviewRating,
+    val reviewedAtEpochMillis: Long,
+    val responseTimeMs: Long?
+)
 
 /**
  * DeckRepository 假实现同时支持活动列表与回收站列表，便于内容管理和回收站测试共享。

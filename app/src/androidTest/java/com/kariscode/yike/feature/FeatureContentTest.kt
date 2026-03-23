@@ -47,6 +47,7 @@ class FeatureContentTest {
         override fun openQuestionSearch(deckId: String?, cardId: String?) = Unit
         override fun openQuestionEditor(cardId: String, deckId: String?) = Unit
         override fun openBackupRestore() = Unit
+        override fun openWebConsole() = Unit
         override fun openLanSync() = Unit
         override fun openRecycleBin() = Unit
         override fun openDebug() = Unit
