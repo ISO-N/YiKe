@@ -2,11 +2,14 @@ package com.kariscode.yike.data.webconsole
 
 import io.ktor.client.request.get
 import io.ktor.client.request.header
+import io.ktor.client.request.post
+import io.ktor.client.request.setBody
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.testing.testApplication
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -18,6 +21,8 @@ import org.robolectric.RuntimeEnvironment
  */
 @RunWith(RobolectricTestRunner::class)
 class WebConsoleHttpServerTest {
+    private var restoredBackupRequest: WebConsoleBackupRestoreRequest? = null
+
     /**
      * 备份导出必须携带服务端建议文件名，
      * 否则浏览器只能退回时间戳临时名，用户后续整理和识别备份文件会明显变难。
@@ -41,6 +46,39 @@ class WebConsoleHttpServerTest {
             response.headers[HttpHeaders.ContentDisposition]
         )
         assertEquals("""{"version":1}""", response.bodyAsText())
+    }
+
+    /**
+     * 备份恢复应把网页上传的 JSON 原样交给业务处理器，
+     * 这样浏览器端的文件读取和手机端的本地导入才能真正共用同一恢复语义。
+     */
+    @Test
+    fun restoreBackup_passesUploadedPayloadToHandler() = testApplication {
+        application {
+            configureWebConsoleRoutes(
+                assetLoader = WebConsoleAssetLoader(RuntimeEnvironment.getApplication()),
+                handler = createHandler()
+            )
+        }
+
+        val response = client.post("/api/web-console/v1/backup/restore") {
+            header(HttpHeaders.Cookie, "yike_web_session=session_1")
+            header(HttpHeaders.ContentType, "application/json")
+            setBody(
+                WebConsoleJson.json.encodeToString(
+                    WebConsoleBackupRestoreRequest.serializer(),
+                    WebConsoleBackupRestoreRequest(
+                        fileName = "restore.json",
+                        content = """{"app":{"backupVersion":1}}"""
+                    )
+                )
+            )
+        }
+
+        assertEquals(HttpStatusCode.OK, response.status)
+        assertTrue(response.bodyAsText().contains("备份已恢复"))
+        assertEquals("restore.json", restoredBackupRequest?.fileName)
+        assertEquals("""{"app":{"backupVersion":1}}""", restoredBackupRequest?.content)
     }
 
     /**
@@ -96,5 +134,10 @@ class WebConsoleHttpServerTest {
             fileName = "yike-backup-test.json",
             content = """{"version":1}"""
         )
+
+        override suspend fun restoreBackup(request: WebConsoleBackupRestoreRequest): WebConsoleMutationPayload {
+            restoredBackupRequest = request
+            return WebConsoleMutationPayload(message = "备份已恢复")
+        }
     }
 }

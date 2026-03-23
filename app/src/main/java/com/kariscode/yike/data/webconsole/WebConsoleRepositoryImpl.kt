@@ -365,6 +365,17 @@ internal class WebConsoleRepositoryImpl(
     }
 
     /**
+     * 网页端恢复直接复用既有 JSON 恢复链路并立刻重建提醒，
+     * 是为了让浏览器上传与手机本地导入保持同一数据语义，而不会出现“数据已恢复但提醒仍是旧配置”的偏差。
+     */
+    override suspend fun restoreBackup(request: WebConsoleBackupRestoreRequest): WebConsoleMutationPayload = withContext(dispatchers.io) {
+        require(request.content.isNotBlank()) { "请选择有效的备份文件后再恢复" }
+        backupService.restoreFromJsonString(request.content)
+        reminderScheduler.syncReminderFromRepository()
+        WebConsoleMutationPayload(message = "备份已恢复，页面数据已同步更新")
+    }
+
+    /**
      * 卡组摘要到网页 DTO 的映射集中在单点，是为了避免概览页和卡组页各自拼装不同字段组合。
      */
     private fun com.kariscode.yike.domain.model.DeckSummary.toDeckPayload(): WebConsoleDeckPayload = WebConsoleDeckPayload(

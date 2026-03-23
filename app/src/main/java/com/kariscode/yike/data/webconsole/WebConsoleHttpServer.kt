@@ -12,6 +12,8 @@ import io.ktor.server.engine.ApplicationEngine
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.server.plugins.origin
+import io.ktor.server.plugins.statuspages.StatusPages
+import io.ktor.server.plugins.statuspages.exception
 import io.ktor.server.request.receive
 import io.ktor.server.request.path
 import io.ktor.server.response.respond
@@ -22,6 +24,7 @@ import io.ktor.server.routing.get
 import io.ktor.server.routing.post
 import io.ktor.server.routing.routing
 import io.ktor.serialization.kotlinx.json.json
+import kotlinx.serialization.SerializationException
 
 /**
  * 网页后台 HTTP 服务只负责暴露网页资源和 API 入口，
@@ -73,6 +76,29 @@ internal fun Application.configureWebConsoleRoutes(
     install(ContentNegotiation) {
         json(WebConsoleJson.json)
     }
+    install(StatusPages) {
+        /**
+         * 统一把参数和校验异常转换成稳定文案，是为了让网页控制台能直接展示业务错误，而不是回落到模糊的 500 失败。
+         */
+        exception<IllegalArgumentException> { call, throwable ->
+            call.respondText(
+                throwable.message ?: "请求参数不合法",
+                status = HttpStatusCode.BadRequest
+            )
+        }
+        exception<IllegalStateException> { call, throwable ->
+            call.respondText(
+                throwable.message ?: "当前操作无法完成",
+                status = HttpStatusCode.BadRequest
+            )
+        }
+        exception<SerializationException> { call, _ ->
+            call.respondText(
+                "请求内容格式不正确",
+                status = HttpStatusCode.BadRequest
+            )
+        }
+    }
     routing {
         post("/api/web-console/v1/auth/login") {
             val remoteHost = call.request.origin.remoteHost
@@ -100,7 +126,7 @@ internal fun Application.configureWebConsoleRoutes(
 
         post("/api/web-console/v1/auth/logout") {
             handler.logout(call.request.cookies[SESSION_COOKIE_NAME])
-            call.response.cookies.appendExpired(SESSION_COOKIE_NAME, path = "/")
+            call.clearSessionCookie()
             call.respond(HttpStatusCode.NoContent)
         }
 
@@ -206,6 +232,11 @@ internal fun Application.configureWebConsoleRoutes(
             )
         }
 
+        post("/api/web-console/v1/backup/restore") {
+            if (call.requireSession(handler) == null) return@post
+            call.respond(handler.restoreBackup(call.receive()))
+        }
+
         get("/{...}") {
             val requestedPath = call.request.path().removePrefix("/")
             val asset = assetLoader.load(requestedPath) ?: assetLoader.load("/")
@@ -236,11 +267,25 @@ private suspend fun io.ktor.server.application.ApplicationCall.requireSession(
     }
     val session = handler.resolveSession(sessionId, remoteHost)
     if (session == null) {
-        response.cookies.appendExpired(SESSION_COOKIE_NAME, path = "/")
+        clearSessionCookie()
         respondText("登录已失效", status = HttpStatusCode.Unauthorized)
         return null
     }
     return session
+}
+
+/**
+ * 失效会话统一用显式过期 Cookie 覆盖，是为了避免各路由各自处理清理逻辑后出现行为漂移。
+ */
+private fun io.ktor.server.application.ApplicationCall.clearSessionCookie() {
+    response.cookies.append(
+        Cookie(
+            name = SESSION_COOKIE_NAME,
+            value = "",
+            path = "/",
+            maxAge = 0
+        )
+    )
 }
 
 /**

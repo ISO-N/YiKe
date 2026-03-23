@@ -34,6 +34,7 @@ internal interface WebConsoleApiHandler {
     suspend fun getSettings(): WebConsoleSettingsPayload
     suspend fun updateSettings(request: WebConsoleUpdateSettingsRequest): WebConsoleMutationPayload
     suspend fun exportBackup(): WebConsoleBackupExportPayload
+    suspend fun restoreBackup(request: WebConsoleBackupRestoreRequest): WebConsoleMutationPayload
 }
 
 @Serializable
@@ -188,6 +189,12 @@ internal data class WebConsoleUpdateSettingsRequest(
 @Serializable
 internal data class WebConsoleBackupExportPayload(
     val fileName: String,
+    val content: String
+)
+
+@Serializable
+internal data class WebConsoleBackupRestoreRequest(
+    val fileName: String? = null,
     val content: String
 )
 

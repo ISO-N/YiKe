@@ -170,6 +170,11 @@ private fun WebConsoleContent(
                 supporting = "请确认 Wi‑Fi 或热点已开启，然后重新启动服务。"
             )
         } else {
+            val recommendedAddress = state.addresses.firstOrNull { it.isRecommended } ?: state.addresses.first()
+            WebConsoleQrCodeCard(
+                address = recommendedAddress,
+                accessCode = state.accessCode
+            )
             state.addresses.forEach { address ->
                 YikeListItemCard(
                     title = address.label,
