@@ -237,7 +237,7 @@ private fun YikeBottomNavigation(
                     ) {
                         Icon(
                             imageVector = destination.icon,
-                            contentDescription = destination.label,
+                            contentDescription = null,
                             modifier = Modifier.size(adaptiveLayout.bottomNavigationIconSize)
                         )
                         Text(

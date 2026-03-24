@@ -57,7 +57,7 @@ fun YikeTopAppBar(
                         Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                             Icon(
                                 imageVector = navigationAction.icon,
-                                contentDescription = navigationAction.contentDescription
+                                contentDescription = null
                             )
                             Text(text = navigationAction.label)
                         }
