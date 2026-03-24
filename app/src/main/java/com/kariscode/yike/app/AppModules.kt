@@ -25,7 +25,9 @@ import com.kariscode.yike.data.reminder.ReminderSyncScheduler
 import com.kariscode.yike.data.settings.DataStoreAppSettingsRepository
 import com.kariscode.yike.data.settings.appSettingsDataStore
 import com.kariscode.yike.data.sync.KeystoreLanSyncSharedSecretProtector
+import com.kariscode.yike.data.sync.LanSyncChangeApplier
 import com.kariscode.yike.data.sync.LanSyncChangeRecorder
+import com.kariscode.yike.data.sync.LanSyncConflictResolver
 import com.kariscode.yike.data.sync.LanSyncCrypto
 import com.kariscode.yike.data.sync.LanSyncLocalProfileStore
 import com.kariscode.yike.data.sync.LanSyncPortAllocator
@@ -181,6 +183,19 @@ private val serviceModule = module {
         )
     }
     single { BackupValidator() }
+    single { LanSyncConflictResolver() }
+    single {
+        LanSyncChangeApplier(
+            database = get(),
+            appSettingsRepository = get(),
+            reminderScheduler = get(),
+            deckDao = get(),
+            cardDao = get(),
+            questionDao = get(),
+            reviewRecordDao = get(),
+            conflictResolver = get()
+        )
+    }
     single {
         BackupService(
             application = get(),
@@ -189,8 +204,10 @@ private val serviceModule = module {
             cardDao = get(),
             questionDao = get(),
             reviewRecordDao = get(),
+            syncChangeDao = get(),
             appSettingsRepository = get(),
             backupValidator = get(),
+            changeApplier = get(),
             timeProvider = get(),
             dispatchers = get()
         )
@@ -213,7 +230,9 @@ private val serviceModule = module {
             deckDao = get(),
             cardDao = get(),
             questionDao = get(),
-            reviewRecordDao = get()
+            reviewRecordDao = get(),
+            conflictResolver = get(),
+            changeApplier = get()
         )
     }
     single<LanSyncRepository> { get<LanSyncRepositoryImpl>() }
