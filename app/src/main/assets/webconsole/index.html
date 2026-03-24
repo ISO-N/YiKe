@@ -59,8 +59,21 @@
                 <p class="eyebrow">局域网控制台</p>
                 <h1 id="section-title">学习工作区</h1>
             </div>
-            <div id="global-message" class="toast" hidden></div>
+            <div class="topbar-meta">
+                <div id="shell-status" class="status-chip-row"></div>
+                <div id="global-message" class="toast" hidden></div>
+            </div>
         </header>
+
+        <section class="context-strip card">
+            <div class="context-strip-main">
+                <p class="eyebrow">Workspace Context</p>
+                <h2 id="context-title">学习工作区</h2>
+                <p id="context-description" class="muted">浏览器端会持续保留最近一次有效工作区上下文。</p>
+            </div>
+            <div id="context-meta" class="context-meta"></div>
+            <div id="context-actions" class="context-actions"></div>
+        </section>
 
         <section id="section-study" class="section is-active">
             <div id="study-overview-metrics" class="metric-grid"></div>

@@ -129,6 +129,34 @@
     color: var(--primary);
 }
 
+.status-chip-row,
+.context-meta,
+.context-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.status-chip,
+.context-chip {
+    display: inline-flex;
+    align-items: center;
+    min-height: 34px;
+    padding: 0 12px;
+    border-radius: 999px;
+    background: rgba(11, 111, 105, 0.08);
+    color: var(--primary);
+    border: 1px solid rgba(11, 111, 105, 0.12);
+    font-weight: 600;
+}
+
+.status-chip.is-warn,
+.context-chip.is-warn {
+    background: rgba(180, 67, 53, 0.08);
+    border-color: rgba(180, 67, 53, 0.16);
+    color: var(--danger);
+}
+
 .empty-state {
     color: var(--text-muted);
     padding: 18px 4px;

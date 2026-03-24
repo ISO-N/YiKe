@@ -5,6 +5,7 @@ export const state = {
     currentSection: "study",
     selectedDeckId: null,
     selectedCardId: null,
+    lastSearchResults: [],
     decks: [],
     cards: [],
     questions: [],
@@ -13,6 +14,7 @@ export const state = {
     isRestoring: false,
     studyWorkspace: null,
     studySession: null,
+    studyReturnContext: null,
     practiceSelection: {
         selectedDeckIds: new Set(),
         selectedCardIds: new Set(),
@@ -36,6 +38,11 @@ export const elements = {
     sectionTitle: document.querySelector("#section-title"),
     sessionSummary: document.querySelector("#session-summary"),
     globalMessage: document.querySelector("#global-message"),
+    shellStatus: document.querySelector("#shell-status"),
+    contextTitle: document.querySelector("#context-title"),
+    contextDescription: document.querySelector("#context-description"),
+    contextMeta: document.querySelector("#context-meta"),
+    contextActions: document.querySelector("#context-actions"),
     deckForm: document.querySelector("#deck-form"),
     cardForm: document.querySelector("#card-form"),
     questionForm: document.querySelector("#question-form"),
@@ -62,12 +69,27 @@ export const elements = {
 };
 
 let unauthorizedHandler = null;
+let shellRefreshHandler = null;
 
 /**
  * 未授权回调可配置，是为了让共享请求工具无需直接依赖具体壳层实现。
  */
 export function setUnauthorizedHandler(handler) {
     unauthorizedHandler = handler;
+}
+
+/**
+ * 壳层刷新回调可配置，是为了让各工作区在状态变化后通知统一上下文栏重绘。
+ */
+export function setShellRefreshHandler(handler) {
+    shellRefreshHandler = handler;
+}
+
+/**
+ * 各模块通过统一入口请求壳层刷新，是为了避免 feature 直接依赖 shell 实现。
+ */
+export function requestShellRefresh() {
+    shellRefreshHandler?.();
 }
 
 /**

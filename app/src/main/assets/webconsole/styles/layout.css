@@ -39,6 +39,24 @@
     align-items: start;
 }
 
+.topbar-meta {
+    display: grid;
+    gap: 10px;
+    justify-items: end;
+}
+
+.context-strip {
+    display: grid;
+    gap: 16px;
+    grid-template-columns: minmax(240px, 1.1fr) minmax(220px, 0.9fr) minmax(200px, auto);
+    align-items: center;
+}
+
+.context-strip-main {
+    display: grid;
+    gap: 6px;
+}
+
 .section {
     display: none;
     gap: 20px;
@@ -97,6 +115,10 @@
     .practice-config-grid {
         grid-template-columns: 1fr;
     }
+
+    .context-strip {
+        grid-template-columns: 1fr;
+    }
 }
 
 @media (max-width: 720px) {
@@ -107,6 +129,11 @@
 
     .topbar {
         flex-direction: column;
+    }
+
+    .topbar-meta {
+        width: 100%;
+        justify-items: stretch;
     }
 
     .search-form,
