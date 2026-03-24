@@ -4,6 +4,7 @@ import {
     fetchJson,
     metricCard,
     postJson,
+    requestShellRefresh,
     renderEmptyState,
     state,
 } from "../shared/core.js";
@@ -25,6 +26,7 @@ export async function loadStudyWorkspace() {
     if (!payload) return;
     state.studyWorkspace = payload;
     renderStudyWorkspace();
+    requestShellRefresh();
 }
 
 /**
@@ -43,6 +45,7 @@ export async function ensureStudySessionSwitchAllowed(targetType) {
     if (!response) return false;
     state.studySession = null;
     studySessionRenderer?.();
+    requestShellRefresh();
     return true;
 }
 

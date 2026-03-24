@@ -8,6 +8,7 @@ import {
     getFieldValue,
     metricCard,
     postJson,
+    requestShellRefresh,
     renderEmptyState,
     resolveDownloadFileName,
     showMessage,
@@ -81,15 +82,23 @@ export async function submitSearchForm(event) {
         tag: tag || null,
     });
     if (!payload) return;
+    state.lastSearchResults = payload;
+    requestShellRefresh();
     document.querySelector("#search-results").innerHTML = payload.length
         ? payload.map((item) => `
             <div class="item">
                 <div class="item-head"><strong>${escapeHtml(item.prompt)}</strong><span class="muted">${escapeHtml(item.deckName)} / ${escapeHtml(item.cardTitle)}</span></div>
                 <div>${escapeHtml(item.answer)}</div>
                 <div class="muted">阶段 ${item.stageIndex} · 复习 ${item.reviewCount} 次 · lapse ${item.lapseCount} 次</div>
+                <div class="item-actions">
+                    <button type="button" data-search-practice="${item.questionId}">练这题</button>
+                </div>
             </div>
         `).join("")
         : renderEmptyState("没有找到结果", "换一个关键词、标签，或先确认目标问题是否已经同步到当前设备。");
+    document.querySelectorAll("[data-search-practice]").forEach((button) => {
+        button.addEventListener("click", () => launchPracticeFromSearch(button.dataset.searchPractice));
+    });
 }
 
 /**
@@ -126,6 +135,7 @@ export async function loadSettings() {
     document.querySelector("#settings-backup-time").textContent = payload.backupLastAt
         ? `最近一次备份：${formatDateTime(payload.backupLastAt)}`
         : "当前还没有可记录的备份时间。";
+    requestShellRefresh();
 }
 
 /**
@@ -227,6 +237,7 @@ export function handleRestoreBackupFileChange(event) {
         ? `${file.name} · ${formatFileSize(file.size)}`
         : "尚未选择备份文件。";
     updateRestoreControls();
+    requestShellRefresh();
 }
 
 /**
@@ -238,6 +249,7 @@ export function clearRestoreSelection() {
     elements.restoreBackupConfirmInput.checked = false;
     elements.restoreBackupFileMeta.textContent = "尚未选择备份文件。";
     updateRestoreControls();
+    requestShellRefresh();
 }
 
 /**
@@ -249,4 +261,26 @@ export function updateRestoreControls() {
     elements.clearRestoreFileButton.disabled = !state.selectedBackupFile || state.isRestoring;
     elements.exportBackupButton.textContent = state.isExporting ? "导出中…" : "导出备份 JSON";
     elements.restoreBackupButton.textContent = state.isRestoring ? "恢复中…" : "确认恢复";
+}
+
+/**
+ * 搜索结果可直接进入题级练习，是为了让搜索上下文真正成为学习入口而不是只读结果页。
+ */
+function launchPracticeFromSearch(questionId) {
+    const result = state.lastSearchResults.find((item) => item.questionId === questionId);
+    if (!result) {
+        return;
+    }
+    state.practiceSelection.selectedDeckIds = new Set([result.deckId]);
+    state.practiceSelection.selectedCardIds = new Set([result.cardId]);
+    state.practiceSelection.selectedQuestionIds = new Set([result.questionId]);
+    state.practiceSelection.cardsByDeckId = new Map();
+    state.practiceSelection.questionsByCardId = new Map();
+    requestShellRefresh();
+    window.dispatchEvent(new CustomEvent("yike:launch-practice", {
+        detail: {
+            returnSection: "search",
+            label: `搜索结果 / ${result.cardTitle}`,
+        },
+    }));
 }

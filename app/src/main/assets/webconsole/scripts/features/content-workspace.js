@@ -3,6 +3,7 @@ import {
     escapeHtml,
     fetchJson,
     postJson,
+    requestShellRefresh,
     renderEmptyState,
     showMessage,
     state,
@@ -40,6 +41,7 @@ export async function loadDecks() {
     renderPracticeSelection();
     updateContentSelection();
     updateCommandAvailability();
+    requestShellRefresh();
 }
 
 /**
@@ -66,6 +68,7 @@ export async function loadCards(deckId) {
     }
     updateContentSelection();
     updateCommandAvailability();
+    requestShellRefresh();
 }
 
 /**
@@ -82,6 +85,7 @@ export async function loadQuestions(cardId) {
     bindQuestionActions(list, payload);
     updateContentSelection();
     updateCommandAvailability();
+    requestShellRefresh();
 }
 
 /**
@@ -91,9 +95,19 @@ export function updateContentSelection() {
     const deck = state.decks.find((item) => item.id === state.selectedDeckId);
     const card = state.cards.find((item) => item.id === state.selectedCardId);
     elements.contentSelectionSummary.innerHTML = `
-        <strong>当前上下文</strong>
-        <div class="muted">${escapeHtml(deck?.name || "未选择卡组")} / ${escapeHtml(card?.title || "未选择卡片")}</div>
+        <div>
+            <strong>当前上下文</strong>
+            <div class="muted">${escapeHtml(deck?.name || "未选择卡组")} / ${escapeHtml(card?.title || "未选择卡片")}</div>
+        </div>
+        <div class="item-actions">
+            ${deck ? `<button type="button" data-content-action="practice-deck">练当前卡组</button>` : ""}
+            ${card ? `<button type="button" data-content-action="practice-card">练当前卡片</button>` : ""}
+        </div>
     `;
+    elements.contentSelectionSummary.querySelectorAll("[data-content-action]").forEach((button) => {
+        button.addEventListener("click", () => launchPracticeFromContent(button.dataset.contentAction));
+    });
+    requestShellRefresh();
 }
 
 /**
@@ -229,4 +243,32 @@ function bindQuestionActions(container, questions) {
             await loadStudyWorkspace();
         });
     });
+}
+
+/**
+ * 内容工作区可直接把当前上下文送入练习，是为了让 drill-down 管理路径和学习路径真正连起来。
+ */
+function launchPracticeFromContent(action) {
+    const deck = state.decks.find((item) => item.id === state.selectedDeckId);
+    const card = state.cards.find((item) => item.id === state.selectedCardId);
+    if (!deck) {
+        return;
+    }
+    state.practiceSelection.selectedDeckIds = new Set([deck.id]);
+    state.practiceSelection.cardsByDeckId = new Map([[deck.id, state.cards]]);
+    if (action === "practice-card" && card) {
+        state.practiceSelection.selectedCardIds = new Set([card.id]);
+        state.practiceSelection.questionsByCardId = new Map([[card.id, state.questions]]);
+    } else {
+        state.practiceSelection.selectedCardIds = new Set();
+        state.practiceSelection.questionsByCardId = new Map();
+    }
+    state.practiceSelection.selectedQuestionIds = new Set();
+    requestShellRefresh();
+    window.dispatchEvent(new CustomEvent("yike:launch-practice", {
+        detail: {
+            returnSection: "content",
+            label: action === "practice-card" && card ? `内容工作台 / ${card.title}` : `内容工作台 / ${deck.name}`,
+        },
+    }));
 }

@@ -4,6 +4,7 @@ import {
     escapeHtml,
     fetchOptionalJson,
     postJson,
+    requestShellRefresh,
     renderEmptyState,
     showMessage,
     state,
@@ -39,6 +40,7 @@ export async function loadStudySession() {
     state.studySession = payload;
     renderStudyWorkspace();
     renderStudySession();
+    requestShellRefresh();
 }
 
 /**
@@ -53,6 +55,7 @@ export async function startReviewSession() {
     showMessage("已进入今日复习。");
     renderStudySession();
     await loadStudyWorkspace();
+    requestShellRefresh();
 }
 
 /**
@@ -63,6 +66,7 @@ export async function revealStudyAnswer() {
     if (!payload) return;
     state.studySession = payload;
     renderStudySession();
+    requestShellRefresh();
 }
 
 /**
@@ -74,6 +78,7 @@ export async function submitReviewRating(rating) {
     state.studySession = payload;
     renderStudySession();
     await loadStudyWorkspace();
+    requestShellRefresh();
 }
 
 /**
@@ -85,6 +90,7 @@ export async function continueReviewSession() {
     state.studySession = payload;
     renderStudySession();
     await loadStudyWorkspace();
+    requestShellRefresh();
 }
 
 /**
@@ -100,6 +106,8 @@ export async function endStudySession() {
     renderStudySession();
     await loadStudyWorkspace();
     showMessage(response.message);
+    requestShellRefresh();
+    window.dispatchEvent(new CustomEvent("yike:study-ended"));
 }
 
 /**

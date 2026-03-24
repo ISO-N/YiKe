@@ -1,4 +1,4 @@
-import { postJson, showMessage, state } from "../shared/core.js";
+import { postJson, requestShellRefresh, showMessage, state } from "../shared/core.js";
 import { ensureStudySessionSwitchAllowed, loadStudyWorkspace } from "./study-workspace.js";
 
 /**
@@ -24,6 +24,7 @@ export async function startPracticeSession() {
     state.studySession = payload;
     showMessage("自由练习已开始。");
     await loadStudyWorkspace();
+    requestShellRefresh();
 }
 
 /**
@@ -33,4 +34,5 @@ export async function navigatePracticeSession(action) {
     const payload = await postJson("/api/web-console/v1/study/practice/navigate", { action });
     if (!payload) return;
     state.studySession = payload;
+    requestShellRefresh();
 }
