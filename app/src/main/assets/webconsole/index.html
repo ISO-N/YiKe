@@ -264,11 +264,19 @@
                 <label>标签<input name="tag" placeholder="可选"></label>
                 <button type="submit" class="primary-button">开始搜索</button>
             </form>
+            <div id="search-feedback" class="workspace-feedback is-empty">
+                <strong>等待搜索条件</strong>
+                <span class="muted">输入关键词或标签后，结果会在同一工作区内展开，并保留继续练习的入口。</span>
+            </div>
             <div id="search-results" class="list-stack empty-state">输入关键词后开始搜索。</div>
         </section>
 
         <section id="section-analytics" class="section">
             <div id="analytics-metrics" class="metric-grid"></div>
+            <div id="analytics-feedback" class="workspace-feedback is-empty">
+                <strong>等待统计数据</strong>
+                <span class="muted">复习记录汇总完成后，这里会统一提示当前统计是否足够支撑分析。</span>
+            </div>
             <div class="card">
                 <div class="card-head">
                     <h3>卡组统计拆分</h3>
@@ -279,6 +287,10 @@
         </section>
 
         <section id="section-settings" class="section">
+            <div id="settings-feedback" class="workspace-feedback is-empty">
+                <strong>等待设置载入</strong>
+                <span class="muted">提醒和主题配置读取完成后，这里会给出当前状态与保存反馈。</span>
+            </div>
             <form id="settings-form" class="card stack">
                 <h3>全局设置</h3>
                 <label class="toggle-row">
@@ -302,6 +314,10 @@
         </section>
 
         <section id="section-backup" class="section">
+            <div id="backup-feedback" class="workspace-feedback is-warning">
+                <strong>高风险操作提示</strong>
+                <span class="muted">导出可直接下载当前备份，恢复会覆盖本地全部数据，执行前请先确认文件来源。</span>
+            </div>
             <div class="card stack">
                 <h3>备份导出</h3>
                 <p class="muted">导出的 JSON 与手机端备份页使用同一份格式，可直接下载到当前设备。</p>

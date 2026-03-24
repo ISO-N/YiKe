@@ -54,6 +54,10 @@ export const elements = {
     restoreBackupButton: document.querySelector("#restore-backup-button"),
     clearRestoreFileButton: document.querySelector("#clear-restore-file-button"),
     exportBackupButton: document.querySelector("#export-backup-button"),
+    searchFeedback: document.querySelector("#search-feedback"),
+    analyticsFeedback: document.querySelector("#analytics-feedback"),
+    settingsFeedback: document.querySelector("#settings-feedback"),
+    backupFeedback: document.querySelector("#backup-feedback"),
     contentSelectionSummary: document.querySelector("#content-selection-summary"),
     contentDeckDetails: document.querySelector("#content-deck-details"),
     contentCardDetails: document.querySelector("#content-card-details"),
@@ -196,6 +200,20 @@ export function renderEmptyState(title, description) {
             <strong>${escapeHtml(title)}</strong>
             <span class="muted">${escapeHtml(description)}</span>
         </div>
+    `;
+}
+
+/**
+ * 工作区反馈条统一生成，是为了让搜索、统计、设置和备份在同一壳层下共享一致的状态层级。
+ */
+export function updateWorkspaceFeedback(element, title, description, variant = "empty") {
+    if (!element) {
+        return;
+    }
+    element.className = `workspace-feedback is-${variant}`;
+    element.innerHTML = `
+        <strong>${escapeHtml(title)}</strong>
+        <span class="muted">${escapeHtml(description)}</span>
     `;
 }
 
