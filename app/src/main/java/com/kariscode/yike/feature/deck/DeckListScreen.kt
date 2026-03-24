@@ -265,22 +265,22 @@ private fun DeckSummaryCard(
         if (item.deck.tags.isNotEmpty()) {
             DeckTagRow(tags = item.deck.tags)
         }
+        YikePrimaryButton(
+            text = "进入卡组",
+            onClick = onOpen,
+            modifier = Modifier.fillMaxWidth()
+        )
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(LocalYikeSpacing.current.sm)
         ) {
-            YikePrimaryButton(
-                text = "进入卡组",
-                onClick = onOpen,
-                modifier = Modifier.weight(1f)
-            )
             YikeSecondaryButton(
-                text = "练习卡组",
+                text = "开始练习",
                 onClick = onPractice,
                 modifier = Modifier.weight(1f)
             )
             YikeSecondaryButton(
-                text = "编辑卡组",
+                text = "编辑信息",
                 onClick = onEdit,
                 modifier = Modifier.weight(1f)
             )
