@@ -33,6 +33,7 @@ class YikeApplication : Application() {
         container.notificationHelper.ensureChannel()
         applicationScope.launch {
             container.reminderScheduler.syncReminderFromRepository()
+            container.questionSearchIndexWriter.rebuildIfNeeded()
         }
     }
 }

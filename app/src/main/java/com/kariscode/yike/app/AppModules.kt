@@ -22,6 +22,8 @@ import com.kariscode.yike.data.reminder.ReminderCheckRunner
 import com.kariscode.yike.data.reminder.ReminderNotifier
 import com.kariscode.yike.data.reminder.ReminderScheduler
 import com.kariscode.yike.data.reminder.ReminderSyncScheduler
+import com.kariscode.yike.data.search.QuestionSearchIndexer
+import com.kariscode.yike.data.search.QuestionSearchIndexWriter
 import com.kariscode.yike.data.settings.DataStoreAppSettingsRepository
 import com.kariscode.yike.data.settings.appSettingsDataStore
 import com.kariscode.yike.data.sync.KeystoreLanSyncSharedSecretProtector
@@ -84,6 +86,7 @@ private val coreModule = module {
     single { get<YikeDatabase>().deckDao() }
     single { get<YikeDatabase>().cardDao() }
     single { get<YikeDatabase>().questionDao() }
+    single { get<YikeDatabase>().questionSearchTokenDao() }
     single { get<YikeDatabase>().reviewRecordDao() }
     single { get<YikeDatabase>().syncChangeDao() }
     single { get<YikeDatabase>().syncPeerDao() }
@@ -100,6 +103,12 @@ private val repositoryModule = module {
     single { LanSyncLocalProfileStore(context = androidContext(), crypto = get()) }
     single { LanSyncChangeRecorder(syncChangeDao = get(), crypto = get()) }
     single { LanSyncPortAllocator() }
+    single<QuestionSearchIndexWriter> {
+        QuestionSearchIndexer(
+            questionDao = get(),
+            questionSearchTokenDao = get()
+        )
+    }
 
     single<AppSettingsRepository> {
         DataStoreAppSettingsRepository(
@@ -129,13 +138,15 @@ private val repositoryModule = module {
             questionDao = get(),
             dispatchers = get(),
             timeProvider = get(),
-            syncChangeRecorder = get()
+            syncChangeRecorder = get(),
+            questionSearchIndexWriter = get()
         )
     }
     single<QuestionEditorDraftRepository> { FileQuestionEditorDraftRepository(context = androidContext()) }
     single<StudyInsightsRepository> {
         OfflineStudyInsightsRepository(
             questionDao = get(),
+            questionSearchTokenDao = get(),
             reviewRecordDao = get(),
             dispatchers = get()
         )
@@ -193,7 +204,8 @@ private val serviceModule = module {
             cardDao = get(),
             questionDao = get(),
             reviewRecordDao = get(),
-            conflictResolver = get()
+            conflictResolver = get(),
+            questionSearchIndexWriter = get()
         )
     }
     single {
@@ -208,6 +220,7 @@ private val serviceModule = module {
             appSettingsRepository = get(),
             backupValidator = get(),
             changeApplier = get(),
+            questionSearchIndexWriter = get(),
             timeProvider = get(),
             dispatchers = get()
         )

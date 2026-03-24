@@ -18,6 +18,8 @@ import com.kariscode.yike.data.local.db.entity.CardEntity
 import com.kariscode.yike.data.local.db.entity.DeckEntity
 import com.kariscode.yike.data.local.db.entity.QuestionEntity
 import com.kariscode.yike.data.local.db.entity.ReviewRecordEntity
+import com.kariscode.yike.data.search.NoOpQuestionSearchIndexWriter
+import com.kariscode.yike.data.search.QuestionSearchIndexWriter
 import com.kariscode.yike.data.sync.LanSyncChangeApplier
 import com.kariscode.yike.data.sync.toPayload
 import com.kariscode.yike.domain.model.AppSettings
@@ -54,6 +56,7 @@ class BackupService(
     private val appSettingsRepository: AppSettingsRepository,
     private val backupValidator: BackupValidator,
     private val changeApplier: LanSyncChangeApplier,
+    private val questionSearchIndexWriter: QuestionSearchIndexWriter = NoOpQuestionSearchIndexWriter,
     private val timeProvider: TimeProvider,
     private val dispatchers: AppDispatchers
 ) : BackupOperations {
@@ -309,6 +312,7 @@ class BackupService(
             deckDao.upsertAll(payload.decks)
             cardDao.upsertAll(payload.cards)
             questionDao.upsertAll(payload.questions)
+            questionSearchIndexWriter.refreshQuestions(payload.questions)
             reviewRecordDao.insertAll(payload.reviewRecords)
         }
     }

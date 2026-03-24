@@ -8,6 +8,7 @@ import com.kariscode.yike.data.local.db.YikeDatabase
 import com.kariscode.yike.data.reminder.NotificationHelper
 import com.kariscode.yike.data.reminder.ReminderCheckRunner
 import com.kariscode.yike.data.reminder.ReminderScheduler
+import com.kariscode.yike.data.search.QuestionSearchIndexWriter
 import com.kariscode.yike.data.sync.LanSyncChangeRecorder
 import com.kariscode.yike.data.sync.LanSyncCrypto
 import com.kariscode.yike.data.sync.LanSyncLocalProfileStore
@@ -43,6 +44,7 @@ class AppContainer : KoinComponent {
     val cardRepository: CardRepository by inject()
     val questionRepository: QuestionRepository by inject()
     val questionEditorDraftRepository: QuestionEditorDraftRepository by inject()
+    val questionSearchIndexWriter: QuestionSearchIndexWriter by inject()
     val studyInsightsRepository: StudyInsightsRepository by inject()
     val reviewRepository: ReviewRepository by inject()
     val practiceRepository: PracticeRepository by inject()
