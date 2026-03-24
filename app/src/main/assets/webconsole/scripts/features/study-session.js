@@ -10,12 +10,15 @@ import {
     state,
 } from "../shared/core.js";
 import {
-    ensureStudySessionSwitchAllowed,
-    loadStudyWorkspace,
     renderPracticeSelectionSummary,
 } from "./practice-selection.js";
 import { navigatePracticeSession, startPracticeSession } from "./practice-session-actions.js";
-import { renderStudyWorkspace, setStudyWorkspaceCallbacks } from "./study-workspace.js";
+import {
+    ensureStudySessionSwitchAllowed,
+    loadStudyWorkspace,
+    renderStudyWorkspace,
+    setStudyWorkspaceCallbacks,
+} from "./study-workspace.js";
 
 /**
  * 学习会话事件绑定集中在这里，是为了让正式复习和会话结束动作围绕同一模块收口。

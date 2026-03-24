@@ -37,25 +37,6 @@ export function prunePracticeDeckSelection() {
 }
 
 /**
- * 当前会话切换确认集中在这里，是为了让复习与练习共享同一条中断边界。
- */
-export async function ensureStudySessionSwitchAllowed(targetType) {
-    if (!state.studySession || state.studySession.type === targetType) {
-        return true;
-    }
-    const targetLabel = targetType === "review" ? "今日复习" : "自由练习";
-    const currentLabel = state.studySession.type === "review" ? "今日复习" : "自由练习";
-    if (!confirmDanger(`当前存在未结束的${currentLabel}会话。确认结束它并切换到${targetLabel}吗？`)) {
-        return false;
-    }
-    const response = await postJson("/api/web-console/v1/study/session/end", {});
-    if (!response) return false;
-    state.studySession = null;
-    studySessionRenderer?.();
-    return true;
-}
-
-/**
  * 练习范围摘要集中渲染，是为了让用户在进入会话前始终清楚本次作用范围。
  */
 export function renderPracticeSelectionSummary() {

@@ -1,6 +1,4 @@
 export {
-    ensureStudySessionSwitchAllowed,
-    loadStudyWorkspace,
     prunePracticeDeckSelection,
     renderPracticeSelection,
     renderPracticeSelectionSummary,
@@ -12,6 +10,8 @@ export {
 } from "./practice-session-actions.js";
 
 export {
+    ensureStudySessionSwitchAllowed,
+    loadStudyWorkspace,
     renderStudyWorkspace,
     setStudyWorkspaceCallbacks,
 } from "./study-workspace.js";
