@@ -9,7 +9,8 @@ import {
     showMessage,
     state,
 } from "../shared/core.js";
-import { loadStudyWorkspace, prunePracticeDeckSelection, renderPracticeSelection } from "./practice-selection.js";
+import { prunePracticeDeckSelection, renderPracticeSelection } from "./practice-selection.js";
+import { loadStudyWorkspace } from "./study-workspace.js";
 import { closeContentForm, openCardForm, openDeckForm, openQuestionForm } from "./content-forms.js";
 
 /**

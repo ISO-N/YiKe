@@ -24,6 +24,10 @@ Invoke-Step "校验网页后台入口产物与体量预算" {
     node .\scripts\build-webconsole.mjs --check
 }
 
+Invoke-Step "校验网页后台相对导入契约" {
+    node .\scripts\check-webconsole-imports.mjs
+}
+
 Invoke-Step "检查网页后台模块语法" {
     Get-ChildItem -Path .\app\src\main\assets\webconsole -Recurse -File -Include *.js |
         ForEach-Object {

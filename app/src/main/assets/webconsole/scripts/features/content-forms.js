@@ -8,8 +8,8 @@ import {
     splitTags,
     state,
 } from "../shared/core.js";
-import { loadStudyWorkspace } from "./practice-selection.js";
 import { loadCards, loadDecks, loadQuestions } from "./content-workspace.js";
+import { loadStudyWorkspace } from "./study-workspace.js";
 
 /**
  * 内容表单事件集中绑定，是为了让新建、编辑和关闭动作围绕同一表单边界演进。
