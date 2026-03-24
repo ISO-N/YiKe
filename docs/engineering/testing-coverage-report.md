@@ -71,7 +71,9 @@
 
 - 新增 `scripts/build-webconsole.mjs`，统一生成 `assets/webconsole/app.js`、`app.css` 并校验前端体量预算
 - 新增 `scripts/verify-webconsole.ps1`，固定网页后台的入口产物校验、语法检查、JVM 回归与 Debug 构建顺序
-- `WebConsoleHttpServerTest` 继续承接网页后台本地 API 契约；桌面/移动浏览器行为仍需人工验收补位
+- `WebConsoleHttpServerTest` 继续承接网页后台本地 API 契约，并新增工作区切换、上下文恢复、局部失败隔离与学习会话中断边界回归
+- `WebConsoleStudyPayloadMapperTest` 继续承接学习工作区完成态与恢复摘要的 DTO 契约
+- 桌面/移动浏览器行为仍需人工验收补位，因此自动化测试面已补强，但不替代真实浏览器验收
 
 ---
 
