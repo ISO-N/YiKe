@@ -412,7 +412,7 @@ private fun AnimatedContentTransitionScope<NavBackStackEntry>.appEnterTransition
         )
     }
     return slideFadeEnter(
-        direction = AnimatedContentTransitionScope.SlideDirection.Left,
+        direction = AnimatedContentTransitionScope.SlideDirection.Up,
         slideDurationMillis = standardSlideDuration,
         fadeDurationMillis = standardFadeDuration
     )
@@ -433,7 +433,7 @@ private fun AnimatedContentTransitionScope<NavBackStackEntry>.appExitTransition(
         )
     }
     return slideFadeExit(
-        direction = AnimatedContentTransitionScope.SlideDirection.Left,
+        direction = AnimatedContentTransitionScope.SlideDirection.Up,
         slideDurationMillis = standardSlideDuration,
         fadeDurationMillis = standardFadeDuration
     )
@@ -454,7 +454,7 @@ private fun AnimatedContentTransitionScope<NavBackStackEntry>.appPopEnterTransit
         )
     }
     return slideFadeEnter(
-        direction = AnimatedContentTransitionScope.SlideDirection.Right,
+        direction = AnimatedContentTransitionScope.SlideDirection.Down,
         slideDurationMillis = standardSlideDuration,
         fadeDurationMillis = standardFadeDuration
     )
@@ -475,7 +475,7 @@ private fun AnimatedContentTransitionScope<NavBackStackEntry>.appPopExitTransiti
         )
     }
     return slideFadeExit(
-        direction = AnimatedContentTransitionScope.SlideDirection.Right,
+        direction = AnimatedContentTransitionScope.SlideDirection.Down,
         slideDurationMillis = standardSlideDuration,
         fadeDurationMillis = standardFadeDuration
     )
