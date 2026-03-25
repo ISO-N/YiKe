@@ -96,14 +96,14 @@ class BackupRestoreViewModel(
      * 避免页面旋转或返回再进入时重复弹出导出/恢复结果。
      */
     fun consumeMessage() {
-        _uiState.update { it.copy(message = null) }
+        _uiState.update(BackupRestoreUiState::consumeMessage)
     }
 
     /**
      * 失败提示同样属于一次性反馈，展示后清理能防止后续重试成功却仍被旧错误反复打断。
      */
     fun consumeErrorMessage() {
-        _uiState.update { it.copy(errorMessage = null) }
+        _uiState.update(BackupRestoreUiState::consumeErrorMessage)
     }
 
     /**
@@ -185,13 +185,7 @@ class BackupRestoreViewModel(
      */
     fun onImportUriSelected(uri: Uri?) {
         if (uri == null) return
-        _uiState.update {
-            it.copy(
-                pendingRestoreUri = uri,
-                message = null,
-                errorMessage = null
-            )
-        }
+        _uiState.update { state -> state.withPendingRestoreUri(uri) }
     }
 
     /**
@@ -199,7 +193,7 @@ class BackupRestoreViewModel(
      * 避免页面后续误把旧选择当作当前操作目标。
      */
     fun onDismissRestoreConfirmation() {
-        _uiState.update { it.copy(pendingRestoreUri = null) }
+        _uiState.update(BackupRestoreUiState::dismissRestoreConfirmation)
     }
 
     /**
@@ -207,34 +201,19 @@ class BackupRestoreViewModel(
      */
     fun onConfirmRestore() {
         val uri = _uiState.value.pendingRestoreUri ?: return
-        _uiState.update {
-            it.copy(
-                isImporting = true,
-                message = null,
-                errorMessage = null,
-                pendingRestoreUri = null
-            )
-        }
+        _uiState.update(BackupRestoreUiState::withRestoreStarted)
         launchResult(
             action = {
                 backupService.restoreFromUri(uri)
                 reminderScheduler.syncReminderFromRepository()
             },
             onSuccess = {
-                _uiState.update {
-                    it.copy(
-                        isImporting = false,
-                        message = SuccessMessages.BACKUP_RESTORED,
-                        errorMessage = null
-                    )
-                }
+                _uiState.update(BackupRestoreUiState::withRestoreSucceeded)
             },
             onFailure = { throwable ->
-                _uiState.update {
-                    it.copy(
-                        isImporting = false,
-                        message = null,
-                        errorMessage = throwable.userMessageOr(ErrorMessages.BACKUP_RESTORE_FAILED)
+                _uiState.update { state ->
+                    state.withRestoreFailed(
+                        throwable.userMessageOr(ErrorMessages.BACKUP_RESTORE_FAILED)
                     )
                 }
             }
@@ -257,24 +236,16 @@ class BackupRestoreViewModel(
         errorMessage: String,
         action: suspend () -> Unit
     ) {
-        _uiState.update { it.copy(isExporting = true, message = null, errorMessage = null) }
+        _uiState.update(BackupRestoreUiState::withExportStarted)
         launchResult(
             action = action,
             onSuccess = {
-                _uiState.update {
-                    it.copy(
-                        isExporting = false,
-                        message = successMessage,
-                        errorMessage = null
-                    )
-                }
+                _uiState.update { state -> state.withExportSucceeded(successMessage) }
             },
             onFailure = { throwable ->
-                _uiState.update {
-                    it.copy(
-                        isExporting = false,
-                        message = null,
-                        errorMessage = throwable.userMessageOr(errorMessage)
+                _uiState.update { state ->
+                    state.withExportFailed(
+                        throwable.userMessageOr(errorMessage)
                     )
                 }
             }
@@ -282,4 +253,85 @@ class BackupRestoreViewModel(
     }
 
 }
+
+/**
+ * 成功提示只应展示一次，是为了避免备份页在配置变更后把旧结果再次当成新反馈。
+ */
+private fun BackupRestoreUiState.consumeMessage(): BackupRestoreUiState = copy(message = null)
+
+/**
+ * 错误提示同样只保留到展示完成，是为了让用户修正后不会持续被旧失败状态打断。
+ */
+private fun BackupRestoreUiState.consumeErrorMessage(): BackupRestoreUiState = copy(errorMessage = null)
+
+/**
+ * 进入导出前统一清空旧反馈，是为了让 JSON 与 CSV 两条导出路径共享同一套进行中语义。
+ */
+private fun BackupRestoreUiState.withExportStarted(): BackupRestoreUiState = copy(
+    isExporting = true,
+    message = null,
+    errorMessage = null
+)
+
+/**
+ * 导出成功后统一退出进行中状态，是为了让不同导出模式都能复用同一套页面反馈模板。
+ */
+private fun BackupRestoreUiState.withExportSucceeded(message: String): BackupRestoreUiState = copy(
+    isExporting = false,
+    message = message,
+    errorMessage = null
+)
+
+/**
+ * 导出失败时统一清空旧成功提示，是为了避免用户看到与当前真实结果冲突的反馈。
+ */
+private fun BackupRestoreUiState.withExportFailed(errorMessage: String): BackupRestoreUiState = copy(
+    isExporting = false,
+    message = null,
+    errorMessage = errorMessage
+)
+
+/**
+ * 待恢复文件进入确认态时统一清空旧反馈，是为了让“高风险确认”不会夹带上一次导出或恢复结果。
+ */
+private fun BackupRestoreUiState.withPendingRestoreUri(uri: Uri): BackupRestoreUiState = copy(
+    pendingRestoreUri = uri,
+    message = null,
+    errorMessage = null
+)
+
+/**
+ * 取消恢复确认只清理待处理文件，是为了让页面其他信息保持稳定，不把普通浏览状态误判成一次失败。
+ */
+private fun BackupRestoreUiState.dismissRestoreConfirmation(): BackupRestoreUiState = copy(
+    pendingRestoreUri = null
+)
+
+/**
+ * 恢复开始时统一退出确认态并清空旧反馈，是为了把不可逆操作正式进入执行阶段的状态固定下来。
+ */
+private fun BackupRestoreUiState.withRestoreStarted(): BackupRestoreUiState = copy(
+    isImporting = true,
+    message = null,
+    errorMessage = null,
+    pendingRestoreUri = null
+)
+
+/**
+ * 恢复成功后统一退出进行中状态，是为了让数据恢复与提醒重建共用同一条成功回写语义。
+ */
+private fun BackupRestoreUiState.withRestoreSucceeded(): BackupRestoreUiState = copy(
+    isImporting = false,
+    message = SuccessMessages.BACKUP_RESTORED,
+    errorMessage = null
+)
+
+/**
+ * 恢复失败时统一保留“已退出确认态”这一结果，是为了让用户能直接重新选择文件而不是停留在半执行状态。
+ */
+private fun BackupRestoreUiState.withRestoreFailed(errorMessage: String): BackupRestoreUiState = copy(
+    isImporting = false,
+    message = null,
+    errorMessage = errorMessage
+)
 
