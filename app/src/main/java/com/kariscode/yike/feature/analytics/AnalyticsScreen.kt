@@ -96,6 +96,7 @@ private fun AnalyticsContent(
             else -> {
                 AnalyticsHeroSection(uiState = uiState, onRangeSelected = onRangeSelected)
                 AnalyticsMetricSection(uiState = uiState)
+                AnalyticsHeatmapSection(heatmapCells = uiState.heatmapCells)
                 AnalyticsAchievementSection(streakAchievementUnlocks = uiState.streakAchievementUnlocks)
                 AnalyticsDistributionSection(uiState = uiState)
                 AnalyticsDeckSection(deckBreakdowns = uiState.deckBreakdowns)

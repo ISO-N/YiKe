@@ -1,6 +1,7 @@
 package com.kariscode.yike.feature.analytics
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -8,7 +9,10 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.FilterChip
@@ -31,6 +35,8 @@ import com.kariscode.yike.ui.component.YikeSecondaryButton
 import com.kariscode.yike.ui.component.YikeStateBanner
 import com.kariscode.yike.ui.component.YikeSurfaceCard
 import com.kariscode.yike.ui.component.YikeRatingPalette
+import com.kariscode.yike.ui.theme.YikeThemeTokens
+import com.kariscode.yike.ui.theme.YikeSemanticColors
 import com.kariscode.yike.ui.theme.LocalYikeSpacing
 
 /**
@@ -93,6 +99,98 @@ internal fun AnalyticsMetricSection(
             )
         }
     }
+}
+
+/**
+ * 热力图采用 52 周 x 7 天网格展示活跃度，是为了让用户从“是否连续”之外再看到“是否稳定”，
+ * 并在不看具体数字的情况下快速识别低谷与高峰。
+ */
+@Composable
+internal fun AnalyticsHeatmapSection(
+    heatmapCells: List<AnalyticsHeatmapCellUiModel>
+) {
+    val spacing = LocalYikeSpacing.current
+    val semanticColors = YikeThemeTokens.semanticColors
+    val weeks = heatmapCells.chunked(7)
+    val cellSize = 10.dp
+    val cellGap = 3.dp
+
+    YikeSurfaceCard {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(text = "近 52 周活跃度", style = MaterialTheme.typography.titleLarge)
+            YikeBadge(text = "52 周")
+        }
+
+        if (heatmapCells.isEmpty()) {
+            Text(
+                text = "当前还没有复习记录，开始复习后这里会出现按天聚合的热力图。",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            return@YikeSurfaceCard
+        }
+
+        Row(
+            modifier = Modifier
+                .horizontalScroll(rememberScrollState())
+                .padding(top = spacing.sm),
+            horizontalArrangement = Arrangement.spacedBy(cellGap)
+        ) {
+            weeks.forEach { week ->
+                Column(verticalArrangement = Arrangement.spacedBy(cellGap)) {
+                    week.forEach { cell ->
+                        Box(
+                            modifier = Modifier
+                                .size(cellSize)
+                                .clip(RoundedCornerShape(3.dp))
+                                .background(color = heatmapColor(cell.level, semanticColors))
+                        )
+                    }
+                }
+            }
+        }
+
+        Row(
+            modifier = Modifier.padding(top = spacing.sm),
+            horizontalArrangement = Arrangement.spacedBy(spacing.xs),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "少",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            (0..4).forEach { level ->
+                Box(
+                    modifier = Modifier
+                        .size(10.dp)
+                        .clip(RoundedCornerShape(3.dp))
+                        .background(color = heatmapColor(level, semanticColors))
+                )
+            }
+            Text(
+                text = "多",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+/**
+ * 颜色映射沿用 issue 建议的 5 档区间，是为了让用户在不同设备和主题下都能形成稳定直觉。
+ */
+@Composable
+private fun heatmapColor(level: Int, semanticColors: YikeSemanticColors): Color = when (level) {
+    0 -> MaterialTheme.colorScheme.surfaceVariant
+    1 -> semanticColors.successContainer.copy(alpha = 0.3f)
+    2 -> semanticColors.successContainer.copy(alpha = 0.6f)
+    3 -> semanticColors.successContainer
+    else -> MaterialTheme.colorScheme.primary
 }
 
 /**
