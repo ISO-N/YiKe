@@ -151,30 +151,12 @@ class BackupRestoreViewModel(
     fun onExportUriSelected(uri: Uri?) {
         if (uri == null) return
         val exportMode = pendingExportMode
-        _uiState.update { it.copy(isExporting = true, message = null, errorMessage = null) }
-        launchResult(
-            action = {
-                backupService.exportToUri(uri = uri, mode = exportMode)
-            },
-            onSuccess = {
-                _uiState.update {
-                    it.copy(
-                        isExporting = false,
-                        message = exportMode.successMessage(),
-                        errorMessage = null
-                    )
-                }
-            },
-            onFailure = { throwable ->
-                _uiState.update {
-                    it.copy(
-                        isExporting = false,
-                        message = null,
-                        errorMessage = throwable.userMessageOr(ErrorMessages.BACKUP_EXPORT_FAILED)
-                    )
-                }
-            }
-        )
+        executeExport(
+            successMessage = exportMode.successMessage(),
+            errorMessage = ErrorMessages.BACKUP_EXPORT_FAILED
+        ) {
+            backupService.exportToUri(uri = uri, mode = exportMode)
+        }
     }
 
     /**
@@ -182,28 +164,12 @@ class BackupRestoreViewModel(
      */
     fun onCsvExportUriSelected(uri: Uri?) {
         if (uri == null) return
-        _uiState.update { it.copy(isExporting = true, message = null, errorMessage = null) }
-        launchResult(
-            action = { csvExporter.exportActiveQuestionsToUri(uri) },
-            onSuccess = {
-                _uiState.update {
-                    it.copy(
-                        isExporting = false,
-                        message = "CSV 导出成功",
-                        errorMessage = null
-                    )
-                }
-            },
-            onFailure = { throwable ->
-                _uiState.update {
-                    it.copy(
-                        isExporting = false,
-                        message = null,
-                        errorMessage = throwable.userMessageOr("CSV 导出失败")
-                    )
-                }
-            }
-        )
+        executeExport(
+            successMessage = "CSV 导出成功",
+            errorMessage = "CSV 导出失败"
+        ) {
+            csvExporter.exportActiveQuestionsToUri(uri)
+        }
     }
 
     /**
@@ -281,6 +247,38 @@ class BackupRestoreViewModel(
     private fun BackupExportMode.successMessage(): String = when (this) {
         BackupExportMode.FULL -> SuccessMessages.BACKUP_EXPORTED
         BackupExportMode.INCREMENTAL -> "增量备份导出成功"
+    }
+
+    /**
+     * 导出类操作共享同一套进行中与反馈模板，是为了避免 JSON/CSV 两条路径逐渐漂移成不同的状态语义。
+     */
+    private fun executeExport(
+        successMessage: String,
+        errorMessage: String,
+        action: suspend () -> Unit
+    ) {
+        _uiState.update { it.copy(isExporting = true, message = null, errorMessage = null) }
+        launchResult(
+            action = action,
+            onSuccess = {
+                _uiState.update {
+                    it.copy(
+                        isExporting = false,
+                        message = successMessage,
+                        errorMessage = null
+                    )
+                }
+            },
+            onFailure = { throwable ->
+                _uiState.update {
+                    it.copy(
+                        isExporting = false,
+                        message = null,
+                        errorMessage = throwable.userMessageOr(errorMessage)
+                    )
+                }
+            }
+        )
     }
 
 }

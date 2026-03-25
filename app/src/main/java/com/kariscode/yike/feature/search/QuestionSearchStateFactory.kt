@@ -38,20 +38,18 @@ internal object QuestionSearchStateFactory {
         state: QuestionSearchUiState,
         metadata: SearchMetadata,
         results: List<QuestionSearchResultUiModel> = state.results
-    ): QuestionSearchUiState {
-        val preservedCardId = state.selectedCardId?.takeIf { candidateId ->
-            metadata.cards.any { card -> card.id == candidateId }
-        }
-        return state.copy(
+    ): QuestionSearchUiState = state.copy(
             isLoading = false,
             availableTags = metadata.tags,
             deckOptions = metadata.decks,
             cardOptions = metadata.cards,
-            selectedCardId = preservedCardId,
+            selectedCardId = preserveSelectedCardId(
+                selectedCardId = state.selectedCardId,
+                cards = metadata.cards
+            ),
             results = results,
             errorMessage = null
         )
-    }
 
     /**
      * 卡组切换后的卡片候选与错误清理总是成组变化，收口成纯转换后能避免成功与失败分支继续复制同一份字段模板。
@@ -80,5 +78,19 @@ internal object QuestionSearchStateFactory {
             mastery = QuestionMasteryCalculator.snapshot(context.question),
             isDue = context.question.status == QuestionStatus.ACTIVE && context.question.dueAt <= nowEpochMillis
         )
+    }
+
+    /**
+     * 当前卡片筛选只在候选列表里仍然存在时才保留，是为了避免刷新元数据后继续带着失效 cardId 做查询。
+     */
+    private fun preserveSelectedCardId(
+        selectedCardId: String?,
+        cards: List<SearchCardOption>
+    ): String? {
+        if (selectedCardId == null) {
+            return null
+        }
+        val availableCardIds = cards.asSequence().map(SearchCardOption::id).toHashSet()
+        return selectedCardId.takeIf(availableCardIds::contains)
     }
 }
