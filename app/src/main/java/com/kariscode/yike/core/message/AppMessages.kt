@@ -1,4 +1,4 @@
-package com.kariscode.yike.core.message
+package com.kariscode.yike.core.ui.message
 
 /**
  * 统一管理应用中的错误消息和提示文本，
@@ -67,3 +67,4 @@ object SuccessMessages {
     const val BACKUP_EXPORTED = "备份已导出"
     const val BACKUP_RESTORED = "恢复成功"
 }
+

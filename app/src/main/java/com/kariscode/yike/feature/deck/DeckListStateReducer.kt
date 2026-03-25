@@ -1,6 +1,6 @@
 package com.kariscode.yike.feature.deck
 
-import com.kariscode.yike.core.message.SuccessMessages
+import com.kariscode.yike.core.ui.message.SuccessMessages
 import com.kariscode.yike.domain.model.DeckSummary
 
 /**
@@ -109,3 +109,4 @@ internal object DeckListStateReducer {
         errorMessage = null
     )
 }
+

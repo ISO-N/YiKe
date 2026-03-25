@@ -1,7 +1,7 @@
 package com.kariscode.yike.feature.deck
 
-import com.kariscode.yike.core.time.TimeProvider
-import com.kariscode.yike.core.message.ErrorMessages
+import com.kariscode.yike.core.domain.time.TimeProvider
+import com.kariscode.yike.core.ui.message.ErrorMessages
 import com.kariscode.yike.domain.model.Deck
 import com.kariscode.yike.domain.model.DeckSummary
 import com.kariscode.yike.domain.repository.DeckRepository
@@ -309,3 +309,4 @@ class DeckListViewModelTest {
         override suspend fun listReviewTimestamps(startEpochMillis: Long?): List<Long> = emptyList()
     }
 }
+

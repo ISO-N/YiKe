@@ -1,8 +1,8 @@
 package com.kariscode.yike.domain.usecase
 
-import com.kariscode.yike.core.time.TimeProvider
-import com.kariscode.yike.core.time.toLocalDate
-import com.kariscode.yike.core.time.toStartOfDayEpochMillis
+import com.kariscode.yike.core.domain.time.TimeProvider
+import com.kariscode.yike.core.domain.time.toLocalDate
+import com.kariscode.yike.core.domain.time.toStartOfDayEpochMillis
 import com.kariscode.yike.domain.model.DeckSummary
 import com.kariscode.yike.domain.repository.DeckRepository
 import java.time.ZoneId
@@ -27,3 +27,4 @@ class ObserveDeckSummariesUseCase(
                 .toStartOfDayEpochMillis(ZoneId.systemDefault())
         )
 }
+

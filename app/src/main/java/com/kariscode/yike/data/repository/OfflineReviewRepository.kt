@@ -1,8 +1,8 @@
 package com.kariscode.yike.data.repository
 
 import androidx.room.withTransaction
-import com.kariscode.yike.core.dispatchers.AppDispatchers
-import com.kariscode.yike.core.id.EntityIds
+import com.kariscode.yike.core.domain.dispatchers.AppDispatchers
+import com.kariscode.yike.core.domain.id.EntityIds
 import com.kariscode.yike.data.local.db.YikeDatabase
 import com.kariscode.yike.data.local.db.dao.QuestionDao
 import com.kariscode.yike.data.local.db.dao.ReviewRecordDao
@@ -106,3 +106,4 @@ class OfflineReviewRepository(
         }
     }
 }
+

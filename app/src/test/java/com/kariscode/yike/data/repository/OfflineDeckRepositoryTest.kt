@@ -1,6 +1,6 @@
 package com.kariscode.yike.data.repository
 
-import com.kariscode.yike.core.dispatchers.AppDispatchers
+import com.kariscode.yike.core.domain.dispatchers.AppDispatchers
 import com.kariscode.yike.data.local.db.dao.DeckDao
 import com.kariscode.yike.data.local.db.dao.DeckSummaryRow
 import com.kariscode.yike.data.local.db.entity.DeckEntity
@@ -305,3 +305,4 @@ class OfflineDeckRepositoryTest {
     }
 
 }
+

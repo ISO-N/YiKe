@@ -6,10 +6,10 @@ import androidx.room.Room
 import androidx.work.WorkManager
 import com.kariscode.yike.BuildConfig
 import com.kariscode.yike.data.backup.BackupOperations
-import com.kariscode.yike.core.dispatchers.AppDispatchers
-import com.kariscode.yike.core.dispatchers.DefaultAppDispatchers
-import com.kariscode.yike.core.time.SystemTimeProvider
-import com.kariscode.yike.core.time.TimeProvider
+import com.kariscode.yike.core.domain.dispatchers.AppDispatchers
+import com.kariscode.yike.core.domain.dispatchers.DefaultAppDispatchers
+import com.kariscode.yike.core.domain.time.SystemTimeProvider
+import com.kariscode.yike.core.domain.time.TimeProvider
 import com.kariscode.yike.data.backup.BackupService
 import com.kariscode.yike.data.backup.BackupValidator
 import com.kariscode.yike.data.editor.FileQuestionEditorDraftRepository
@@ -305,7 +305,7 @@ private val useCaseModule = module {
     factory { DeleteCardUseCase(cardRepository = get()) }
     factory { GetDeckCardMasterySummaryUseCase(studyInsightsRepository = get()) }
     factory { LoadReviewCardSessionUseCase(cardRepository = get(), reviewRepository = get()) }
-    factory { SubmitReviewRatingUseCase(reviewRepository = get(), nowEpochMillisProvider = get<com.kariscode.yike.core.time.TimeProvider>()::nowEpochMillis) }
+    factory { SubmitReviewRatingUseCase(reviewRepository = get(), nowEpochMillisProvider = get<com.kariscode.yike.core.domain.time.TimeProvider>()::nowEpochMillis) }
     factory { GetQuestionSearchMetadataUseCase(studyInsightsRepository = get(), deckRepository = get(), cardRepository = get()) }
     factory { SearchQuestionsUseCase(studyInsightsRepository = get()) }
     factory { LoadQuestionEditorContentUseCase(cardRepository = get(), questionRepository = get(), questionEditorDraftRepository = get()) }
@@ -437,3 +437,4 @@ private val viewModelModule = module {
  * 是为了替换手写 new 链路，同时让后续继续扩展 ViewModel/UseCase 时复用同一对象图。
  */
 val yikeModules = listOf(coreModule, repositoryModule, serviceModule, useCaseModule, viewModelModule)
+

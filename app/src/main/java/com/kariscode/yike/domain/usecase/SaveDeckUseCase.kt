@@ -1,7 +1,7 @@
 package com.kariscode.yike.domain.usecase
 
-import com.kariscode.yike.core.id.EntityIds
-import com.kariscode.yike.core.time.TimeProvider
+import com.kariscode.yike.core.domain.id.EntityIds
+import com.kariscode.yike.core.domain.time.TimeProvider
 import com.kariscode.yike.domain.model.Deck
 import com.kariscode.yike.domain.repository.DeckRepository
 
@@ -59,3 +59,4 @@ data class DeckSaveRequest(
     val tags: List<String>,
     val intervalStepCount: Int
 )
+

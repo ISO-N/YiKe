@@ -1,7 +1,7 @@
 package com.kariscode.yike.domain.scheduler
 
-import com.kariscode.yike.core.time.toLocalDate
-import com.kariscode.yike.core.time.toStartOfDayEpochMillis
+import com.kariscode.yike.core.domain.time.toLocalDate
+import com.kariscode.yike.core.domain.time.toStartOfDayEpochMillis
 import com.kariscode.yike.domain.model.ReviewRating
 import java.time.ZoneId
 import java.time.temporal.ChronoUnit
@@ -245,4 +245,5 @@ data class ReviewOverdueAssessment(
     val hasDecay: Boolean
         get() = decayLevel > 0
 }
+
 

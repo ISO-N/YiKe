@@ -1,8 +1,8 @@
 package com.kariscode.yike.app
 
 import android.app.Application
-import com.kariscode.yike.core.dispatchers.AppDispatchers
-import com.kariscode.yike.core.time.TimeProvider
+import com.kariscode.yike.core.domain.dispatchers.AppDispatchers
+import com.kariscode.yike.core.domain.time.TimeProvider
 import com.kariscode.yike.data.backup.BackupService
 import com.kariscode.yike.data.local.db.YikeDatabase
 import com.kariscode.yike.data.reminder.NotificationHelper
@@ -60,3 +60,4 @@ class AppContainer : KoinComponent {
     val lanSyncRepository: LanSyncRepository by inject<LanSyncRepositoryImpl>()
     val webConsoleRepository: WebConsoleRepository by inject()
 }
+

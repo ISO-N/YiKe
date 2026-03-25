@@ -1,7 +1,7 @@
 package com.kariscode.yike.domain.usecase
 
-import com.kariscode.yike.core.id.EntityIds
-import com.kariscode.yike.core.time.TimeProvider
+import com.kariscode.yike.core.domain.id.EntityIds
+import com.kariscode.yike.core.domain.time.TimeProvider
 import com.kariscode.yike.domain.model.Card
 import com.kariscode.yike.domain.repository.CardRepository
 
@@ -57,3 +57,4 @@ data class CardSaveRequest(
     val title: String,
     val description: String
 )
+

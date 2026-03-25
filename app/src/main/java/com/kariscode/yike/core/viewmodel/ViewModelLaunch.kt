@@ -1,4 +1,4 @@
-package com.kariscode.yike.core.viewmodel
+package com.kariscode.yike.core.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -156,3 +156,4 @@ inline fun <State, T> ViewModel.restartStateResult(
         }
     )
 }
+

@@ -11,7 +11,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.kariscode.yike.BuildConfig
-import com.kariscode.yike.core.message.ErrorMessages
+import com.kariscode.yike.core.ui.message.ErrorMessages
 import com.kariscode.yike.domain.model.DeckSummary
 import com.kariscode.yike.domain.model.PracticeSessionArgs
 import com.kariscode.yike.navigation.YikeNavigator
@@ -384,3 +384,4 @@ private fun buildHomeSubtitle(uiState: HomeUiState): String = when {
     uiState.contentMode == HomeContentMode.REVIEW_CLEARED -> "待复习入口已经清空，现在适合补充新内容或回看今日预览。"
     else -> "先创建卡组和卡片，首页才会开始积累真实复习节奏。"
 }
+

@@ -1,6 +1,6 @@
 package com.kariscode.yike.testsupport
 
-import com.kariscode.yike.core.time.TimeProvider
+import com.kariscode.yike.core.domain.time.TimeProvider
 import com.kariscode.yike.domain.model.AppSettings
 import com.kariscode.yike.domain.model.ArchivedCardSummary
 import com.kariscode.yike.domain.model.Card
@@ -576,3 +576,4 @@ fun defaultAppSettings(): AppSettings = AppSettings(
     backupLastAt = null,
     themeMode = ThemeMode.SYSTEM
 )
+

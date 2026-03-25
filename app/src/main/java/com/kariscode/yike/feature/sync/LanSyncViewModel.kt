@@ -3,9 +3,9 @@ package com.kariscode.yike.feature.sync
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.kariscode.yike.core.viewmodel.launchMutation
-import com.kariscode.yike.core.viewmodel.launchResult
-import com.kariscode.yike.core.viewmodel.typedViewModelFactory
+import com.kariscode.yike.core.ui.viewmodel.launchMutation
+import com.kariscode.yike.core.ui.viewmodel.launchResult
+import com.kariscode.yike.core.ui.viewmodel.typedViewModelFactory
 import com.kariscode.yike.domain.model.LanSyncConflictChoice
 import com.kariscode.yike.domain.model.LanSyncConflictResolution
 import com.kariscode.yike.domain.model.LanSyncLocalProfile
@@ -344,3 +344,4 @@ class LanSyncViewModel(
         }
     }
 }
+

@@ -1,6 +1,6 @@
 package com.kariscode.yike.feature.card
 
-import com.kariscode.yike.core.message.SuccessMessages
+import com.kariscode.yike.core.ui.message.SuccessMessages
 import com.kariscode.yike.feature.common.TextMetadataDraft
 import com.kariscode.yike.domain.model.CardSummary
 
@@ -143,3 +143,4 @@ internal object CardListStateReducer {
      */
     fun masteryLoadFailed(state: CardListUiState): CardListUiState = state.copy(masterySummary = null)
 }
+

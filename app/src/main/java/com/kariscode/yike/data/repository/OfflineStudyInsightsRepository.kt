@@ -1,6 +1,6 @@
 package com.kariscode.yike.data.repository
 
-import com.kariscode.yike.core.dispatchers.AppDispatchers
+import com.kariscode.yike.core.domain.dispatchers.AppDispatchers
 import com.kariscode.yike.data.local.db.dao.QuestionDao
 import com.kariscode.yike.data.local.db.dao.QuestionContextRow
 import com.kariscode.yike.data.local.db.dao.QuestionSearchTokenDao
@@ -234,3 +234,4 @@ class OfflineStudyInsightsRepository(
         const val NO_MATCH_QUESTION_ID: String = "__unused__"
     }
 }
+
