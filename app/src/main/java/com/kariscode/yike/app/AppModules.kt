@@ -69,6 +69,7 @@ import com.kariscode.yike.domain.usecase.SubmitReviewRatingUseCase
 import com.kariscode.yike.domain.usecase.ToggleCardArchiveUseCase
 import com.kariscode.yike.domain.usecase.ToggleDeckArchiveUseCase
 import com.kariscode.yike.domain.usecase.DeleteCardUseCase
+import com.kariscode.yike.domain.usecase.DeleteDeckUseCase
 import com.kariscode.yike.feature.analytics.AnalyticsViewModel
 import com.kariscode.yike.feature.backup.BackupRestoreViewModel
 import com.kariscode.yike.feature.card.CardListViewModel
@@ -306,6 +307,7 @@ private val useCaseModule = module {
     factory { GetDeckAvailableTagsUseCase(studyInsightsRepository = get()) }
     factory { SaveDeckUseCase(deckRepository = get(), timeProvider = get()) }
     factory { ToggleDeckArchiveUseCase(deckRepository = get(), timeProvider = get()) }
+    factory { DeleteDeckUseCase(deckRepository = get()) }
     factory { LoadDeckCardContextUseCase(deckRepository = get()) }
     factory { ObserveCardSummariesUseCase(cardRepository = get(), timeProvider = get()) }
     factory { SaveCardUseCase(cardRepository = get(), timeProvider = get()) }
