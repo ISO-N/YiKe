@@ -307,19 +307,14 @@ class DeckListViewModel(
      * 与真正删除的高风险链路明确拆开，避免 UI 侧混用两种后果完全不同的动作。
      */
     fun onToggleArchiveClick(item: DeckSummary) {
-        launchStateResult(state = _uiState) {
-            action {
-                toggleDeckArchiveUseCase(
-                    deckId = item.deck.id,
-                    archived = !item.deck.archived
-                )
-            }
-            onSuccess { state, _ ->
-                DeckListStateReducer.archiveToggled(state, item.deck.archived)
-            }
-            onFailure { state, _ ->
-                DeckListStateReducer.mutationFailed(state, ErrorMessages.UPDATE_FAILED)
-            }
+        executeMutation(
+            errorMessage = ErrorMessages.UPDATE_FAILED,
+            onSuccess = { state -> DeckListStateReducer.archiveToggled(state, item.deck.archived) }
+        ) {
+            toggleDeckArchiveUseCase(
+                deckId = item.deck.id,
+                archived = !item.deck.archived
+            )
         }
     }
 
@@ -344,12 +339,11 @@ class DeckListViewModel(
      */
     fun onConfirmDelete() {
         val pending = _uiState.value.pendingDelete ?: return
-        launchStateResult(state = _uiState) {
-            action { deleteDeckUseCase(pending.deck.id) }
-            onSuccess { state, _ -> DeckListStateReducer.deleteSucceeded(state) }
-            onFailure { state, _ ->
-                DeckListStateReducer.mutationFailed(state, ErrorMessages.DELETE_FAILED)
-            }
+        executeMutation(
+            errorMessage = ErrorMessages.DELETE_FAILED,
+            onSuccess = DeckListStateReducer::deleteSucceeded
+        ) {
+            deleteDeckUseCase(pending.deck.id)
         }
     }
 
@@ -365,6 +359,24 @@ class DeckListViewModel(
      */
     private fun updateEditor(transform: (DeckMetadataDraft) -> DeckMetadataDraft) {
         _uiState.update { state -> DeckListStateReducer.updateEditor(state, transform) }
+    }
+
+    /**
+     * 卡组页写操作统一走同一编排入口，是为了让归档、删除这类副作用共享同一套失败收口，
+     * 并把“仓储调用”和“状态回写”稳定拆成两个阶段，避免分支继续复制 `launchStateResult` 模板。
+     */
+    private fun executeMutation(
+        errorMessage: String,
+        onSuccess: (DeckListUiState) -> DeckListUiState = { state -> state },
+        action: suspend () -> Unit
+    ) {
+        launchStateResult(state = _uiState) {
+            action(action)
+            onSuccess { state, _ -> onSuccess(state) }
+            onFailure { state, _ ->
+                DeckListStateReducer.mutationFailed(state, errorMessage)
+            }
+        }
     }
 
     /**
