@@ -4,6 +4,7 @@ import com.kariscode.yike.domain.model.QuestionContext
 import com.kariscode.yike.domain.model.QuestionMasteryCalculator
 import com.kariscode.yike.domain.model.QuestionQueryFilters
 import com.kariscode.yike.domain.model.QuestionStatus
+import com.kariscode.yike.domain.model.PracticeSessionArgs
 
 /**
  * 搜索页的元数据快照单独建模，是为了让 ViewModel 刷新时只围绕一份结构化筛选快照工作。
@@ -79,6 +80,33 @@ internal object QuestionSearchStateFactory {
             isDue = context.question.status == QuestionStatus.ACTIVE && context.question.dueAt <= nowEpochMillis
         )
     }
+
+    /**
+     * 搜索页把当前结果带去练习时统一导出参数，是为了让“整批结果练习”的 deck/card/question 口径只维护一处。
+     */
+    fun buildPracticeArgsForResults(state: QuestionSearchUiState): PracticeSessionArgs {
+        val questionIds = state.results.mapTo(ArrayList(state.results.size)) { item ->
+            item.context.question.id
+        }
+        val cardIds = LinkedHashSet<String>(state.results.size)
+        state.results.forEach { item ->
+            cardIds += item.context.question.cardId
+        }
+        return PracticeSessionArgs(
+            deckIds = state.selectedDeckId?.let(::listOf).orEmpty(),
+            cardIds = cardIds.toList(),
+            questionIds = questionIds
+        )
+    }
+
+    /**
+     * 单条结果的练习入口直接按题目上下文导出参数，是为了让列表卡片不再重复拼装同一份导航协议。
+     */
+    fun buildPracticeArgsForResult(item: QuestionSearchResultUiModel): PracticeSessionArgs = PracticeSessionArgs(
+        deckIds = listOf(item.context.deckId),
+        cardIds = listOf(item.context.question.cardId),
+        questionIds = listOf(item.context.question.id)
+    )
 
     /**
      * 当前卡片筛选只在候选列表里仍然存在时才保留，是为了避免刷新元数据后继续带着失效 cardId 做查询。

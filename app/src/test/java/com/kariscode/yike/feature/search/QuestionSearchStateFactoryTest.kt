@@ -1,5 +1,9 @@
 package com.kariscode.yike.feature.search
 
+import com.kariscode.yike.domain.model.PracticeSessionArgs
+import com.kariscode.yike.domain.model.Question
+import com.kariscode.yike.domain.model.QuestionContext
+import com.kariscode.yike.domain.model.QuestionMasteryCalculator
 import com.kariscode.yike.domain.model.QuestionStatus
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -59,21 +63,110 @@ class QuestionSearchStateFactoryTest {
     }
 
     /**
+     * 整批结果导出到练习参数时必须去重 cardId，但保留题目顺序，
+     * 这样练习设置页既能拿到最小范围，又不会丢掉搜索结果当前的题目列表顺序。
+     */
+    @Test
+    fun buildPracticeArgsForResults_deduplicatesCardIdsAndKeepsQuestionIds() {
+        val results = listOf(
+            result(questionId = "q1", deckId = "deck_1", cardId = "card_1"),
+            result(questionId = "q2", deckId = "deck_1", cardId = "card_1"),
+            result(questionId = "q3", deckId = "deck_1", cardId = "card_2")
+        )
+        val state = baseState(
+            selectedCardId = null,
+            selectedDeckId = "deck_1",
+            results = results
+        )
+
+        val args = QuestionSearchStateFactory.buildPracticeArgsForResults(state)
+
+        assertEquals(
+            PracticeSessionArgs(
+                deckIds = listOf("deck_1"),
+                cardIds = listOf("card_1", "card_2"),
+                questionIds = listOf("q1", "q2", "q3")
+            ),
+            args
+        )
+    }
+
+    /**
+     * 单条结果导出时应只带当前题目的最小范围，
+     * 这样“练习这题”不会意外把同卡片的其他结果也一起带进会话。
+     */
+    @Test
+    fun buildPracticeArgsForResult_usesSingleResultScope() {
+        val item = result(questionId = "q1", deckId = "deck_1", cardId = "card_1")
+
+        val args = QuestionSearchStateFactory.buildPracticeArgsForResult(item)
+
+        assertEquals(
+            PracticeSessionArgs(
+                deckIds = listOf("deck_1"),
+                cardIds = listOf("card_1"),
+                questionIds = listOf("q1")
+            ),
+            args
+        )
+    }
+
+    /**
      * 基础状态只保留工厂真正会读取的字段，
      * 这样测试可以聚焦在元数据映射和 cardId 保留规则，而不是整页状态装配噪音。
      */
-    private fun baseState(selectedCardId: String?): QuestionSearchUiState = QuestionSearchUiState(
+    private fun baseState(
+        selectedCardId: String?,
+        selectedDeckId: String? = "deck_1",
+        results: List<QuestionSearchResultUiModel> = emptyList()
+    ): QuestionSearchUiState = QuestionSearchUiState(
         isLoading = true,
         keyword = "",
         selectedTag = null,
         selectedStatus = QuestionStatus.ACTIVE,
-        selectedDeckId = "deck_1",
+        selectedDeckId = selectedDeckId,
         selectedCardId = selectedCardId,
         selectedMasteryLevel = null,
         availableTags = emptyList(),
         deckOptions = emptyList(),
         cardOptions = emptyList(),
-        results = emptyList(),
+        results = results,
         errorMessage = "旧错误"
     )
+
+    /**
+     * 搜索结果测试数据只保留导出练习参数真正需要的字段，
+     * 这样测试可以聚焦在协议映射，而不是 UI 额外展示状态。
+     */
+    private fun result(
+        questionId: String,
+        deckId: String,
+        cardId: String
+    ): QuestionSearchResultUiModel {
+        val question = Question(
+            id = questionId,
+            cardId = cardId,
+            prompt = "题目 $questionId",
+            answer = "答案 $questionId",
+            tags = emptyList(),
+            status = QuestionStatus.ACTIVE,
+            stageIndex = 0,
+            dueAt = 1_000L,
+            lastReviewedAt = null,
+            reviewCount = 0,
+            lapseCount = 0,
+            createdAt = 1L,
+            updatedAt = 1L
+        )
+        return QuestionSearchResultUiModel(
+            context = QuestionContext(
+                question = question,
+                deckId = deckId,
+                deckName = "卡组 $deckId",
+                cardTitle = "卡片 $cardId"
+            ),
+            mastery = QuestionMasteryCalculator.snapshot(question),
+            isDue = true
+        )
+    }
 }
