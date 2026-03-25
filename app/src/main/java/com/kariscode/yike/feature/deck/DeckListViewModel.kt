@@ -1,14 +1,12 @@
 package com.kariscode.yike.feature.deck
 
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.kariscode.yike.core.ui.message.ErrorMessages
 import com.kariscode.yike.core.ui.message.SuccessMessages
 import com.kariscode.yike.core.ui.message.userMessageOr
 import com.kariscode.yike.core.domain.time.TimeProvider
 import com.kariscode.yike.core.ui.viewmodel.launchStateResult
-import com.kariscode.yike.core.ui.viewmodel.typedViewModelFactory
 import com.kariscode.yike.domain.model.DeckSummary
 import com.kariscode.yike.domain.repository.DeckRepository
 import com.kariscode.yike.domain.repository.StudyInsightsRepository
@@ -388,19 +386,6 @@ class DeckListViewModel(
         }
     }
 
-    companion object {
-        /**
-         * 在不引入 DI 框架时，通过工厂注入依赖能保持 ViewModel 的可测试性，
-         * 同时避免在 ViewModel 内部直接访问全局单例。
-         */
-        fun factory(
-            deckRepository: DeckRepository,
-            studyInsightsRepository: StudyInsightsRepository,
-            timeProvider: TimeProvider
-        ): ViewModelProvider.Factory = typedViewModelFactory {
-            DeckListViewModel(deckRepository, studyInsightsRepository, timeProvider)
-        }
-    }
 }
 
 

@@ -1,14 +1,12 @@
 package com.kariscode.yike.feature.card
 
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.kariscode.yike.core.ui.message.ErrorMessages
 import com.kariscode.yike.core.ui.message.SuccessMessages
 import com.kariscode.yike.core.ui.message.userMessageOr
 import com.kariscode.yike.core.domain.time.TimeProvider
 import com.kariscode.yike.core.ui.viewmodel.launchStateResult
-import com.kariscode.yike.core.ui.viewmodel.typedViewModelFactory
 import com.kariscode.yike.domain.model.CardSummary
 import com.kariscode.yike.domain.repository.CardRepository
 import com.kariscode.yike.domain.repository.DeckRepository
@@ -396,25 +394,5 @@ class CardListViewModel(
             masteredCount = masteredCount
         )
 
-    companion object {
-        /**
-         * 工厂将 deckId 与容器依赖注入 ViewModel，避免 ViewModel 直接依赖全局单例。
-         */
-        fun factory(
-            deckId: String,
-            deckRepository: DeckRepository,
-            cardRepository: CardRepository,
-            studyInsightsRepository: StudyInsightsRepository,
-            timeProvider: TimeProvider
-        ): ViewModelProvider.Factory = typedViewModelFactory {
-            CardListViewModel(
-                deckId = deckId,
-                deckRepository = deckRepository,
-                cardRepository = cardRepository,
-                studyInsightsRepository = studyInsightsRepository,
-                timeProvider = timeProvider
-            )
-        }
-    }
 }
 

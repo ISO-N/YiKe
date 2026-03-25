@@ -1,11 +1,9 @@
 package com.kariscode.yike.feature.practice
 
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
 import com.kariscode.yike.core.ui.message.ErrorMessages
 import com.kariscode.yike.core.ui.message.userMessageOr
 import com.kariscode.yike.core.ui.viewmodel.launchResult
-import com.kariscode.yike.core.ui.viewmodel.typedViewModelFactory
 import com.kariscode.yike.domain.model.PracticeOrderMode
 import com.kariscode.yike.domain.model.PracticeSessionArgs
 import com.kariscode.yike.domain.model.QuestionContext
@@ -212,19 +210,5 @@ class PracticeSetupViewModel(
         )
     }
 
-    companion object {
-        /**
-         * 工厂显式接收初始练习参数，是为了让不同入口带入的局部上下文都能被测试和复用。
-         */
-        fun factory(
-            initialArgs: PracticeSessionArgs,
-            practiceRepository: PracticeRepository
-        ): ViewModelProvider.Factory = typedViewModelFactory {
-            PracticeSetupViewModel(
-                initialArgs = initialArgs,
-                practiceRepository = practiceRepository
-            )
-        }
-    }
 }
 

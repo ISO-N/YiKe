@@ -2,14 +2,12 @@ package com.kariscode.yike.feature.backup
 
 import android.net.Uri
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.kariscode.yike.core.ui.message.ErrorMessages
 import com.kariscode.yike.core.ui.message.SuccessMessages
 import com.kariscode.yike.core.ui.message.userMessageOr
 import com.kariscode.yike.data.backup.BackupExportMode
 import com.kariscode.yike.core.ui.viewmodel.launchResult
-import com.kariscode.yike.core.ui.viewmodel.typedViewModelFactory
 import com.kariscode.yike.data.backup.BackupOperations
 import com.kariscode.yike.data.export.CsvExporter
 import com.kariscode.yike.data.reminder.ReminderSyncScheduler
@@ -285,23 +283,5 @@ class BackupRestoreViewModel(
         BackupExportMode.INCREMENTAL -> "增量备份导出成功"
     }
 
-    companion object {
-        /**
-         * 工厂注入高风险服务依赖，可让页面测试时替换为假实现而不触碰真实文件与数据库。
-         */
-        fun factory(
-            backupService: BackupOperations,
-            csvExporter: CsvExporter,
-            appSettingsRepository: AppSettingsRepository,
-            reminderScheduler: ReminderSyncScheduler
-        ): ViewModelProvider.Factory = typedViewModelFactory {
-            BackupRestoreViewModel(
-                backupService = backupService,
-                csvExporter = csvExporter,
-                appSettingsRepository = appSettingsRepository,
-                reminderScheduler = reminderScheduler
-            )
-        }
-    }
 }
 
