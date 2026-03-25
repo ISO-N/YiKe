@@ -37,6 +37,18 @@ data class QuestionContextRow(
 )
 
 /**
+ * 熟练度摘要行把卡片页需要的四档统计一次性聚合出来，
+ * 是为了避免上层为了几个数字先拉整批题目再重复执行领域级分类。
+ */
+data class DeckMasterySummaryRow(
+    val totalQuestions: Int,
+    val newCount: Int,
+    val learningCount: Int,
+    val familiarCount: Int,
+    val masteredCount: Int
+)
+
+/**
  * QuestionDao 的查询需要显式包含 status 与 due 条件，
  * 这是为了保证“归档不出现”和“今日到期口径”在全应用范围内一致。
  */
@@ -188,6 +200,58 @@ interface QuestionDao {
         includeAllQuestions: Boolean,
         questionIds: List<String>
     ): List<QuestionContextRow>
+
+    /**
+     * 卡组熟练度摘要直接在数据库完成分类计数，是为了让卡片页拿到稳定数字时不必额外装载题目上下文。
+     */
+    @Query(
+        """
+        SELECT
+            COUNT(q.id) AS totalQuestions,
+            SUM(CASE WHEN q.reviewCount <= 0 THEN 1 ELSE 0 END) AS newCount,
+            SUM(
+                CASE
+                    WHEN q.reviewCount > 0
+                     AND MIN(MAX(q.stageIndex, 0), 7) >= 6
+                     AND q.lapseCount = 0
+                    THEN 1
+                    ELSE 0
+                END
+            ) AS masteredCount,
+            SUM(
+                CASE
+                    WHEN q.reviewCount > 0
+                     AND MIN(MAX(q.stageIndex, 0), 7) >= 3
+                     AND q.lapseCount <= 1
+                     AND NOT (
+                        MIN(MAX(q.stageIndex, 0), 7) >= 6
+                        AND q.lapseCount = 0
+                     )
+                    THEN 1
+                    ELSE 0
+                END
+            ) AS familiarCount,
+            SUM(
+                CASE
+                    WHEN q.reviewCount > 0
+                     AND NOT (
+                        MIN(MAX(q.stageIndex, 0), 7) >= 3
+                        AND q.lapseCount <= 1
+                     )
+                    THEN 1
+                    ELSE 0
+                END
+            ) AS learningCount
+        FROM question q
+        JOIN card c ON c.id = q.cardId
+        JOIN deck d ON d.id = c.deckId
+        WHERE d.archived = 0
+          AND c.archived = 0
+          AND c.deckId = :deckId
+          AND q.status = :activeStatus
+        """
+    )
+    suspend fun getDeckMasterySummary(deckId: String, activeStatus: String): DeckMasterySummaryRow
 
     /**
      * 复习页需要只加载当前卡片本轮到期的问题，

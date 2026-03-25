@@ -366,7 +366,7 @@ class CardListViewModel(
     /**
      * 领域摘要转换成页面模型收口在本地，是为了让展示层仍能自由演进命名而不反向污染用例层。
      */
-    private fun com.kariscode.yike.domain.usecase.DeckMasterySummarySnapshot.toUiModel(): DeckMasterySummary =
+    private fun com.kariscode.yike.domain.model.DeckMasterySummarySnapshot.toUiModel(): DeckMasterySummary =
         DeckMasterySummary(
             totalQuestions = totalQuestions,
             newCount = newCount,

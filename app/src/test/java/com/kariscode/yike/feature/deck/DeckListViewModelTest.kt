@@ -294,6 +294,15 @@ class DeckListViewModelTest {
 
         override suspend fun listAvailableTags(limit: Int): List<String> = listOf("高频", "定义")
 
+        override suspend fun getDeckMasterySummary(deckId: String) =
+            com.kariscode.yike.domain.model.DeckMasterySummarySnapshot(
+                totalQuestions = 0,
+                newCount = 0,
+                learningCount = 0,
+                familiarCount = 0,
+                masteredCount = 0
+            )
+
         override suspend fun getReviewAnalytics(startEpochMillis: Long?) =
             throw UnsupportedOperationException("Not required for DeckListViewModelTest")
 

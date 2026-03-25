@@ -125,19 +125,21 @@ class PracticeSessionViewModel(
                     maximumValue = (orderedQuestions.lastIndex).coerceAtLeast(0)
                 )
                 savedStateHandle[CURRENT_INDEX_KEY] = currentIndex
-                _uiState.value = PracticeSessionUiState(
-                    isLoading = false,
-                    orderMode = args.orderMode,
-                    currentIndex = currentIndex,
-                    totalCount = orderedQuestions.size,
-                    currentQuestion = orderedQuestions.getOrNull(currentIndex),
-                    answerVisible = savedStateHandle[ANSWER_VISIBLE_KEY] ?: false,
-                    sessionSeed = savedStateHandle[SESSION_SEED_KEY],
-                    startedAtEpochMillis = sessionStartedAtEpochMillis,
-                    isCompleted = false,
-                    isEmpty = orderedQuestions.isEmpty(),
-                    errorMessage = null
-                )
+                _uiState.update { state ->
+                    state.copy(
+                        isLoading = false,
+                        orderMode = args.orderMode,
+                        currentIndex = currentIndex,
+                        totalCount = orderedQuestions.size,
+                        currentQuestion = orderedQuestions.getOrNull(currentIndex),
+                        answerVisible = savedStateHandle[ANSWER_VISIBLE_KEY] ?: false,
+                        sessionSeed = savedStateHandle[SESSION_SEED_KEY],
+                        startedAtEpochMillis = sessionStartedAtEpochMillis,
+                        isCompleted = false,
+                        isEmpty = orderedQuestions.isEmpty(),
+                        errorMessage = null
+                    )
+                }
             },
             onFailure = { throwable ->
                 _uiState.update { state ->

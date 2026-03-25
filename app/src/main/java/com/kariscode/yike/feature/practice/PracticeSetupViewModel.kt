@@ -60,13 +60,15 @@ class PracticeSetupViewModel(
             },
             onSuccess = { contexts ->
                 allQuestionContexts = contexts
-                _uiState.value = buildUiState(
-                    allQuestionContexts = contexts,
-                    selectedDeckIds = _uiState.value.selectedDeckIds,
-                    selectedCardIds = _uiState.value.selectedCardIds,
-                    selectedQuestionIds = _uiState.value.selectedQuestionIds,
-                    orderMode = _uiState.value.orderMode
-                )
+                _uiState.update { state ->
+                    buildUiState(
+                        allQuestionContexts = contexts,
+                        selectedDeckIds = state.selectedDeckIds,
+                        selectedCardIds = state.selectedCardIds,
+                        selectedQuestionIds = state.selectedQuestionIds,
+                        orderMode = state.orderMode
+                    )
+                }
             },
             onFailure = { throwable ->
                 _uiState.update { state ->
@@ -146,13 +148,15 @@ class PracticeSetupViewModel(
         selectedQuestionIds: Set<String>? = _uiState.value.selectedQuestionIds,
         orderMode: PracticeOrderMode = _uiState.value.orderMode
     ) {
-        _uiState.value = buildUiState(
-            allQuestionContexts = allQuestionContexts,
-            selectedDeckIds = selectedDeckIds,
-            selectedCardIds = selectedCardIds,
-            selectedQuestionIds = selectedQuestionIds,
-            orderMode = orderMode
-        )
+        _uiState.update {
+            buildUiState(
+                allQuestionContexts = allQuestionContexts,
+                selectedDeckIds = selectedDeckIds,
+                selectedCardIds = selectedCardIds,
+                selectedQuestionIds = selectedQuestionIds,
+                orderMode = orderMode
+            )
+        }
     }
 
     /**
