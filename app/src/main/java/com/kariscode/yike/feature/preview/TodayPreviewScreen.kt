@@ -8,8 +8,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
-import com.kariscode.yike.app.LocalAppContainer
 import com.kariscode.yike.core.message.ErrorMessages
 import com.kariscode.yike.navigation.YikeNavigator
 import com.kariscode.yike.ui.component.YikeFlowScaffold
@@ -19,6 +17,7 @@ import com.kariscode.yike.ui.component.YikeScrollableColumn
 import com.kariscode.yike.ui.component.YikeStateBanner
 import com.kariscode.yike.ui.component.backNavigationAction
 import com.kariscode.yike.ui.theme.LocalYikeSpacing
+import org.koin.androidx.compose.koinViewModel
 
 /**
  * 今日预览页独立存在，是为了让用户在开始复习前先建立任务预期，而不是进入队列后再被动接受负荷。
@@ -28,13 +27,7 @@ fun TodayPreviewScreen(
     navigator: YikeNavigator,
     modifier: Modifier = Modifier
 ) {
-    val container = LocalAppContainer.current
-    val viewModel = viewModel<TodayPreviewViewModel>(
-        factory = TodayPreviewViewModel.factory(
-            studyInsightsRepository = container.studyInsightsRepository,
-            timeProvider = container.timeProvider
-        )
-    )
+    val viewModel = koinViewModel<TodayPreviewViewModel>()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     YikeFlowScaffold(
