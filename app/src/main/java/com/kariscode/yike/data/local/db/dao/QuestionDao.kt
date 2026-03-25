@@ -334,6 +334,30 @@ interface QuestionDao {
     suspend fun listDueQuestions(activeStatus: String, nowEpochMillis: Long): List<QuestionEntity>
 
     /**
+     * 未来到期预测只需要 dueAt 时间戳序列，因此在 DAO 层直接返回 Long 列表，
+     * 既能减少实体装载开销，也能让上层按本地日期自由分桶。
+     */
+    @Query(
+        """
+        SELECT q.dueAt
+        FROM question q
+        JOIN card c ON c.id = q.cardId
+        JOIN deck d ON d.id = c.deckId
+        WHERE d.archived = 0
+          AND c.archived = 0
+          AND q.status = :activeStatus
+          AND q.dueAt >= :startEpochMillis
+          AND q.dueAt < :endEpochMillis
+        ORDER BY q.dueAt ASC
+        """
+    )
+    suspend fun listUpcomingDueAts(
+        activeStatus: String,
+        startEpochMillis: Long,
+        endEpochMillis: Long
+    ): List<Long>
+
+    /**
      * 队列页把“下一张卡片”判断下推到数据库，可以避免把全部到期问题加载到内存后再做分组筛选。
      */
     @Query(
