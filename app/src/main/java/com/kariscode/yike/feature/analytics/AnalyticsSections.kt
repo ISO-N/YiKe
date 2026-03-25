@@ -1,6 +1,7 @@
 package com.kariscode.yike.feature.analytics
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -8,6 +9,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
@@ -24,6 +26,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
 import com.kariscode.yike.domain.model.StreakAchievement
 import com.kariscode.yike.domain.model.StreakAchievementUnlock
@@ -253,9 +257,24 @@ internal fun AnalyticsDistributionSection(
             Text(text = "评分分布", style = MaterialTheme.typography.titleLarge)
             YikeBadge(text = "基于 ${uiState.totalReviews} 次评分")
         }
-        uiState.distributions.forEach { item ->
-            AnalyticsDistributionRow(item = item, barColor = distributionColor(item.label))
+
+        AnalyticsRatingDonutChart(
+            distributions = uiState.distributions,
+            totalReviews = uiState.totalReviews
+        )
+
+        Column(
+            modifier = Modifier.padding(top = spacing.sm),
+            verticalArrangement = Arrangement.spacedBy(spacing.xs)
+        ) {
+            uiState.distributions.forEach { item ->
+                AnalyticsDistributionLegendRow(
+                    item = item,
+                    color = distributionColor(item.label)
+                )
+            }
         }
+
         if (uiState.totalReviews == 0) {
             Text(
                 text = "当前时间范围内还没有复习记录，开始一轮复习后这里会出现真实分布。",
@@ -263,6 +282,120 @@ internal fun AnalyticsDistributionSection(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
+    }
+}
+
+/**
+ * 评分分布使用 Canvas 绘制环形图，是为了让四档评分在同一视觉尺度下对比，
+ * 并满足 issue 对“环形图而不是比例条”的验收要求。
+ */
+@Composable
+private fun AnalyticsRatingDonutChart(
+    distributions: List<AnalyticsDistributionUiModel>,
+    totalReviews: Int,
+    modifier: Modifier = Modifier
+) {
+    val spacing = LocalYikeSpacing.current
+    val strokeWidth = 18.dp
+    val chartSize = 156.dp
+    val total = totalReviews.coerceAtLeast(1)
+    val backgroundRingColor = MaterialTheme.colorScheme.surfaceVariant
+
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(top = spacing.sm),
+        contentAlignment = Alignment.Center
+    ) {
+        Box(
+            modifier = Modifier.size(chartSize),
+            contentAlignment = Alignment.Center
+        ) {
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                val stroke = Stroke(width = strokeWidth.toPx(), cap = StrokeCap.Butt)
+                val inset = stroke.width / 2f
+                val arcSize = androidx.compose.ui.geometry.Size(
+                    width = size.width - stroke.width,
+                    height = size.height - stroke.width
+                )
+                val topLeft = androidx.compose.ui.geometry.Offset(inset, inset)
+
+                // 背景环让“无数据”或小比例时仍然有稳定结构，不会显得空白或跳变。
+                drawArc(
+                    color = backgroundRingColor,
+                    startAngle = 0f,
+                    sweepAngle = 360f,
+                    useCenter = false,
+                    topLeft = topLeft,
+                    size = arcSize,
+                    style = stroke
+                )
+
+                var startAngle = -90f
+                distributions
+                    .filter { item -> item.count > 0 }
+                    .forEach { item ->
+                        val sweepAngle = item.count.toFloat() / total.toFloat() * 360f
+                        drawArc(
+                            color = distributionColor(item.label),
+                            startAngle = startAngle,
+                            sweepAngle = sweepAngle,
+                            useCenter = false,
+                            topLeft = topLeft,
+                            size = arcSize,
+                            style = stroke
+                        )
+                        startAngle += sweepAngle
+                    }
+            }
+
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text = totalReviews.toString(),
+                    style = MaterialTheme.typography.titleLarge
+                )
+                Text(
+                    text = "次评分",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Legend 行提供颜色与数字对照，是为了让环形图在不标注角度的情况下仍能被精确读出。
+ */
+@Composable
+private fun AnalyticsDistributionLegendRow(
+    item: AnalyticsDistributionUiModel,
+    color: Color,
+    modifier: Modifier = Modifier
+) {
+    val spacing = LocalYikeSpacing.current
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(spacing.sm)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(10.dp)
+                    .clip(CircleShape)
+                    .background(color)
+            )
+            Text(text = item.label, style = MaterialTheme.typography.labelLarge)
+        }
+        Text(
+            text = "${item.count} · ${(item.ratio * 100).toInt()}%",
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
 
@@ -322,48 +455,6 @@ internal fun AnalyticsConclusionSection(
                 modifier = Modifier.weight(1f)
             )
         }
-    }
-}
-
-/**
- * 分布行把文字和比例条放在一行，是为了在手机上保留足够可读性又不占太多高度。
- */
-@Composable
-private fun AnalyticsDistributionRow(
-    item: AnalyticsDistributionUiModel,
-    barColor: Color
-) {
-    val spacing = LocalYikeSpacing.current
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(text = item.label, modifier = Modifier.width(56.dp), style = MaterialTheme.typography.labelLarge)
-        Spacer(modifier = Modifier.width(spacing.sm))
-        Surface(
-            modifier = Modifier.weight(1f),
-            color = MaterialTheme.colorScheme.surfaceVariant,
-            shape = CircleShape
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(10.dp)
-                    .clip(CircleShape)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth(item.ratio.coerceIn(0f, 1f))
-                        .height(10.dp)
-                        .background(barColor, RoundedCornerShape(999.dp))
-                )
-            }
-        }
-        Spacer(modifier = Modifier.width(spacing.sm))
-        Text(
-            text = "${(item.ratio * 100).toInt()}%",
-            style = MaterialTheme.typography.labelLarge
-        )
     }
 }
 
