@@ -32,7 +32,8 @@ fun YikeApp(
             dailyReminderMinute = 0,
             schemaVersion = SettingsConstants.SCHEMA_VERSION,
             backupLastAt = null,
-            themeMode = ThemeMode.LIGHT
+            themeMode = ThemeMode.LIGHT,
+            streakAchievementUnlocks = emptyList()
         )
     )
     YikeTheme(themeMode = settings.value.themeMode) {

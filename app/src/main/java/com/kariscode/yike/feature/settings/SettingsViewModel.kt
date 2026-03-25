@@ -63,7 +63,8 @@ class SettingsViewModel(
         dailyReminderMinute = 0,
         schemaVersion = SettingsConstants.SCHEMA_VERSION,
         backupLastAt = null,
-        themeMode = ThemeMode.LIGHT
+        themeMode = ThemeMode.LIGHT,
+        streakAchievementUnlocks = emptyList()
     )
 
     private val _uiState = MutableStateFlow(
