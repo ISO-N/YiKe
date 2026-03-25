@@ -573,6 +573,16 @@ class OfflineQuestionRepositoryTest {
 
         override suspend fun listAll(): List<QuestionEntity> = storedQuestions.values.toList()
 
+        /**
+         * 启动分批重建索引只依赖稳定分页结果，这里直接基于已存数据切片，
+         * 能让仓储测试在不引入额外状态的前提下满足最新 DAO 契约。
+         */
+        override suspend fun listPage(limit: Int, offset: Int): List<QuestionEntity> =
+            storedQuestions.values
+                .sortedBy(QuestionEntity::createdAt)
+                .drop(offset)
+                .take(limit)
+
         override suspend fun deleteById(questionId: String): Int {
             deletedIds.add(questionId)
             storedQuestions.remove(questionId)
