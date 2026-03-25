@@ -350,9 +350,11 @@ private val viewModelModule = module {
         )
     }
     viewModel { parameters ->
+        val cardId = parameters[0] as String
+        val deckId = parameters[1] as String?
         QuestionEditorViewModel(
-            cardId = parameters.get(),
-            deckId = parameters.get(),
+            cardId = cardId,
+            deckId = deckId,
             questionEditorDraftRepository = get(),
             loadQuestionEditorContentUseCase = get(),
             saveQuestionEditorChangesUseCase = get(),
@@ -409,10 +411,13 @@ private val viewModelModule = module {
         )
     }
     viewModel { parameters ->
+        val initialDeckId = parameters[0] as String?
+        val initialCardId = parameters[1] as String?
+        val initialTag = parameters[2] as String?
         QuestionSearchViewModel(
-            initialDeckId = parameters.get(),
-            initialCardId = parameters.get(),
-            initialTag = parameters.get(),
+            initialDeckId = initialDeckId,
+            initialCardId = initialCardId,
+            initialTag = initialTag,
             getQuestionSearchMetadataUseCase = get(),
             searchQuestionsUseCase = get(),
             timeProvider = get()
