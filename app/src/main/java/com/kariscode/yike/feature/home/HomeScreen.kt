@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -25,9 +26,10 @@ import com.kariscode.yike.ui.component.YikePrimaryButton
 import com.kariscode.yike.ui.component.YikePrimaryDestination
 import com.kariscode.yike.ui.component.YikePrimaryScaffold
 import com.kariscode.yike.ui.component.YikeProgressBar
+import com.kariscode.yike.ui.component.YikePullToRefresh
 import com.kariscode.yike.ui.component.YikeScrollableColumn
 import com.kariscode.yike.ui.component.YikeSecondaryButton
-import com.kariscode.yike.ui.component.YikeSkeletonBlock
+import com.kariscode.yike.ui.component.YikeShimmerBlock
 import com.kariscode.yike.ui.component.YikeStateBanner
 import com.kariscode.yike.ui.component.YikeEmptyStateIcon
 import com.kariscode.yike.ui.theme.LocalYikeSpacing
@@ -72,61 +74,72 @@ fun HomeContent(
     contentPadding: PaddingValues = PaddingValues()
 ) {
     val spacing = LocalYikeSpacing.current
-    YikeScrollableColumn(
-        modifier = modifier,
-        contentPadding = contentPadding
-    ) {
-        when {
-            uiState.isLoading -> {
-                HomeLoadingSection()
-            }
+    val isInitialLoading = uiState.isLoading &&
+        uiState.contentMode == HomeContentMode.CONTENT_EMPTY &&
+        uiState.recentDecks.isEmpty()
+    val isRefreshing = uiState.isLoading && !isInitialLoading
 
-            uiState.errorMessage != null -> {
-                YikeStateBanner(
-                    title = ErrorMessages.HOME_LOAD_FAILED,
-                    description = uiState.errorMessage ?: "请稍后重试，或先进入内容管理继续整理卡组。"
-                ) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(spacing.sm)) {
-                        YikePrimaryButton(
-                            text = "重试",
-                            onClick = onRetry,
-                            modifier = Modifier.weight(1f)
-                        )
-                        YikeSecondaryButton(
-                            text = "进入卡组",
-                            onClick = navigator::openDeckList,
-                            modifier = Modifier.weight(1f)
-                        )
+    YikePullToRefresh(
+        isRefreshing = isRefreshing,
+        onRefresh = onRetry,
+        modifier = modifier
+    ) {
+        YikeScrollableColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = contentPadding
+        ) {
+            when {
+                isInitialLoading -> {
+                    HomeLoadingSection()
+                }
+
+                uiState.errorMessage != null -> {
+                    YikeStateBanner(
+                        title = ErrorMessages.HOME_LOAD_FAILED,
+                        description = uiState.errorMessage ?: "请稍后重试，或先进入内容管理继续整理卡组。"
+                    ) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(spacing.sm)) {
+                            YikePrimaryButton(
+                                text = "重试",
+                                onClick = onRetry,
+                                modifier = Modifier.weight(1f)
+                            )
+                            YikeSecondaryButton(
+                                text = "进入卡组",
+                                onClick = navigator::openDeckList,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
                     }
+                }
+
+                else -> {
+                    HomeHeroSection(
+                        contentMode = uiState.contentMode,
+                        dueCards = uiState.summary.dueCardCount,
+                        dueQuestions = uiState.summary.dueQuestionCount,
+                        navigator = navigator
+                    )
+                    HomeRhythmSection(
+                        contentMode = uiState.contentMode,
+                        dueQuestions = uiState.summary.dueQuestionCount,
+                        totalRecentDecks = uiState.recentDecks.size,
+                        navigator = navigator
+                    )
+                    RecentDeckSection(
+                        recentDecks = uiState.recentDecks,
+                        navigator = navigator
+                    )
                 }
             }
 
-            else -> {
-                HomeHeroSection(
-                    contentMode = uiState.contentMode,
-                    dueCards = uiState.summary.dueCardCount,
-                    dueQuestions = uiState.summary.dueQuestionCount,
-                    navigator = navigator
-                )
-                HomeRhythmSection(
-                    contentMode = uiState.contentMode,
-                    dueQuestions = uiState.summary.dueQuestionCount,
-                    totalRecentDecks = uiState.recentDecks.size,
-                    navigator = navigator
-                )
-                RecentDeckSection(
-                    recentDecks = uiState.recentDecks,
-                    navigator = navigator
-                )
-            }
+            YikeSecondaryButton(
+                text = "进入设置",
+                onClick = navigator::openSettings,
+                modifier = Modifier.fillMaxWidth()
+            )
+            HomeDebugEntry(navigator = navigator)
         }
-
-        YikeSecondaryButton(
-            text = "进入设置",
-            onClick = navigator::openSettings,
-            modifier = Modifier.fillMaxWidth()
-        )
-        HomeDebugEntry(navigator = navigator)
     }
 }
 
@@ -334,9 +347,9 @@ private fun HomeLoadingSection() {
         description = "稍等一下，我们会把待复习概览和最近卡组一起准备好。"
     )
     Column(verticalArrangement = Arrangement.spacedBy(spacing.md)) {
-        YikeSkeletonBlock(height = 112.dp)
-        YikeSkeletonBlock(height = 168.dp)
-        YikeSkeletonBlock(height = 88.dp)
+        YikeShimmerBlock(height = 112.dp)
+        YikeShimmerBlock(height = 168.dp)
+        YikeShimmerBlock(height = 88.dp)
     }
 }
 
