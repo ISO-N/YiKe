@@ -1,7 +1,6 @@
 package com.kariscode.yike.feature.search
 
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
 import com.kariscode.yike.core.domain.coroutine.parallel
 import com.kariscode.yike.core.ui.message.ErrorMessages
 import com.kariscode.yike.core.ui.message.userMessageOr
@@ -9,7 +8,6 @@ import com.kariscode.yike.core.domain.time.TimeProvider
 import com.kariscode.yike.core.ui.viewmodel.launchResult
 import com.kariscode.yike.core.ui.viewmodel.launchStateResult
 import com.kariscode.yike.core.ui.viewmodel.restartStateResult
-import com.kariscode.yike.core.ui.viewmodel.typedViewModelFactory
 import com.kariscode.yike.domain.model.QuestionMasteryLevel
 import com.kariscode.yike.domain.model.QuestionStatus
 import com.kariscode.yike.domain.repository.CardRepository
@@ -255,34 +253,5 @@ class QuestionSearchViewModel(
         search()
     }
 
-    companion object {
-        /**
-         * 工厂显式接收初始筛选参数，是为了让首页和卡片页都能通过路由预置不同搜索上下文。
-         */
-        fun factory(
-            initialDeckId: String?,
-            initialCardId: String?,
-            initialTag: String?,
-            studyInsightsRepository: StudyInsightsRepository,
-            deckRepository: DeckRepository,
-            cardRepository: CardRepository,
-            timeProvider: TimeProvider
-        ): ViewModelProvider.Factory = typedViewModelFactory {
-            QuestionSearchViewModel(
-                initialDeckId = initialDeckId,
-                initialCardId = initialCardId,
-                initialTag = initialTag,
-                getQuestionSearchMetadataUseCase = GetQuestionSearchMetadataUseCase(
-                    studyInsightsRepository = studyInsightsRepository,
-                    deckRepository = deckRepository,
-                    cardRepository = cardRepository
-                ),
-                searchQuestionsUseCase = SearchQuestionsUseCase(
-                    studyInsightsRepository = studyInsightsRepository
-                ),
-                timeProvider = timeProvider
-            )
-        }
-    }
 }
 

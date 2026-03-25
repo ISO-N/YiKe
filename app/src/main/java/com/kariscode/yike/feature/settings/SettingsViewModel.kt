@@ -2,11 +2,9 @@ package com.kariscode.yike.feature.settings
 
 import android.os.Build
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.kariscode.yike.core.ui.message.ErrorMessages
 import com.kariscode.yike.core.ui.viewmodel.launchResult
-import com.kariscode.yike.core.ui.viewmodel.typedViewModelFactory
 import com.kariscode.yike.data.reminder.ReminderScheduler
 import com.kariscode.yike.data.settings.SettingsConstants
 import com.kariscode.yike.domain.model.AppSettings
@@ -248,21 +246,5 @@ class SettingsViewModel(
         dailyReminderMinute = minute
     )
 
-    companion object {
-        /**
-         * 工厂显式注入系统依赖，是为了保持 ViewModel 可测试且不依赖全局静态单例。
-         */
-        fun factory(
-            appSettingsRepository: AppSettingsRepository,
-            reminderScheduler: ReminderScheduler,
-            appVersionName: String
-        ): ViewModelProvider.Factory = typedViewModelFactory {
-            SettingsViewModel(
-                appSettingsRepository = appSettingsRepository,
-                reminderScheduler = reminderScheduler,
-                appVersionName = appVersionName
-            )
-        }
-    }
 }
 
