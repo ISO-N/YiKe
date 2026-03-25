@@ -1,3 +1,13 @@
 <resources>
     <string name="app_name">Yike</string>
+
+    <!--
+        Shortcuts 文案集中在 string 资源中，是为了兼容后续多语言或统一文案调整，
+        避免 shortcuts.xml 内硬编码导致更新时遗漏。
+    -->
+    <string name="shortcut_review_short_label">快速复习</string>
+    <string name="shortcut_review_long_label">快速进入复习队列</string>
+    <string name="shortcut_new_card_short_label">新建卡片</string>
+    <string name="shortcut_new_card_long_label">快速创建一张新卡片</string>
+    <string name="shortcut_disabled_message">入口暂不可用</string>
 </resources>
