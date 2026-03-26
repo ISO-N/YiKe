@@ -22,8 +22,10 @@ import kotlin.random.Random
 class LanSyncHttpClient(
     private val crypto: LanSyncCrypto,
     private val client: HttpClient = createDefaultHttpClient(),
-    private val retryBackoff: RetryBackoff = RetryBackoff()
+    retryDelaysMillis: LongArray? = null
 ) : LanSyncTransportClient {
+    private val retryBackoff: RetryBackoff = RetryBackoff()
+    private val retryDelaysMillisOverride: LongArray? = retryDelaysMillis
     /**
      * hello 走明文只返回最小发现资料，是为了在未配对前先完成版本和身份识别，而不提前暴露真正同步内容。
      */
@@ -201,6 +203,25 @@ class LanSyncHttpClient(
      * 幂等请求统一做指数退避，是为了在局域网抖动时保住用户体验，又避免对提交型请求造成重复副作用。
      */
     private suspend fun <T> retryIdempotent(action: suspend () -> T): T {
+        val fixedDelays = retryDelaysMillisOverride
+        if (fixedDelays != null) {
+            var attempt = 0
+            var lastError: Throwable? = null
+            while (attempt < fixedDelays.size + 1) {
+                try {
+                    return action()
+                } catch (throwable: Throwable) {
+                    lastError = throwable
+                    if (attempt >= fixedDelays.lastIndex) {
+                        break
+                    }
+                    delay(fixedDelays[attempt])
+                    attempt += 1
+                }
+            }
+            throw lastError ?: IllegalStateException("局域网同步请求失败")
+        }
+
         var attempt = 0
         var lastError: Throwable? = null
         while (attempt < retryBackoff.maxAttempts + 1) {

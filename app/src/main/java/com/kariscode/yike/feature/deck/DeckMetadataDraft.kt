@@ -13,7 +13,7 @@ data class DeckMetadataDraft(
     val description: String,
     val tags: List<String> = emptyList(),
     val intervalStepCountText: String = ReviewSchedulerV1.DEFAULT_INTERVAL_STEP_COUNT.toString(),
-    val validationMessage: String? = null
+    override val validationMessage: String? = null
 ) : ValidationMessageDraft<DeckMetadataDraft> {
     /**
      * 名称变更时同步清空旧校验提示，是为了让用户修正后能立即看到“当前输入重新有效”的反馈。

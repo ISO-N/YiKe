@@ -72,12 +72,12 @@ fun buildCardOptions(
  */
 fun Set<String>.normalizeQuestionSelection(
     availableQuestionIds: Set<String>
-): Set<String>? = normalizeQuestionSelectionDomain(this, availableQuestionIds)
+): Set<String>? = normalizeQuestionSelectionDomain(availableQuestionIds)
 
 /**
  * 多选集合统一用可逆 toggle，是为了让 deck/card/question 三层都共享同一套点击语义。
  */
-fun MutableSet<String>.applyToggle(id: String): Set<String> = applyToggleDomain(this, id)
+fun MutableSet<String>.applyToggle(id: String): Set<String> = applyToggleDomain(id)
 
 /**
  * practice 设置页的范围投影依赖 domain 纯函数，然后把输出映射到 UI 需要的预览字段。
@@ -131,4 +131,3 @@ internal fun buildPracticeSelectionProjection(
         effectiveQuestionCount = projection.effectiveQuestionCount
     )
 }
-

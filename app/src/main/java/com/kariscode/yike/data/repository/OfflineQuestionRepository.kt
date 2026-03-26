@@ -108,7 +108,7 @@ class OfflineQuestionRepository(
         if (deletedRows == 0) {
             throw EntityNotFoundException(entityLabel = "问题", entityId = questionId)
         }
-        RepositorySyncSupport.recordDeleteFromSnapshot(
+        RepositorySyncSupport.recordDeleteFromSnapshot<Question>(
             syncChangeRecorder = syncChangeRecorder,
             entityType = SyncEntityType.QUESTION,
             entityId = questionId,
@@ -135,7 +135,7 @@ class OfflineQuestionRepository(
         }
         val fallbackModifiedAt = timeProvider.nowEpochMillis()
         questionIds.forEach { questionId ->
-            RepositorySyncSupport.recordDeleteFromSnapshot(
+            RepositorySyncSupport.recordDeleteFromSnapshot<Question>(
                 syncChangeRecorder = syncChangeRecorder,
                 entityType = SyncEntityType.QUESTION,
                 entityId = questionId,

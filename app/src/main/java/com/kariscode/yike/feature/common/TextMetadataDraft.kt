@@ -8,7 +8,7 @@ data class TextMetadataDraft(
     val entityId: String?,
     val primaryValue: String,
     val secondaryValue: String,
-    val validationMessage: String? = null
+    override val validationMessage: String? = null
 ) : ValidationMessageDraft<TextMetadataDraft> {
     /**
      * 主字段修改时统一清空旧校验提示，是为了让用户修正输入后立即回到干净的编辑状态。
