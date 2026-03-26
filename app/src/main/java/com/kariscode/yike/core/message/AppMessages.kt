@@ -12,7 +12,6 @@ object ErrorMessages {
     const val DELETE_FAILED = "删除失败，请稍后重试"
     const val UPDATE_FAILED = "更新失败，请稍后重试"
 
-    // 通用页面加载错误
     const val HOME_LOAD_FAILED = "首页加载失败"
     const val DECK_LIST_LOAD_FAILED = "卡组列表加载失败"
     const val CARD_LIST_LOAD_FAILED = "卡片列表加载失败"
@@ -22,7 +21,6 @@ object ErrorMessages {
     const val REVIEW_LOAD_FAILED = "加载失败，请重试"
     const val SETTINGS_SAVE_FAILED = "设置保存失败，请稍后重试"
 
-    // 编辑器相关
     const val NAME_REQUIRED = "名称不能为空"
     const val INTERVAL_STEP_COUNT_INVALID = "间隔次数需为 1 到 8 之间的整数"
     const val TITLE_REQUIRED = "标题不能为空"
@@ -31,15 +29,12 @@ object ErrorMessages {
     const val VALIDATION_ERROR = "请修正校验错误后再保存"
     const val CARD_NOT_FOUND = "卡片不存在或加载失败"
 
-    // 备份恢复
     const val BACKUP_EXPORT_FAILED = "导出失败，请重试"
     const val BACKUP_RESTORE_FAILED = "恢复失败，当前数据未被修改"
 
-    // 复习
     const val REVIEW_RECORD_FAILED = "记录失败，请重试"
     const val REVIEW_SUBMIT_FAILED = "评分提交失败"
 
-    // 搜索
     const val SEARCH_FAILED = "搜索失败，请稍后重试"
 }
 
@@ -63,7 +58,6 @@ object SuccessMessages {
     const val ARCHIVED = "已归档，可在已归档内容中恢复"
     const val UNARCHIVED = "已恢复到卡组列表"
 
-    // 备份恢复
     const val BACKUP_EXPORTED = "备份已导出"
     const val BACKUP_RESTORED = "恢复成功"
 }

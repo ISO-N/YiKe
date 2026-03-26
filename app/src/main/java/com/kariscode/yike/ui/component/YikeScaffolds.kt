@@ -119,27 +119,19 @@ fun YikePrimaryScaffold(
                     .windowInsetsPadding(WindowInsets.statusBars.only(WindowInsetsSides.Top))
                     .padding(horizontal = adaptiveLayout.horizontalPadding)
             ) {
-                Box(
-                    modifier = Modifier.fillMaxWidth(),
-                    contentAlignment = Alignment.TopCenter
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .widthIn(max = adaptiveLayout.maxContentWidth)
+                        .align(Alignment.CenterHorizontally)
                 ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .widthIn(max = adaptiveLayout.maxContentWidth)
-                    ) {
-                        YikePrimaryHeaderBlock(
-                            eyebrow = currentDestination.label,
-                            title = title,
-                            subtitle = subtitle
-                        )
-                        Spacer(modifier = Modifier.height(spacing.sm))
-                        Box(
-                            modifier = Modifier.fillMaxSize()
-                        ) {
-                            content(PaddingValues(bottom = contentBottomPadding))
-                        }
-                    }
+                    YikePrimaryHeaderBlock(
+                        eyebrow = currentDestination.label,
+                        title = title,
+                        subtitle = subtitle
+                    )
+                    Spacer(modifier = Modifier.height(spacing.sm))
+                    content(PaddingValues(bottom = contentBottomPadding))
                 }
             }
 
@@ -413,13 +405,23 @@ private fun YikeScrollableTailBlock(
             .background(
                 brush = Brush.verticalGradient(
                     colors = listOf(
-                        MaterialTheme.colorScheme.surface.copy(alpha = 0.04f),
-                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.1f),
-                        MaterialTheme.colorScheme.surface.copy(alpha = 0.14f)
+                        MaterialTheme.colorScheme.surface.copy(alpha = ScrollableTailGradientAlpha.START),
+                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = ScrollableTailGradientAlpha.MID),
+                        MaterialTheme.colorScheme.surface.copy(alpha = ScrollableTailGradientAlpha.END)
                     )
                 ),
                 shape = MaterialTheme.shapes.extraLarge
             )
     )
+}
+
+/**
+ * 尾部渐变的透明度常量集中命名，是为了让视觉调参不再依赖“读魔法数猜意图”，
+ * 同时避免未来不同页面各自复制一份略有差异的 alpha 组合。
+ */
+private object ScrollableTailGradientAlpha {
+    const val START: Float = 0.04f
+    const val MID: Float = 0.1f
+    const val END: Float = 0.14f
 }
 
