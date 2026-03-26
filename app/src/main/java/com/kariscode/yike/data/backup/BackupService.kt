@@ -334,12 +334,18 @@ class BackupService(
     /**
      * 备份文档先一次性转成实体载荷，是为了让校验通过后的恢复事务只专注处理数据库替换。
      */
-    private fun BackupFullPayload.toRestorePayload(): RestorePayload = RestorePayload(
-        decks = decks.map { deck -> deck.toEntity() },
-        cards = cards.map { card -> card.toEntity() },
-        questions = questions.map { question -> question.toEntity() },
-        reviewRecords = reviewRecords.map { record -> record.toEntity() }
-    )
+    private suspend fun BackupFullPayload.toRestorePayload(): RestorePayload = coroutineScope {
+        val decksDeferred = async(dispatchers.default) { decks.map { deck -> deck.toEntity() } }
+        val cardsDeferred = async(dispatchers.default) { cards.map { card -> card.toEntity() } }
+        val questionsDeferred = async(dispatchers.default) { questions.map { question -> question.toEntity() } }
+        val reviewRecordsDeferred = async(dispatchers.default) { reviewRecords.map { record -> record.toEntity() } }
+        RestorePayload(
+            decks = decksDeferred.await(),
+            cards = cardsDeferred.await(),
+            questions = questionsDeferred.await(),
+            reviewRecords = reviewRecordsDeferred.await()
+        )
+    }
 
     /**
      * 旧快照同样投影成统一载荷，是为了让补偿恢复与正式恢复完全复用同一套写入骨架。
