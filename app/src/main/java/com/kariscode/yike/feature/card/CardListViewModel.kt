@@ -96,7 +96,7 @@ class CardListViewModel(
      * 熟练度摘要用独立 Job 收口，是为了在列表连续发射时只保留最后一次统计，避免无意义叠加查询。
      */
     private var masterySummaryJob: Job? = null
-    private var lastMasterySummarySignature: String? = null
+    private var lastMasterySummarySignatureHash: Long? = null
     private var loadingTracker = CardListLoadingTracker()
 
     private val _uiState = MutableStateFlow(
@@ -373,11 +373,11 @@ class CardListViewModel(
      * 这样既能避免仅编辑卡片标题时触发无意义检索，也能确保复习评分后摘要不会卡在旧分布。
      */
     private fun maybeRefreshMasterySummary(items: List<CardSummary>) {
-        val currentSignature = buildMasterySummarySignature(items)
-        if (currentSignature == lastMasterySummarySignature) {
+        val currentSignatureHash = buildMasterySummarySignatureHash(items)
+        if (currentSignatureHash == lastMasterySummarySignatureHash) {
             return
         }
-        lastMasterySummarySignature = currentSignature
+        lastMasterySummarySignatureHash = currentSignatureHash
         refreshMasterySummary()
     }
 
@@ -387,10 +387,15 @@ class CardListViewModel(
      * `dueQuestionCount` 必须包含在内，是为了让复习评分导致 dueAt 前移/后移时能触发重算，
      * 否则“题目数量不变但熟练度分布已变化”的场景会卡住摘要。
      */
-    private fun buildMasterySummarySignature(items: List<CardSummary>): String = items
-        .joinToString(separator = "|") { summary ->
-            "${summary.card.id}:${summary.questionCount}:${summary.dueQuestionCount}"
+    private fun buildMasterySummarySignatureHash(items: List<CardSummary>): Long {
+        var hash = 1125899906842597L
+        items.forEach { summary ->
+            hash = hash * 31 + summary.card.id.hashCode()
+            hash = hash * 31 + summary.questionCount
+            hash = hash * 31 + summary.dueQuestionCount
         }
+        return hash
+    }
 
     /**
      * 领域摘要转换成页面模型收口在本地，是为了让展示层仍能自由演进命名而不反向污染用例层。
