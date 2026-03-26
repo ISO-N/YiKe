@@ -13,6 +13,8 @@ import io.ktor.http.HttpHeaders
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.delay
 import kotlinx.serialization.KSerializer
+import kotlin.math.min
+import kotlin.random.Random
 
 /**
  * 局域网客户端把 hello、配对和受保护请求统一封装，是为了让仓储层只关注同步意图而不关心 HTTP 细节。
@@ -20,8 +22,10 @@ import kotlinx.serialization.KSerializer
 class LanSyncHttpClient(
     private val crypto: LanSyncCrypto,
     private val client: HttpClient = createDefaultHttpClient(),
-    private val retryDelaysMillis: LongArray = DEFAULT_RETRY_DELAYS_MILLIS
+    retryDelaysMillis: LongArray? = null
 ) : LanSyncTransportClient {
+    private val retryBackoff: RetryBackoff = RetryBackoff()
+    private val retryDelaysMillisOverride: LongArray? = retryDelaysMillis
     /**
      * hello 走明文只返回最小发现资料，是为了在未配对前先完成版本和身份识别，而不提前暴露真正同步内容。
      */
@@ -199,21 +203,62 @@ class LanSyncHttpClient(
      * 幂等请求统一做指数退避，是为了在局域网抖动时保住用户体验，又避免对提交型请求造成重复副作用。
      */
     private suspend fun <T> retryIdempotent(action: suspend () -> T): T {
+        val fixedDelays = retryDelaysMillisOverride
+        if (fixedDelays != null) {
+            var attempt = 0
+            var lastError: Throwable? = null
+            while (attempt < fixedDelays.size + 1) {
+                try {
+                    return action()
+                } catch (throwable: Throwable) {
+                    lastError = throwable
+                    if (attempt >= fixedDelays.lastIndex) {
+                        break
+                    }
+                    delay(fixedDelays[attempt])
+                    attempt += 1
+                }
+            }
+            throw lastError ?: IllegalStateException("局域网同步请求失败")
+        }
+
         var attempt = 0
         var lastError: Throwable? = null
-        while (attempt < retryDelaysMillis.size + 1) {
+        while (attempt < retryBackoff.maxAttempts + 1) {
             try {
                 return action()
             } catch (throwable: Throwable) {
                 lastError = throwable
-                if (attempt >= retryDelaysMillis.lastIndex) {
+                if (attempt >= retryBackoff.maxAttempts) {
                     break
                 }
-                delay(retryDelaysMillis[attempt])
+                delay(retryBackoff.computeDelayMillis(attempt))
                 attempt += 1
             }
         }
         throw lastError ?: IllegalStateException("局域网同步请求失败")
+    }
+
+    /**
+     * 指数退避配置独立建模，是为了让网络抖动时既能快速恢复，又能避免固定间隔下的“齐步重试”放大拥塞。
+     */
+    private data class RetryBackoff(
+        val baseDelayMillis: Long = DEFAULT_RETRY_BASE_DELAY_MILLIS,
+        val maxDelayMillis: Long = DEFAULT_RETRY_MAX_DELAY_MILLIS,
+        val maxAttempts: Int = DEFAULT_MAX_RETRY_ATTEMPTS,
+        val jitterRatio: Double = DEFAULT_RETRY_JITTER_RATIO
+    ) {
+        /**
+         * attempt 从 0 开始：第 0 次失败后先等待 baseDelay，第 1 次失败等待 baseDelay * 2，以此类推。
+         */
+        fun computeDelayMillis(attempt: Int): Long {
+            // shift 限制在 30，避免极端配置触发溢出；最终也会被 maxDelayMillis 截断。
+            val exponential = baseDelayMillis * (1L shl attempt.coerceAtMost(30))
+            val capped = min(exponential, maxDelayMillis)
+            val jitterBound = (capped * jitterRatio).toLong().coerceAtLeast(0L)
+            val jitter = if (jitterBound == 0L) 0L else Random.nextLong(from = 0L, until = jitterBound + 1L)
+            return capped + jitter
+        }
     }
 
     /**
@@ -253,7 +298,10 @@ class LanSyncHttpClient(
         private const val PULL_CHANGES_PATH: String = "/lan-sync/v2/changes/pull"
         private const val PUSH_CHANGES_PATH: String = "/lan-sync/v2/changes/push"
         private const val ACK_PATH: String = "/lan-sync/v2/sync/ack"
-        private val DEFAULT_RETRY_DELAYS_MILLIS: LongArray = longArrayOf(1_000L, 2_000L, 4_000L)
+        private const val DEFAULT_RETRY_BASE_DELAY_MILLIS: Long = 1_000L
+        private const val DEFAULT_RETRY_MAX_DELAY_MILLIS: Long = 8_000L
+        private const val DEFAULT_MAX_RETRY_ATTEMPTS: Int = 3
+        private const val DEFAULT_RETRY_JITTER_RATIO: Double = 0.25
 
         /**
          * 默认客户端配置集中在单点，是为了让生产超时策略和测试注入入口围绕同一构造边界维护。

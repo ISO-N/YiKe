@@ -1,5 +1,6 @@
 package com.kariscode.yike.feature.deck
 
+import com.kariscode.yike.core.text.DeckTagNormalizer
 import com.kariscode.yike.domain.model.Deck
 import com.kariscode.yike.domain.model.DeckSummary
 import org.junit.Assert.assertEquals

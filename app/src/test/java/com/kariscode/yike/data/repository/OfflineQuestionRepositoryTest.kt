@@ -507,7 +507,10 @@ class OfflineQuestionRepositoryTest {
             questionIds: List<String>
         ): List<QuestionContextRow> = emptyList()
 
-        override suspend fun listTagsJson(activeStatus: String): List<String> = emptyList()
+        override suspend fun listTagUsages(
+            activeStatus: String,
+            limit: Int
+        ): List<com.kariscode.yike.data.local.db.dao.TagUsageRow> = emptyList()
 
         override suspend fun listCsvExportRows(activeStatus: String): List<com.kariscode.yike.data.local.db.dao.CsvQuestionExportRow> =
             emptyList()

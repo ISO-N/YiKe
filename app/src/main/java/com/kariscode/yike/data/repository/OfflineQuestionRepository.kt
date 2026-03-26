@@ -104,18 +104,15 @@ class OfflineQuestionRepository(
      * 也能避免为了同一条删除路径先执行一次多余查询。
      */
     override suspend fun delete(questionId: String) = dispatchers.onIo {
-        val current = questionDao.findById(questionId)?.let { entity ->
-            entity.toDomain()
-        }
         val deletedRows = questionDao.deleteById(questionId)
         if (deletedRows == 0) {
             throw EntityNotFoundException(entityLabel = "问题", entityId = questionId)
         }
-        RepositorySyncSupport.recordDeleteFromSnapshot(
+        RepositorySyncSupport.recordDeleteFromSnapshot<Question>(
             syncChangeRecorder = syncChangeRecorder,
             entityType = SyncEntityType.QUESTION,
             entityId = questionId,
-            current = current,
+            current = null,
             fallbackSummary = questionId,
             fallbackModifiedAt = timeProvider.nowEpochMillis(),
             summaryOf = { question -> question.prompt.take(48) },
@@ -129,9 +126,6 @@ class OfflineQuestionRepository(
      */
     override suspend fun deleteAll(questionIds: Collection<String>) = dispatchers.onIo {
         if (questionIds.isEmpty()) return@onIo
-        val currentQuestions = questionDao.listByIds(questionIds.toList()).map { entity ->
-            entity.toDomain()
-        }
         val deletedRows = questionDao.deleteByIds(questionIds)
         if (deletedRows != questionIds.size) {
             throw EntityNotFoundException(
@@ -139,14 +133,15 @@ class OfflineQuestionRepository(
                 entityId = questionIds.joinToString(separator = ",")
             )
         }
-        currentQuestions.forEach { question ->
-            RepositorySyncSupport.recordDeleteFromSnapshot(
+        val fallbackModifiedAt = timeProvider.nowEpochMillis()
+        questionIds.forEach { questionId ->
+            RepositorySyncSupport.recordDeleteFromSnapshot<Question>(
                 syncChangeRecorder = syncChangeRecorder,
                 entityType = SyncEntityType.QUESTION,
-                entityId = question.id,
-                current = question,
-                fallbackSummary = question.id,
-                fallbackModifiedAt = question.updatedAt,
+                entityId = questionId,
+                current = null,
+                fallbackSummary = questionId,
+                fallbackModifiedAt = fallbackModifiedAt,
                 summaryOf = { model -> model.prompt.take(48) },
                 modifiedAtOf = { model -> model.updatedAt }
             )

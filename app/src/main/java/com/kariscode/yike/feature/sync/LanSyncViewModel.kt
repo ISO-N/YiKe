@@ -97,7 +97,8 @@ class LanSyncViewModel(
      */
     fun consumeSessionMessage() {
         _uiState.update { state ->
-            state.copy(session = state.session.copy(message = null))
+            val nextSession = state.session.copy(message = null)
+            state.copy(session = nextSession)
         }
     }
 
@@ -106,7 +107,8 @@ class LanSyncViewModel(
      */
     fun consumeSessionFailure() {
         _uiState.update { state ->
-            state.copy(session = state.session.copy(activeFailure = null))
+            val nextSession = state.session.copy(activeFailure = null)
+            state.copy(session = nextSession)
         }
     }
 
